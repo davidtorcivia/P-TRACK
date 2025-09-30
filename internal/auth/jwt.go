@@ -1,0 +1,89 @@
+package auth
+
+import (
+	"errors"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	ErrInvalidToken = errors.New("invalid token")
+	ErrExpiredToken = errors.New("expired token")
+)
+
+type Claims struct {
+	UserID   int64  `json:"user_id"`
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+type JWTManager struct {
+	secret          []byte
+	sessionDuration time.Duration
+}
+
+func NewJWTManager(secret string, sessionDuration time.Duration) *JWTManager {
+	return &JWTManager{
+		secret:          []byte(secret),
+		sessionDuration: sessionDuration,
+	}
+}
+
+// GenerateToken creates a new JWT token for a user
+func (m *JWTManager) GenerateToken(userID int64, username string) (string, error) {
+	now := time.Now()
+	claims := Claims{
+		UserID:   userID,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(m.sessionDuration)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(m.secret)
+}
+
+// ValidateToken validates a JWT token and returns the claims
+func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		// Validate the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return m.secret, nil
+	})
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrExpiredToken
+		}
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	return claims, nil
+}
+
+// RefreshToken generates a new token with extended expiration
+func (m *JWTManager) RefreshToken(tokenString string) (string, error) {
+	claims, err := m.ValidateToken(tokenString)
+	if err != nil && !errors.Is(err, ErrExpiredToken) {
+		return "", err
+	}
+
+	// Generate new token with same claims but new expiration
+	return m.GenerateToken(claims.UserID, claims.Username)
+}
+
+// SessionDuration returns the configured session duration
+func (m *JWTManager) SessionDuration() time.Duration {
+	return m.sessionDuration
+}

@@ -1,0 +1,169 @@
+{{ define "content" }}
+<article x-data="{
+    currentMonth: {{ .CurrentMonth }},
+    currentYear: {{ .CurrentYear }},
+    showLegend: true
+}">
+    <header>
+        <hgroup>
+            <h1>Calendar View</h1>
+            <p>Visual overview of injections and symptoms</p>
+        </hgroup>
+    </header>
+
+    <!-- Calendar Navigation -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <button hx-get="/api/calendar?month={{ .PrevMonth }}&year={{ .PrevYear }}"
+                hx-target="#calendar-view"
+                hx-swap="innerHTML"
+                class="outline">
+            ← Previous
+        </button>
+
+        <h2 style="margin: 0;">
+            <span x-text="new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })">
+                {{ .MonthName }} {{ .CurrentYear }}
+            </span>
+        </h2>
+
+        <button hx-get="/api/calendar?month={{ .NextMonth }}&year={{ .NextYear }}"
+                hx-target="#calendar-view"
+                hx-swap="innerHTML"
+                class="outline">
+            Next →
+        </button>
+    </div>
+
+    <!-- Legend -->
+    <article x-show="showLegend" style="margin-bottom: 1rem;">
+        <button @click="showLegend = false"
+                aria-label="Close"
+                class="close"
+                style="float: right; background: none; border: none; font-size: 1rem; cursor: pointer;">
+            ✕
+        </button>
+        <strong>Legend:</strong>
+        <div class="grid" style="margin-top: 0.5rem;">
+            <small>💉 Left injection</small>
+            <small>💉 Right injection</small>
+            <small>📝 Symptoms logged</small>
+            <small>💊 Medication taken</small>
+            <small style="color: var(--pico-del-color);">⚠️ Missed injection</small>
+        </div>
+    </article>
+
+    <!-- Calendar Grid -->
+    <div id="calendar-view">
+        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
+            <!-- Day headers -->
+            {{ range .DayHeaders }}
+            <div style="text-align: center; font-weight: bold; padding: 0.5rem;">
+                {{ . }}
+            </div>
+            {{ end }}
+
+            <!-- Calendar days -->
+            {{ range .CalendarDays }}
+            <div style="
+                border: 1px solid var(--pico-muted-border-color);
+                border-radius: var(--pico-border-radius);
+                padding: 0.5rem;
+                min-height: 100px;
+                background-color: {{ if .IsToday }}var(--pico-primary-background){{ else if not .IsCurrentMonth }}var(--pico-card-background-color){{ else }}transparent{{ end }};
+                opacity: {{ if not .IsCurrentMonth }}0.5{{ else }}1{{ end }};
+            ">
+                <div style="text-align: right; font-weight: {{ if .IsToday }}bold{{ else }}normal{{ end }};">
+                    {{ .Day }}
+                </div>
+
+                <!-- Day events -->
+                {{ if .HasEvents }}
+                <div style="margin-top: 0.5rem; font-size: 1.2rem;">
+                    {{ range .Events }}
+                    <div title="{{ .Tooltip }}" style="margin: 0.2rem 0;">
+                        {{ if eq .Type "injection" }}
+                        <span style="cursor: pointer;" onclick="window.location.href='/injections/{{ .ID }}'">
+                            💉 {{ if eq .Side "left" }}⬅️{{ else }}➡️{{ end }}
+                        </span>
+                        {{ else if eq .Type "symptom" }}
+                        <span style="cursor: pointer;" onclick="window.location.href='/symptoms/{{ .ID }}'">
+                            📝
+                        </span>
+                        {{ else if eq .Type "medication" }}
+                        💊
+                        {{ else if eq .Type "missed" }}
+                        <span style="color: var(--pico-del-color);">⚠️</span>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+                {{ end }}
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
+    <!-- Monthly Summary -->
+    {{ if .MonthlySummary }}
+    <article style="margin-top: 2rem;">
+        <header>
+            <h3>Monthly Summary</h3>
+        </header>
+
+        <div class="grid">
+            <div>
+                <strong>Total Injections:</strong> {{ .MonthlySummary.TotalInjections }}<br>
+                <strong>Left Side:</strong> {{ .MonthlySummary.LeftCount }}<br>
+                <strong>Right Side:</strong> {{ .MonthlySummary.RightCount }}<br>
+            </div>
+            <div>
+                <strong>Symptoms Logged:</strong> {{ .MonthlySummary.SymptomsLogged }}<br>
+                <strong>Average Pain:</strong> {{ .MonthlySummary.AveragePain }}/10<br>
+                <strong>Medications:</strong> {{ .MonthlySummary.MedicationsTaken }}<br>
+            </div>
+        </div>
+    </article>
+    {{ end }}
+
+    <!-- Export Options -->
+    <footer style="margin-top: 2rem;">
+        <div class="grid">
+            <button onclick="window.location.href='/api/export/calendar?month={{ .CurrentMonth }}&year={{ .CurrentYear }}'"
+                    class="outline">
+                📄 Export This Month
+            </button>
+            <button onclick="window.print()"
+                    class="outline">
+                🖨️ Print Calendar
+            </button>
+        </div>
+    </footer>
+</article>
+
+<style>
+    /* Print styles */
+    @media print {
+        nav, footer, button, .outline {
+            display: none !important;
+        }
+
+        article {
+            page-break-inside: avoid;
+        }
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        #calendar-view > div {
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.25rem;
+        }
+
+        #calendar-view > div > div {
+            padding: 0.25rem;
+            min-height: 60px;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{{ end }}

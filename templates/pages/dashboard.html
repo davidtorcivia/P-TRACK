@@ -1,0 +1,136 @@
+{{ define "content" }}
+<div x-data="{ showInjectionModal: false }">
+    <!-- Active Course Info -->
+    <article>
+        <header>
+            <hgroup>
+                <h2>{{ if .ActiveCourse }}{{ .ActiveCourse.Name }}{{ else }}No Active Course{{ end }}</h2>
+                <p>
+                    {{ if .LastInjection }}
+                        Last injection: {{ .LastInjection.TimeAgo }} ({{ .LastInjection.Side }})
+                    {{ else }}
+                        No injections logged yet
+                    {{ end }}
+                </p>
+            </hgroup>
+        </header>
+
+        <!-- Large Log Injection Button -->
+        <div style="text-align: center; margin: 2rem 0;">
+            <button @click="showInjectionModal = true"
+                    style="font-size: 1.5rem; padding: 1.5rem 3rem; width: 100%;"
+                    {{ if not .ActiveCourse }}disabled{{ end }}>
+                💉 LOG INJECTION NOW
+            </button>
+            {{ if not .ActiveCourse }}
+            <p style="margin-top: 1rem;">
+                <a href="/courses/new" style="font-size: 1.1rem;">📋 Create a course to start tracking</a>
+            </p>
+            {{ end }}
+        </div>
+
+        <!-- Next Injection Info -->
+        {{ if .NextInjection }}
+        <footer>
+            <small>
+                {{ if .NextInjection.Overdue }}
+                    ⚠️ Next injection overdue by {{ .NextInjection.TimeUntil }}
+                {{ else }}
+                    ⏱️ Next injection due in {{ .NextInjection.TimeUntil }}
+                {{ end }}
+            </small>
+        </footer>
+        {{ end }}
+    </article>
+
+    <!-- Quick Actions -->
+    <div class="grid">
+        <button onclick="window.location.href='/symptoms'" class="outline">
+            📝 Log Symptoms
+        </button>
+        <button onclick="window.location.href='/medications'" class="outline">
+            💊 View Medications
+        </button>
+        <button onclick="window.location.href='/calendar'" class="outline">
+            📅 View Calendar
+        </button>
+        <button onclick="window.location.href='/inventory'" class="outline">
+            📦 Check Inventory
+        </button>
+    </div>
+
+    <!-- Low Stock Warnings -->
+    {{ if .LowStockItems }}
+    <article style="background-color: var(--pico-warning-background); border-left: 4px solid var(--pico-warning);">
+        <header>
+            <strong>⚠️ Low Stock Alerts</strong>
+        </header>
+        <ul>
+            {{ range .LowStockItems }}
+            <li>
+                <strong>{{ .ItemType }}</strong>: {{ .Quantity }} {{ .Unit }} remaining
+                {{ if .ExpirationDate }}(Expires: {{ .ExpirationDate }}){{ end }}
+            </li>
+            {{ end }}
+        </ul>
+        <footer>
+            <a href="/inventory">Manage inventory →</a>
+        </footer>
+    </article>
+    {{ end }}
+
+    <!-- Recent Activity -->
+    <article>
+        <header>
+            <h3>Recent Activity</h3>
+        </header>
+        <div id="recent-activity"
+             hx-get="/api/dashboard/recent"
+             hx-trigger="load, every 30s"
+             hx-swap="innerHTML">
+            <p aria-busy="true">Loading recent activity...</p>
+        </div>
+    </article>
+
+    <!-- Statistics -->
+    {{ if .Stats }}
+    <div class="grid">
+        <article>
+            <header>Total Injections</header>
+            <h2 style="text-align: center; margin: 0;">{{ .Stats.TotalInjections }}</h2>
+            <footer>
+                <small>Left: {{ .Stats.LeftCount }} | Right: {{ .Stats.RightCount }}</small>
+            </footer>
+        </article>
+        <article>
+            <header>This Week</header>
+            <h2 style="text-align: center; margin: 0;">{{ .Stats.ThisWeek }}</h2>
+            <footer>
+                <small>Average: {{ .Stats.WeeklyAverage }}/week</small>
+            </footer>
+        </article>
+        <article>
+            <header>Current Course</header>
+            <h2 style="text-align: center; margin: 0;">{{ .Stats.CourseDays }}</h2>
+            <footer>
+                <small>days active</small>
+            </footer>
+        </article>
+    </div>
+    {{ end }}
+
+    <!-- Include Injection Modal -->
+    <div x-show="showInjectionModal"
+         x-cloak
+         style="display: none;"
+         @keydown.escape.window="showInjectionModal = false">
+        {{ template "injection_modal" . }}
+    </div>
+</div>
+
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+{{ end }}

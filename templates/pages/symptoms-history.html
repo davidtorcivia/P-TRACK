@@ -1,0 +1,166 @@
+{{ define "content" }}
+<article>
+    <header>
+        <hgroup>
+            <h1>Symptom History</h1>
+            <p>View all logged symptoms</p>
+        </hgroup>
+        <button onclick="window.location.href='/symptoms'">
+            ← Back to Symptoms
+        </button>
+    </header>
+
+    <!-- Filter Controls -->
+    <article x-data="{
+        startDate: '',
+        endDate: '',
+        courseId: ''
+    }">
+        <header>
+            <h3>Filters</h3>
+        </header>
+
+        <div class="grid">
+            <label>
+                Start Date
+                <input type="date" x-model="startDate">
+            </label>
+            <label>
+                End Date
+                <input type="date" x-model="endDate">
+            </label>
+        </div>
+
+        <button @click="
+            let url = '/api/symptoms?limit=100';
+            if (startDate && endDate) {
+                url += '&start_date=' + startDate + '&end_date=' + endDate;
+            }
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('symptoms-list');
+                    if (data.length === 0) {
+                        container.innerHTML = '<p style=text-align:center;color:var(--pico-muted-color);>No symptoms found for this date range.</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(symptom => {
+                        const date = new Date(symptom.timestamp);
+                        const formattedDate = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
+                        html += '<article>';
+                        html += '<header>' + formattedDate + '</header>';
+                        html += '<div><strong>Pain Level:</strong> ' + (symptom.pain_level || 'N/A') + '/10</div>';
+                        html += '<div><strong>Location:</strong> ' + (symptom.pain_location || 'N/A') + '</div>';
+                        html += '<div><strong>Type:</strong> ' + (symptom.pain_type || 'N/A') + '</div>';
+
+                        if (symptom.symptoms) {
+                            try {
+                                const symptoms = JSON.parse(symptom.symptoms);
+                                if (symptoms.length > 0) {
+                                    html += '<div><strong>Symptoms:</strong> ' + symptoms.join(', ') + '</div>';
+                                }
+                            } catch(e) {}
+                        }
+
+                        if (symptom.notes) {
+                            html += '<div><strong>Notes:</strong> ' + symptom.notes + '</div>';
+                        }
+
+                        html += '<footer style=margin-top:1rem;>';
+                        html += '<button onclick=\"if(confirm(\\'Delete this symptom log?\\')) { ';
+                        html += 'fetch(\\'/api/symptoms/' + symptom.id + '\\', { ';
+                        html += 'method: \\'DELETE\\', ';
+                        html += 'headers: {\\'X-CSRF-Token\\': document.querySelector(\\'meta[name=csrf-token]\\')?.content || \\'\\'}';
+                        html += '}).then(() => window.location.reload()); }\" class=\"outline secondary\" style=\"font-size: 0.9rem;\">';
+                        html += 'Delete</button>';
+                        html += '</footer>';
+                        html += '</article>';
+                    });
+
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    alert('Error loading symptoms: ' + err.message);
+                });
+        ">
+            Apply Filters
+        </button>
+    </article>
+
+    <!-- Symptoms List -->
+    <div id="symptoms-list">
+        <p aria-busy="true">Loading symptoms...</p>
+    </div>
+
+    <script>
+        // Load all symptoms on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/api/symptoms?limit=100')
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('symptoms-list');
+                    if (data.length === 0) {
+                        container.innerHTML = '<p style="text-align:center;color:var(--pico-muted-color);">No symptoms logged yet.</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(symptom => {
+                        const date = new Date(symptom.timestamp);
+                        const formattedDate = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
+                        html += '<article>';
+                        html += '<header>' + formattedDate + '</header>';
+                        html += '<div><strong>Pain Level:</strong> ' + (symptom.pain_level || 'N/A') + '/10</div>';
+                        html += '<div><strong>Location:</strong> ' + (symptom.pain_location || 'N/A') + '</div>';
+                        html += '<div><strong>Type:</strong> ' + (symptom.pain_type || 'N/A') + '</div>';
+
+                        if (symptom.symptoms) {
+                            try {
+                                const symptoms = JSON.parse(symptom.symptoms);
+                                if (symptoms.length > 0) {
+                                    html += '<div><strong>Symptoms:</strong> ' + symptoms.join(', ') + '</div>';
+                                }
+                            } catch(e) {}
+                        }
+
+                        if (symptom.notes) {
+                            html += '<div><strong>Notes:</strong> ' + symptom.notes + '</div>';
+                        }
+
+                        html += '<footer style="margin-top:1rem;">';
+                        html += '<button onclick="if(confirm(\'Delete this symptom log?\')) { ';
+                        html += 'fetch(\'/api/symptoms/' + symptom.id + '\', { ';
+                        html += 'method: \'DELETE\', ';
+                        html += 'headers: {\'X-CSRF-Token\': document.querySelector(\'meta[name=csrf-token]\')?.content || \'\'}';
+                        html += '}).then(() => window.location.reload()); }" class="outline secondary" style="font-size: 0.9rem;">';
+                        html += 'Delete</button>';
+                        html += '</footer>';
+                        html += '</article>';
+                    });
+
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('symptoms-list').innerHTML =
+                        '<p style="color:red;">Error loading symptoms: ' + err.message + '</p>';
+                });
+        });
+    </script>
+</article>
+{{ end }}

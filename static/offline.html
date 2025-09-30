@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Injection Tracker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .cached-pages {
+            text-align: left;
+            margin-top: 2rem;
+        }
+        .cached-pages ul {
+            list-style: none;
+            padding: 0;
+        }
+        .cached-pages li {
+            padding: 0.5rem 0;
+        }
+        .cached-pages a {
+            text-decoration: none;
+            color: var(--pico-primary);
+        }
+        .retry-button {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <article>
+            <div class="offline-icon">📡</div>
+            <header>
+                <h1>You're Offline</h1>
+            </header>
+            <p>
+                It looks like you've lost your internet connection.
+            </p>
+            <p>
+                Don't worry! Your data is safe. Once you're back online, any changes you made will be synchronized automatically.
+            </p>
+
+            <div class="cached-pages">
+                <h3>Available Offline:</h3>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/injections">Injection History</a></li>
+                    <li><a href="/inventory">Inventory</a></li>
+                </ul>
+                <p><small>Note: These pages may show cached data from your last visit.</small></p>
+            </div>
+
+            <button class="retry-button" onclick="location.reload()">
+                Try Again
+            </button>
+        </article>
+    </main>
+
+    <script>
+        // Auto-retry connection every 5 seconds
+        let retryCount = 0;
+        const maxRetries = 10;
+
+        function checkConnection() {
+            if (navigator.onLine) {
+                location.reload();
+            } else {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    setTimeout(checkConnection, 5000);
+                }
+            }
+        }
+
+        // Start checking after 2 seconds
+        setTimeout(checkConnection, 2000);
+
+        // Listen for online event
+        window.addEventListener('online', () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>

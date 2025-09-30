@@ -1,0 +1,256 @@
+{{ define "content" }}
+<article>
+    <header>
+        <h1>Settings</h1>
+    </header>
+
+    <!-- Profile Settings -->
+    <article>
+        <header>
+            <h3>Profile</h3>
+        </header>
+
+        <form hx-post="/api/settings/profile"
+              hx-target="#profile-feedback"
+              hx-swap="innerHTML">
+
+            <div id="profile-feedback"></div>
+
+            <label for="username">
+                Username
+                <input type="text"
+                       id="username"
+                       name="username"
+                       value="{{ .User.Username }}"
+                       required
+                       minlength="3">
+            </label>
+
+            <label for="email">
+                Email
+                <input type="email"
+                       id="email"
+                       name="email"
+                       value="{{ .User.Email }}"
+                       placeholder="your@email.com">
+                <small>For password recovery only</small>
+            </label>
+
+            <button type="submit">Update Profile</button>
+        </form>
+    </article>
+
+    <!-- Change Password -->
+    <article>
+        <header>
+            <h3>Change Password</h3>
+        </header>
+
+        <form hx-post="/api/settings/password"
+              hx-target="#password-feedback"
+              hx-swap="innerHTML"
+              x-data="{ newPassword: '', confirmPassword: '', passwordMatch: true }">
+
+            <div id="password-feedback"></div>
+
+            <label for="current-password">
+                Current Password
+                <input type="password"
+                       id="current-password"
+                       name="current_password"
+                       required>
+            </label>
+
+            <label for="new-password">
+                New Password
+                <input type="password"
+                       id="new-password"
+                       name="new_password"
+                       x-model="newPassword"
+                       @input="passwordMatch = newPassword === confirmPassword || confirmPassword === ''"
+                       minlength="8"
+                       required>
+                <small>Minimum 8 characters</small>
+            </label>
+
+            <label for="confirm-password">
+                Confirm New Password
+                <input type="password"
+                       id="confirm-password"
+                       name="confirm_password"
+                       x-model="confirmPassword"
+                       @input="passwordMatch = newPassword === confirmPassword"
+                       :aria-invalid="!passwordMatch && confirmPassword !== ''"
+                       required>
+                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--pico-del-color);">
+                    Passwords do not match
+                </small>
+            </label>
+
+            <button type="submit" :disabled="!passwordMatch">
+                Change Password
+            </button>
+        </form>
+    </article>
+
+    <!-- App Settings -->
+    <article>
+        <header>
+            <h3>App Settings</h3>
+        </header>
+
+        <form hx-post="/api/settings/app"
+              hx-target="#app-feedback"
+              hx-swap="innerHTML">
+
+            <div id="app-feedback"></div>
+
+            <label for="theme">
+                Theme
+                <select id="theme" name="theme">
+                    <option value="light" {{ if eq .Settings.Theme "light" }}selected{{ end }}>Light</option>
+                    <option value="dark" {{ if eq .Settings.Theme "dark" }}selected{{ end }}>Dark</option>
+                    <option value="auto" {{ if eq .Settings.Theme "auto" }}selected{{ end }}>Auto (System)</option>
+                </select>
+            </label>
+
+            <label for="advanced-mode">
+                <input type="checkbox"
+                       id="advanced-mode"
+                       name="advanced_mode"
+                       role="switch"
+                       {{ if .Settings.AdvancedMode }}checked{{ end }}>
+                Enable Advanced Mode
+                <small>Shows anatomical diagram for precise injection site tracking</small>
+            </label>
+
+            <label for="date-format">
+                Date Format
+                <select id="date-format" name="date_format">
+                    <option value="MM/DD/YYYY" {{ if eq .Settings.DateFormat "MM/DD/YYYY" }}selected{{ end }}>MM/DD/YYYY</option>
+                    <option value="DD/MM/YYYY" {{ if eq .Settings.DateFormat "DD/MM/YYYY" }}selected{{ end }}>DD/MM/YYYY</option>
+                    <option value="YYYY-MM-DD" {{ if eq .Settings.DateFormat "YYYY-MM-DD" }}selected{{ end }}>YYYY-MM-DD</option>
+                </select>
+            </label>
+
+            <label for="time-format">
+                Time Format
+                <select id="time-format" name="time_format">
+                    <option value="12h" {{ if eq .Settings.TimeFormat "12h" }}selected{{ end }}>12-hour (AM/PM)</option>
+                    <option value="24h" {{ if eq .Settings.TimeFormat "24h" }}selected{{ end }}>24-hour</option>
+                </select>
+            </label>
+
+            <button type="submit">Save Settings</button>
+        </form>
+    </article>
+
+    <!-- Notification Settings -->
+    <article>
+        <header>
+            <h3>Notifications</h3>
+        </header>
+
+        <form hx-post="/api/settings/notifications"
+              hx-target="#notification-feedback"
+              hx-swap="innerHTML">
+
+            <div id="notification-feedback"></div>
+
+            <label for="enable-notifications">
+                <input type="checkbox"
+                       id="enable-notifications"
+                       name="enable_notifications"
+                       role="switch"
+                       {{ if .Settings.EnableNotifications }}checked{{ end }}>
+                Enable Push Notifications
+            </label>
+
+            <label for="injection-reminders">
+                <input type="checkbox"
+                       id="injection-reminders"
+                       name="injection_reminders"
+                       role="switch"
+                       {{ if .Settings.InjectionReminders }}checked{{ end }}>
+                Injection Reminders
+            </label>
+
+            <label for="reminder-time">
+                Reminder Time
+                <input type="time"
+                       id="reminder-time"
+                       name="reminder_time"
+                       value="{{ .Settings.ReminderTime }}">
+            </label>
+
+            <label for="low-stock-alerts">
+                <input type="checkbox"
+                       id="low-stock-alerts"
+                       name="low_stock_alerts"
+                       role="switch"
+                       {{ if .Settings.LowStockAlerts }}checked{{ end }}>
+                Low Stock Alerts
+            </label>
+
+            <button type="submit">Save Notification Settings</button>
+        </form>
+    </article>
+
+    <!-- Data Management -->
+    <article>
+        <header>
+            <h3>Data Management</h3>
+        </header>
+
+        <div class="grid">
+            <button onclick="window.location.href='/api/export/all'"
+                    class="outline">
+                📦 Export All Data
+            </button>
+
+            <button onclick="window.location.href='/api/export/pdf?full=true'"
+                    class="outline">
+                📑 Generate Full Report
+            </button>
+        </div>
+
+        <details style="margin-top: 1rem;">
+            <summary style="color: var(--pico-del-color);">
+                <strong>Danger Zone</strong>
+            </summary>
+
+            <div style="padding: 1rem; border: 1px solid var(--pico-del-color); border-radius: var(--pico-border-radius); margin-top: 1rem;">
+                <p><strong>Delete All Data</strong></p>
+                <p>This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
+                <button hx-delete="/api/settings/all-data"
+                        hx-confirm="Are you ABSOLUTELY SURE? Type 'DELETE' to confirm."
+                        class="outline"
+                        style="color: var(--pico-del-color); border-color: var(--pico-del-color);">
+                    Delete All Data
+                </button>
+            </div>
+        </details>
+    </article>
+
+    <!-- About -->
+    <article>
+        <header>
+            <h3>About</h3>
+        </header>
+
+        <dl>
+            <dt>Version</dt>
+            <dd>1.0.0</dd>
+
+            <dt>Database Size</dt>
+            <dd>{{ .DatabaseSize }}</dd>
+
+            <dt>Last Backup</dt>
+            <dd>{{ .LastBackup }}</dd>
+
+            <dt>Documentation</dt>
+            <dd><a href="https://github.com/yourusername/injection-tracker" target="_blank">View on GitHub</a></dd>
+        </dl>
+    </article>
+</article>
+{{ end }}

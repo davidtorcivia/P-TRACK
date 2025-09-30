@@ -1,0 +1,235 @@
+{{ define "content" }}
+<article>
+    <header>
+        <hgroup>
+            <h1>Injection History</h1>
+            <p>View and manage all injection records</p>
+        </hgroup>
+    </header>
+
+    <!-- Filters -->
+    <div x-data="{ showFilters: false }" style="margin-bottom: 1rem;">
+        <button @click="showFilters = !showFilters" class="outline">
+            <span x-text="showFilters ? '▼' : '▶'"></span> Filters
+        </button>
+
+        <form x-show="showFilters"
+              hx-get="/api/injections"
+              hx-target="#injections-table"
+              hx-swap="innerHTML"
+              style="margin-top: 1rem;">
+
+            <div class="grid">
+                <label for="filter-course">
+                    Course
+                    <select id="filter-course" name="course_id">
+                        <option value="">All Courses</option>
+                        {{ range .Courses }}
+                        <option value="{{ .ID }}" {{ if eq .ID $.FilterCourseID }}selected{{ end }}>
+                            {{ .Name }}
+                        </option>
+                        {{ end }}
+                    </select>
+                </label>
+
+                <label for="filter-side">
+                    Side
+                    <select id="filter-side" name="side">
+                        <option value="">Both Sides</option>
+                        <option value="left" {{ if eq $.FilterSide "left" }}selected{{ end }}>Left</option>
+                        <option value="right" {{ if eq $.FilterSide "right" }}selected{{ end }}>Right</option>
+                    </select>
+                </label>
+
+                <label for="filter-start-date">
+                    Start Date
+                    <input type="date" id="filter-start-date" name="start_date" value="{{ .FilterStartDate }}">
+                </label>
+
+                <label for="filter-end-date">
+                    End Date
+                    <input type="date" id="filter-end-date" name="end_date" value="{{ .FilterEndDate }}">
+                </label>
+            </div>
+
+            <button type="submit">Apply Filters</button>
+        </form>
+    </div>
+
+    <!-- Injections Table -->
+    <div id="injections-table" style="overflow-x: auto;">
+        {{ if .Injections }}
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Side</th>
+                    <th>Pain Level</th>
+                    <th>Reaction</th>
+                    <th>Knots</th>
+                    <th>Administered By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Injections }}
+                <tr>
+                    <td>
+                        <strong>{{ .FormattedDate }}</strong><br>
+                        <small>{{ .FormattedTime }}</small>
+                    </td>
+                    <td>
+                        <span style="font-size: 1.2rem;">
+                            {{ if eq .Side "left" }}⬅️ LEFT{{ else }}RIGHT ➡️{{ end }}
+                        </span>
+                    </td>
+                    <td>
+                        {{ if .PainLevel }}
+                        <span style="color: {{ if gt .PainLevel 7 }}var(--pico-del-color){{ else if gt .PainLevel 4 }}var(--pico-warning){{ else }}var(--pico-success){{ end }};">
+                            {{ .PainLevel }}/10
+                        </span>
+                        {{ else }}
+                        <small>Not recorded</small>
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if .SiteReaction }}
+                        {{ if eq .SiteReaction "none" }}
+                        ✓ None
+                        {{ else }}
+                        ⚠️ {{ .SiteReaction }}
+                        {{ end }}
+                        {{ else }}
+                        <small>-</small>
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if .HasKnots }}
+                        ⚠️ Yes
+                        {{ else }}
+                        -
+                        {{ end }}
+                    </td>
+                    <td>
+                        <small>{{ .AdministeredByName }}</small>
+                    </td>
+                    <td>
+                        <details class="dropdown">
+                            <summary role="button" class="outline">⋮</summary>
+                            <ul>
+                                <li><a href="/injections/{{ .ID }}">View Details</a></li>
+                                <li><a href="/injections/{{ .ID }}/edit">Edit</a></li>
+                                <li>
+                                    <a href="#"
+                                       hx-delete="/api/injections/{{ .ID }}"
+                                       hx-confirm="Are you sure you want to delete this injection?"
+                                       hx-target="closest tr"
+                                       hx-swap="outerHTML swap:1s"
+                                       style="color: var(--pico-del-color);">
+                                        Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </details>
+                    </td>
+                </tr>
+                {{ if .Notes }}
+                <tr>
+                    <td colspan="7" style="background-color: var(--pico-background-color); padding: 0.5rem 1rem;">
+                        <small><strong>Notes:</strong> {{ .Notes }}</small>
+                    </td>
+                </tr>
+                {{ end }}
+                {{ end }}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {{ if .Pagination }}
+        <nav aria-label="pagination" style="text-align: center; margin-top: 1rem;">
+            <ul style="display: flex; justify-content: center; list-style: none; padding: 0;">
+                {{ if .Pagination.HasPrev }}
+                <li>
+                    <a href="#"
+                       hx-get="/api/injections?page={{ .Pagination.PrevPage }}"
+                       hx-target="#injections-table"
+                       hx-swap="innerHTML">
+                        ← Previous
+                    </a>
+                </li>
+                {{ end }}
+
+                <li style="padding: 0 1rem;">
+                    Page {{ .Pagination.CurrentPage }} of {{ .Pagination.TotalPages }}
+                </li>
+
+                {{ if .Pagination.HasNext }}
+                <li>
+                    <a href="#"
+                       hx-get="/api/injections?page={{ .Pagination.NextPage }}"
+                       hx-target="#injections-table"
+                       hx-swap="innerHTML">
+                        Next →
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+        </nav>
+        {{ end }}
+
+        {{ else }}
+        <article style="text-align: center;">
+            <p>No injections found.</p>
+            <p><a href="/" role="button">Log your first injection</a></p>
+        </article>
+        {{ end }}
+    </div>
+
+    <!-- Export Options -->
+    <footer style="margin-top: 2rem;">
+        <div class="grid">
+            <button onclick="window.location.href='/api/export/csv?type=injections'"
+                    class="outline">
+                📄 Export to CSV
+            </button>
+            <button onclick="window.location.href='/api/export/pdf?type=injections'"
+                    class="outline">
+                📑 Export to PDF
+            </button>
+        </div>
+    </footer>
+</article>
+
+<style>
+    /* Responsive table for mobile */
+    @media (max-width: 768px) {
+        table {
+            font-size: 0.875rem;
+        }
+
+        thead {
+            display: none;
+        }
+
+        tr {
+            display: block;
+            margin-bottom: 1rem;
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+        }
+
+        td {
+            display: block;
+            text-align: right;
+            padding: 0.5rem 1rem;
+            border: none;
+        }
+
+        td::before {
+            content: attr(data-label);
+            float: left;
+            font-weight: bold;
+        }
+    }
+</style>
+{{ end }}

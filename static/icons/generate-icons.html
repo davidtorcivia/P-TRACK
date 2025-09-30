@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Generator - Injection Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #6366f1;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 10px;
+            border-radius: 10px;
+        }
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .canvas-wrapper {
+            text-align: center;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        .instructions {
+            background: #f0f4ff;
+            border-left: 4px solid #6366f1;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💉 Injection Tracker Icon Generator</h1>
+        <p class="subtitle">Generate PWA icons directly in your browser</p>
+
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Click "Generate Icons" below</li>
+                <li>Right-click each icon and "Save Image As..."</li>
+                <li>Save as <code>icon-192.png</code> and <code>icon-512.png</code></li>
+                <li>Place files in <code>static/icons/</code> directory</li>
+            </ol>
+        </div>
+
+        <button onclick="generateIcons()">Generate Icons</button>
+        <button onclick="downloadAll()">Download All Icons</button>
+
+        <div id="success" class="success">
+            ✅ Icons generated successfully! Right-click each icon to save.
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <canvas id="icon192" width="192" height="192"></canvas>
+                <p>192x192 (App Icon)</p>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="icon512" width="512" height="512"></canvas>
+                <p>512x512 (Splash Screen)</p>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <strong>Note:</strong> These are programmatically generated placeholder icons.
+            For a professional look, consider using a design tool or the SVG template
+            in <code>ICON_GENERATION_INSTRUCTIONS.md</code>.
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const scale = size / 512;
+
+            // Background
+            ctx.fillStyle = '#6366f1';
+            const cornerRadius = 115 * scale;
+            ctx.beginPath();
+            ctx.moveTo(cornerRadius, 0);
+            ctx.lineTo(size - cornerRadius, 0);
+            ctx.quadraticCurveTo(size, 0, size, cornerRadius);
+            ctx.lineTo(size, size - cornerRadius);
+            ctx.quadraticCurveTo(size, size, size - cornerRadius, size);
+            ctx.lineTo(cornerRadius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - cornerRadius);
+            ctx.lineTo(0, cornerRadius);
+            ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // Syringe Icon
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const syringeScale = scale * 3;
+
+            // Plunger
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(
+                centerX - 25 * syringeScale,
+                centerY - 80 * syringeScale,
+                15 * syringeScale,
+                50 * syringeScale
+            );
+
+            // Barrel
+            ctx.fillStyle = '#e0e7ff';
+            ctx.fillRect(
+                centerX - 30 * syringeScale,
+                centerY - 30 * syringeScale,
+                30 * syringeScale,
+                60 * syringeScale
+            );
+
+            // Barrel outline
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2 * scale;
+            ctx.strokeRect(
+                centerX - 30 * syringeScale,
+                centerY - 30 * syringeScale,
+                30 * syringeScale,
+                60 * syringeScale
+            );
+
+            // Needle base
+            ctx.fillStyle = '#d1d5db';
+            ctx.fillRect(
+                centerX - 20 * syringeScale,
+                centerY + 30 * syringeScale,
+                10 * syringeScale,
+                8 * syringeScale
+            );
+
+            // Needle
+            ctx.fillStyle = '#9ca3af';
+            ctx.beginPath();
+            ctx.moveTo(centerX - 18 * syringeScale, centerY + 38 * syringeScale);
+            ctx.lineTo(centerX - 15 * syringeScale, centerY + 60 * syringeScale);
+            ctx.lineTo(centerX - 12 * syringeScale, centerY + 38 * syringeScale);
+            ctx.closePath();
+            ctx.fill();
+
+            // Medical Cross Accent
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+
+            // Vertical bar
+            ctx.fillRect(
+                centerX + 40 * syringeScale,
+                centerY - 60 * syringeScale,
+                10 * syringeScale,
+                40 * syringeScale
+            );
+
+            // Horizontal bar
+            ctx.fillRect(
+                centerX + 30 * syringeScale,
+                centerY - 48 * syringeScale,
+                30 * syringeScale,
+                10 * syringeScale
+            );
+
+            // Measurement marks on barrel
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 1 * scale;
+            for (let i = 0; i < 3; i++) {
+                const y = centerY - 20 * syringeScale + (i * 15 * syringeScale);
+                ctx.beginPath();
+                ctx.moveTo(centerX - 30 * syringeScale, y);
+                ctx.lineTo(centerX - 25 * syringeScale, y);
+                ctx.stroke();
+            }
+        }
+
+        function generateIcons() {
+            const canvas192 = document.getElementById('icon192');
+            const canvas512 = document.getElementById('icon512');
+
+            drawIcon(canvas192, 192);
+            drawIcon(canvas512, 512);
+
+            document.getElementById('success').style.display = 'block';
+        }
+
+        function downloadCanvas(canvas, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadAll() {
+            const canvas192 = document.getElementById('icon192');
+            const canvas512 = document.getElementById('icon512');
+
+            if (!canvas192.getContext('2d').getImageData(0, 0, 1, 1).data[3]) {
+                alert('Please generate icons first!');
+                return;
+            }
+
+            downloadCanvas(canvas192, 'icon-192.png');
+            setTimeout(() => downloadCanvas(canvas512, 'icon-512.png'), 500);
+        }
+
+        // Auto-generate on page load
+        window.addEventListener('load', generateIcons);
+    </script>
+</body>
+</html>

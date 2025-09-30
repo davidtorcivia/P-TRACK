@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: injection-tracker
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    environment:
+      - PORT=8080
+      - ENVIRONMENT=production
+      - JWT_SECRET=${JWT_SECRET}
+      - CSRF_SECRET=${CSRF_SECRET}
+      - DATABASE_PATH=/app/data/tracker.db
+      - SESSION_DURATION=${SESSION_DURATION:-336h}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-1m}
+      - LOGIN_RATE_LIMIT=${LOGIN_RATE_LIMIT:-5}
+      - LOGIN_RATE_WINDOW=${LOGIN_RATE_WINDOW:-15m}
+      - SMTP_ENABLED=${SMTP_ENABLED:-false}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM}
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      - CSP_ENABLED=${CSP_ENABLED:-true}
+      - HSTS_ENABLED=${HSTS_ENABLED:-true}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+  # Nginx is optional for development - comment out if not needed
+  # For development without SSL, the app service on port 8080 is sufficient
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: injection-tracker-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - app
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   cap_drop:
+  #     - ALL
+  #   cap_add:
+  #     - NET_BIND_SERVICE
+  #     - CHOWN
+  #     - SETUID
+  #     - SETGID
+  #   profiles:
+  #     - production
+
+volumes:
+  data:
+  backups:

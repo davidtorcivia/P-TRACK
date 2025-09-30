@@ -1,0 +1,221 @@
+{{ define "content" }}
+<div x-data="{ showNewCourseModal: {{ if eq .Action "new" }}true{{ else }}false{{ end }} }">
+<article>
+    <header>
+        <hgroup>
+            <h1>Treatment Courses</h1>
+            <p>Manage your treatment cycles and periods</p>
+        </hgroup>
+        <button @click="showNewCourseModal = true">
+            + New Course
+        </button>
+    </header>
+
+    <!-- Active Course -->
+    {{ if .ActiveCourse }}
+    <article style="border-left: 4px solid var(--pico-primary);">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <hgroup>
+                    <h2>{{ .ActiveCourse.Name }}</h2>
+                    <p>
+                        Started: {{ .ActiveCourse.FormattedStartDate }} ({{ .ActiveCourse.DaysActive }} days)
+                    </p>
+                </hgroup>
+                <span style="padding: 0.5rem 1rem; background-color: var(--pico-primary); color: white; border-radius: var(--pico-border-radius);">
+                    ACTIVE
+                </span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div>
+                <strong>Total Injections:</strong> {{ .ActiveCourse.InjectionCount }}<br>
+                <strong>Expected End:</strong> {{ .ActiveCourse.FormattedExpectedEndDate }}<br>
+                {{ if .ActiveCourse.Notes }}
+                <strong>Notes:</strong> {{ .ActiveCourse.Notes }}
+                {{ end }}
+            </div>
+        </div>
+
+        <footer>
+            <button onclick="if(confirm('Are you sure you want to close this course?')) {
+                        fetch('/api/courses/{{ .ActiveCourse.ID }}/close', {
+                            method: 'POST',
+                            headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                        }).then(() => window.location.reload());
+                    }"
+                    class="secondary">
+                Close Course
+            </button>
+        </footer>
+    </article>
+    {{ else }}
+    <article style="text-align: center;">
+        <p>No active course. Create one to start tracking injections.</p>
+        <button @click="showNewCourseModal = true">
+            Create Your First Course
+        </button>
+    </article>
+    {{ end }}
+
+    <!-- Past Courses -->
+    {{ if .PastCourses }}
+    <article>
+        <header>
+            <h2>Past Courses</h2>
+        </header>
+
+        {{ range .PastCourses }}
+        <details>
+            <summary>
+                <strong>{{ .Name }}</strong>
+                <small>({{ .FormattedStartDate }} - {{ .FormattedEndDate }})</small>
+            </summary>
+
+            <div style="padding: 1rem;">
+                <div class="grid">
+                    <div>
+                        <strong>Duration:</strong> {{ .DurationDays }} days<br>
+                        <strong>Total Injections:</strong> {{ .InjectionCount }}<br>
+                        <strong>Average per week:</strong> {{ .AveragePerWeek }}<br>
+                        {{ if .Notes }}
+                        <strong>Notes:</strong> {{ .Notes }}
+                        {{ end }}
+                    </div>
+                </div>
+
+                <footer style="margin-top: 1rem;">
+                    <div class="grid">
+                        <button onclick="if(confirm('Are you sure you want to reactivate this course?')) {
+                                    fetch('/api/courses/{{ .ID }}/activate', {
+                                        method: 'POST',
+                                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                                    }).then(() => window.location.reload());
+                                }"
+                                class="outline secondary">
+                            Reactivate
+                        </button>
+                        <button onclick="if(confirm('Are you sure? This will delete all associated injections and symptoms!')) {
+                                    fetch('/api/courses/{{ .ID }}', {
+                                        method: 'DELETE',
+                                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                                    }).then(() => window.location.reload());
+                                }"
+                                class="outline"
+                                style="color: var(--pico-del-color);">
+                            Delete
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        </details>
+        {{ end }}
+    </article>
+    {{ end }}
+</article>
+
+<!-- New Course Modal -->
+<dialog :open="showNewCourseModal" @click="if($event.target === $el) showNewCourseModal = false">
+    <article style="max-width: 600px; margin: 2rem auto;">
+        <header>
+            <button @click="showNewCourseModal = false" aria-label="Close" rel="prev" style="float: right;"></button>
+            <h2>Create New Course</h2>
+        </header>
+
+        <form x-data="{
+                  name: '',
+                  startDate: new Date().toISOString().split('T')[0],
+                  expectedEndDate: '',
+                  notes: ''
+              }"
+              @submit.prevent="
+                const btn = $el.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.textContent = 'Creating...';
+                fetch('/api/courses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ $.CSRFToken }}'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        start_date: startDate,
+                        expected_end_date: expectedEndDate || null,
+                        notes: notes || null
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        showNewCourseModal = false;
+                        window.location.reload();
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = 'Create Course';
+                        response.text().then(text => {
+                            document.getElementById('course-feedback').innerHTML = '<div class=error-message>' + text + '</div>';
+                        });
+                    }
+                })
+                .catch(error => {
+                    btn.disabled = false;
+                    btn.textContent = 'Create Course';
+                    document.getElementById('course-feedback').innerHTML = '<div class=error-message>Error: ' + error.message + '</div>';
+                });
+              ">
+
+            <div id="course-feedback"></div>
+
+            <label for="course_name">
+                Course Name *
+                <input type="text"
+                       id="course_name"
+                       name="name"
+                       x-model="name"
+                       placeholder="e.g., IVF Cycle 1, Pregnancy Support"
+                       required
+                       autofocus>
+            </label>
+
+            <div class="grid">
+                <label for="start_date">
+                    Start Date *
+                    <input type="date"
+                           id="start_date"
+                           name="start_date"
+                           x-model="startDate"
+                           required>
+                </label>
+
+                <label for="expected_end_date">
+                    Expected End Date
+                    <input type="date"
+                           id="expected_end_date"
+                           name="expected_end_date"
+                           x-model="expectedEndDate">
+                </label>
+            </div>
+
+            <label for="notes">
+                Notes (optional)
+                <textarea id="notes"
+                          name="notes"
+                          x-model="notes"
+                          rows="3"
+                          placeholder="Any notes about this treatment course..."></textarea>
+            </label>
+
+            <footer>
+                <button type="button" @click="showNewCourseModal = false" class="secondary">
+                    Cancel
+                </button>
+                <button type="submit" :disabled="!name || !startDate">
+                    Create Course
+                </button>
+            </footer>
+        </form>
+    </article>
+</dialog>
+</div>
+{{ end }}

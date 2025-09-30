@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ .CSRFToken }}">
+    <meta name="description" content="Track progesterone injections, medications, and symptoms">
+
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}Injection Tracker</title>
+
+    <!-- Pico CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+
+    <!-- Chart.js (for data visualization) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+</head>
+<body>
+    <!-- Navigation -->
+    {{ if .IsAuthenticated }}
+    <nav class="container-fluid">
+        <ul>
+            <li>
+                <details class="dropdown">
+                    <summary>☰ Menu</summary>
+                    <ul>
+                        <li><a href="/dashboard">Dashboard</a></li>
+                        <li><a href="/courses">Courses</a></li>
+                        <li><a href="/injections">Injections</a></li>
+                        <li><a href="/symptoms">Symptoms</a></li>
+                        <li><a href="/medications">Medications</a></li>
+                        <li><a href="/inventory">Inventory</a></li>
+                        <li><a href="/calendar">Calendar</a></li>
+                        <li><a href="/reports">Reports</a></li>
+                    </ul>
+                </details>
+            </li>
+            <li><a href="/dashboard" style="text-decoration: none;"><strong style="font-size: 1.125rem;">Injection Tracker</strong></a></li>
+        </ul>
+        <ul>
+            <li>
+                <details class="dropdown">
+                    <summary>Account</summary>
+                    <ul>
+                        <li><a href="/settings">Settings</a></li>
+                        <li>
+                            <a href="#"
+                               hx-post="/api/auth/logout"
+                               hx-swap="none"
+                               hx-on::after-request="window.location.href='/login'">
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </details>
+            </li>
+        </ul>
+    </nav>
+    {{ end }}
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Flash Messages -->
+        {{ if .SuccessMessage }}
+        <article style="background-color: var(--pico-success-background);"
+                 x-data="{ show: true }"
+                 x-show="show"
+                 x-init="setTimeout(() => show = false, 5000)">
+            <p>✓ {{ .SuccessMessage }}</p>
+        </article>
+        {{ end }}
+
+        {{ if .ErrorMessage }}
+        <article style="background-color: var(--pico-danger-background);"
+                 x-data="{ show: true }"
+                 x-show="show"
+                 x-init="setTimeout(() => show = false, 5000)">
+            <p>✕ {{ .ErrorMessage }}</p>
+        </article>
+        {{ end }}
+
+        <!-- Page Content -->
+        {{ template "content" . }}
+    </main>
+
+    <!-- Footer -->
+    <footer class="container-fluid" style="text-align: center;">
+        <small>
+            Injection Tracker v1.0
+            {{ if .IsAuthenticated }}
+            | Last login: {{ .LastLogin }}
+            {{ end }}
+        </small>
+    </footer>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed', err));
+        }
+
+        // Add CSRF token to all HTMX requests
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                event.detail.headers['X-CSRF-Token'] = csrfToken;
+            }
+        });
+    </script>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

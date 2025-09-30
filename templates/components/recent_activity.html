@@ -1,0 +1,45 @@
+{{ define "recent_activity" }}
+{{ if .Activities }}
+<ul style="list-style: none; padding: 0;">
+    {{ range .Activities }}
+    <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--pico-muted-border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>
+                    {{ if eq .Type "injection" }}
+                    💉 Injection ({{ .Side }})
+                    {{ else if eq .Type "symptom" }}
+                    📝 Symptom Log
+                    {{ else if eq .Type "medication" }}
+                    💊 {{ .MedicationName }}
+                    {{ else if eq .Type "inventory" }}
+                    📦 Inventory Update
+                    {{ end }}
+                </strong>
+                <br>
+                <small>
+                    {{ .TimeAgo }} • {{ .UserName }}
+                    {{ if .Notes }}
+                    <br>{{ .Notes }}
+                    {{ end }}
+                </small>
+            </div>
+            <div>
+                {{ if eq .Type "injection" }}
+                {{ if .PainLevel }}
+                <span style="font-size: 1.5rem;" title="Pain Level: {{ .PainLevel }}/10">
+                    {{ if gt .PainLevel 7 }}😣{{ else if gt .PainLevel 4 }}😐{{ else }}😊{{ end }}
+                </span>
+                {{ end }}
+                {{ end }}
+            </div>
+        </div>
+    </li>
+    {{ end }}
+</ul>
+{{ else }}
+<p style="text-align: center; color: var(--pico-muted-color);">
+    No recent activity
+</p>
+{{ end }}
+{{ end }}

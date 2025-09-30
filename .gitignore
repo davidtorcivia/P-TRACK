@@ -1,0 +1,90 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+build/
+out/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage/
+coverage.html
+coverage.txt
+coverage.out
+*.coverprofile
+
+# Test cache
+.cache/
+testdata/tmp/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/
+backups/
+*.backup
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# SSL certificates
+ssl/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+nul
+
+# Node modules (if using any frontend build tools)
+node_modules/
+
+# Docker volumes
+.docker/
+
+# Air (Go live reload)
+.air.toml
+air_tmp/
+
+# Vendor directory
+vendor/

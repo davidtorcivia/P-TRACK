@@ -1,0 +1,104 @@
+{{ define "content" }}
+<article>
+    <hgroup>
+        <h1>📊 Reports & Analytics</h1>
+        <p>View and export your injection and symptom data</p>
+    </hgroup>
+</article>
+
+<div class="grid">
+    <!-- Date Range Selection -->
+    <article>
+        <h3>Select Date Range</h3>
+        <form x-data="{ startDate: '', endDate: '', courseId: '' }">
+            <label for="start-date">
+                Start Date
+                <input type="date" id="start-date" x-model="startDate" required>
+            </label>
+
+            <label for="end-date">
+                End Date
+                <input type="date" id="end-date" x-model="endDate" required>
+            </label>
+
+            <label for="course-filter">
+                Course (optional)
+                <select id="course-filter" x-model="courseId"
+                        hx-get="/api/courses"
+                        hx-trigger="load"
+                        hx-swap="innerHTML">
+                    <option value="">All Courses</option>
+                </select>
+            </label>
+
+            <div class="grid">
+                <button type="button"
+                        @click="window.location.href = `/api/export/pdf?start_date=${startDate}&end_date=${endDate}&course_id=${courseId}`"
+                        :disabled="!startDate || !endDate">
+                    📄 Export PDF
+                </button>
+                <button type="button"
+                        @click="window.location.href = `/api/export/csv?start_date=${startDate}&end_date=${endDate}&course_id=${courseId}`"
+                        :disabled="!startDate || !endDate">
+                    📊 Export CSV
+                </button>
+            </div>
+        </form>
+    </article>
+
+    <!-- Quick Stats -->
+    <article>
+        <h3>Quick Statistics</h3>
+        <div hx-get="/api/injections/stats"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p aria-busy="true">Loading stats...</p>
+        </div>
+    </article>
+</div>
+
+<!-- Charts Section -->
+<article>
+    <h3>📈 Data Visualization</h3>
+
+    <div class="grid">
+        <div>
+            <h4>Injection Frequency</h4>
+            <canvas id="injection-frequency-chart"></canvas>
+        </div>
+        <div>
+            <h4>Pain Levels Over Time</h4>
+            <canvas id="pain-trend-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div>
+            <h4>Side Distribution</h4>
+            <canvas id="side-distribution-chart"></canvas>
+        </div>
+        <div>
+            <h4>Symptom Frequency</h4>
+            <canvas id="symptom-frequency-chart"></canvas>
+        </div>
+    </div>
+</article>
+
+<!-- Recent Activity Table -->
+<article>
+    <h3>Recent Injections</h3>
+    <div hx-get="/api/injections/recent"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p aria-busy="true">Loading recent injections...</p>
+    </div>
+</article>
+
+<script>
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        // Placeholder charts - will be populated with real data via HTMX
+        // Charts will be initialized after data is loaded
+    });
+</script>
+{{ end }}

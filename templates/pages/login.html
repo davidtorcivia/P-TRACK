@@ -1,0 +1,78 @@
+{{ define "content" }}
+<div style="max-width: 500px; margin: 2rem auto;">
+    <article>
+        <hgroup>
+            <h1>Welcome Back</h1>
+            <p>Log in to your Injection Tracker account</p>
+        </hgroup>
+
+        <form hx-post="/api/auth/login"
+              hx-target="#login-error"
+              hx-swap="innerHTML"
+              hx-indicator="#login-spinner">
+
+            <div id="login-error"></div>
+
+            <label for="username">
+                Username
+                <input type="text"
+                       id="username"
+                       name="username"
+                       placeholder="Enter your username"
+                       required
+                       autofocus>
+            </label>
+
+            <label for="password">
+                Password
+                <input type="password"
+                       id="password"
+                       name="password"
+                       placeholder="Enter your password"
+                       required>
+            </label>
+
+            <label for="remember">
+                <input type="checkbox" id="remember" name="remember" role="switch">
+                Remember me for 2 weeks
+            </label>
+
+            <button type="submit" id="login-btn">
+                <span id="login-spinner" class="htmx-indicator">
+                    <span aria-busy="true">Logging in...</span>
+                </span>
+                <span class="htmx-indicator-none">
+                    Log In
+                </span>
+            </button>
+        </form>
+
+        <footer>
+            <small>
+                Don't have an account? <a href="/register">Register here</a><br>
+                <a href="/forgot-password">Forgot your password?</a>
+            </small>
+        </footer>
+    </article>
+
+    <!-- Security Notice -->
+    <article style="margin-top: 2rem;">
+        <small>
+            <strong>Note:</strong> This application stores sensitive medical information.
+            Please ensure you're using a secure device and connection.
+        </small>
+    </article>
+</div>
+
+<style>
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: inline;
+    }
+    .htmx-request .htmx-indicator-none {
+        display: none;
+    }
+</style>
+{{ end }}

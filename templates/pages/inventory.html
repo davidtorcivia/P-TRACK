@@ -1,0 +1,386 @@
+{{ define "content" }}
+<article>
+    <header>
+        <hgroup>
+            <h1>Inventory Management</h1>
+            <p>Track medical supplies and get low stock alerts</p>
+        </hgroup>
+    </header>
+
+    <!-- Quick Stats -->
+    <div class="grid" style="margin-bottom: 2rem;">
+        <article style="text-align: center;">
+            <header><strong>Items Tracked</strong></header>
+            <h2 style="margin: 0;">{{ .TotalItems }}</h2>
+        </article>
+        <article style="text-align: center; background-color: var(--pico-warning-background);">
+            <header><strong>Low Stock</strong></header>
+            <h2 style="margin: 0;">{{ .LowStockCount }}</h2>
+        </article>
+        <article style="text-align: center; background-color: var(--pico-danger-background);">
+            <header><strong>Expiring Soon</strong></header>
+            <h2 style="margin: 0;">{{ .ExpiringSoonCount }}</h2>
+        </article>
+    </div>
+
+    <!-- Add New Item -->
+    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock' }">
+        <header>
+            <h3>➕ Add Inventory</h3>
+        </header>
+        <form @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
+            let changeAmount;
+            if (itemType === 'progesterone') {
+                changeAmount = parseFloat(vialSize) * parseFloat(amount);
+            } else {
+                changeAmount = parseInt(amount);
+            }
+
+            fetch('/api/inventory/' + itemType + '/adjust', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ .CSRFToken }}'
+                },
+                body: JSON.stringify({
+                    change_amount: changeAmount,
+                    reason: reason,
+                    notes: 'Added inventory'
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.text().then(text => {
+                        btn.disabled = false;
+                        btn.textContent = 'Add to Inventory';
+                        alert('Error: ' + text);
+                    });
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.textContent = 'Add to Inventory';
+                alert('Error: ' + error.message);
+            });
+        ">
+            <div class="grid">
+                <label>
+                    Item Type
+                    <select x-model="itemType" required>
+                        <option value="progesterone">💉 Progesterone (vials)</option>
+                        <option value="draw_needle">🔹 Draw Needles</option>
+                        <option value="injection_needle">🔸 Injection Needles</option>
+                        <option value="syringe">💊 Syringes</option>
+                        <option value="swab">🧼 Alcohol Swabs</option>
+                        <option value="gauze">🩹 Gauze Pads</option>
+                    </select>
+                </label>
+                <label x-show="itemType === 'progesterone'">
+                    Vial Size (mL)
+                    <input type="number" x-model="vialSize" step="0.1" min="0.1">
+                </label>
+                <label>
+                    <span x-text="itemType === 'progesterone' ? 'Number of Vials' : 'Quantity'"></span>
+                    <input type="number" x-model="amount" :step="itemType === 'progesterone' ? '1' : '1'" min="1" required>
+                </label>
+            </div>
+            <button type="submit">Add to Inventory</button>
+        </form>
+    </article>
+
+    <!-- Current Inventory -->
+    <article>
+        <header>
+            <h3>📦 Current Stock</h3>
+        </header>
+        <div id="inventory-items">
+        {{ range .InventoryItems }}
+        <article x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '' }">
+            <div class="grid">
+                <div>
+                    <h3 style="margin-bottom: 0.5rem;">
+                        {{ .Icon }} {{ .DisplayName }}
+                    </h3>
+                    <p style="margin: 0;">
+                        <strong style="font-size: 1.5rem;">{{ .Quantity }} {{ .Unit }}</strong>
+                        {{ if .LowStock }}
+                        <span style="color: var(--pico-warning);">⚠️ Low Stock</span>
+                        {{ end }}
+                    </p>
+                    {{ if .ExpirationDate }}
+                    <small>
+                        Expires: {{ .FormattedExpiration }}
+                        {{ if .ExpiringSoon }}
+                        <span style="color: var(--pico-del-color);">⚠️ Expiring soon!</span>
+                        {{ end }}
+                    </small>
+                    {{ end }}
+                    {{ if .LotNumber }}
+                    <small>Lot #: {{ .LotNumber }}</small>
+                    {{ end }}
+                </div>
+                <div style="text-align: right;">
+                    <button @click="showAdjust = !showAdjust" class="outline">
+                        <span x-text="showAdjust ? 'Cancel' : 'Adjust'"></span>
+                    </button>
+                    <button onclick="window.location.href='/inventory/{{ .ItemType }}/history'"
+                            class="outline secondary">
+                        History
+                    </button>
+                </div>
+            </div>
+
+            <!-- Adjustment Form -->
+            <div x-show="showAdjust" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
+                <form hx-post="/api/inventory/{{ .ItemType }}/adjust"
+                      hx-headers='{"X-CSRF-Token": "{{ $.CSRFToken }}"}'
+                      hx-target="closest article"
+                      hx-swap="outerHTML"
+                      @htmx:after-request="showAdjust = false">
+
+                    <div class="grid">
+                        <label for="adjust-amount-{{ .ItemType }}">
+                            Amount
+                            <input type="number"
+                                   id="adjust-amount-{{ .ItemType }}"
+                                   name="amount"
+                                   step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
+                                   x-model="adjustAmount"
+                                   placeholder="Use - for decrease"
+                                   required>
+                            <small>Positive to add, negative to remove</small>
+                        </label>
+
+                        <label for="adjust-reason-{{ .ItemType }}">
+                            Reason
+                            <select id="adjust-reason-{{ .ItemType }}"
+                                    name="reason"
+                                    x-model="adjustReason"
+                                    required>
+                                <option value="">Select reason...</option>
+                                <option value="restock">Restock</option>
+                                <option value="manual_correction">Manual Correction</option>
+                                <option value="expired">Expired/Discarded</option>
+                                <option value="damaged">Damaged</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label for="adjust-notes-{{ .ItemType }}">
+                        Notes (optional)
+                        <textarea id="adjust-notes-{{ .ItemType }}"
+                                  name="notes"
+                                  x-model="adjustNotes"
+                                  rows="2"
+                                  placeholder="Additional details..."></textarea>
+                    </label>
+
+                    <!-- Optional fields for restock -->
+                    <div x-show="adjustReason === 'restock'">
+                        <div class="grid">
+                            <label for="lot-number-{{ .ItemType }}">
+                                Lot Number (optional)
+                                <input type="text"
+                                       id="lot-number-{{ .ItemType }}"
+                                       name="lot_number"
+                                       placeholder="Lot/batch number">
+                            </label>
+
+                            <label for="expiration-date-{{ .ItemType }}">
+                                Expiration Date (optional)
+                                <input type="date"
+                                       id="expiration-date-{{ .ItemType }}"
+                                       name="expiration_date">
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" :disabled="!adjustAmount || !adjustReason">
+                        Update Inventory
+                    </button>
+                </form>
+            </div>
+
+            <!-- Progress Bar for Low Stock -->
+            {{ if .LowStockThreshold }}
+            <div style="margin-top: 1rem;">
+                <progress value="{{ .Quantity }}"
+                          max="{{ .LowStockThreshold }}"
+                          style="width: 100%;"></progress>
+                <small>Threshold: {{ .LowStockThreshold }} {{ .Unit }}</small>
+            </div>
+            {{ end }}
+        </article>
+        {{ end }}
+        </div>
+    </article>
+
+    <!-- Auto-Deduction Settings -->
+    <article>
+        <header>
+            <h3>Auto-Deduction Settings</h3>
+            <p>Configure how much inventory is deducted per injection</p>
+        </header>
+
+        <form @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const progPerInj = parseFloat(document.getElementById('progesterone-per-injection').value);
+            const autoDeduct = document.getElementById('auto-deduct').checked;
+
+            fetch('/api/inventory/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ .CSRFToken }}'
+                },
+                body: JSON.stringify({
+                    progesterone_per_injection: progPerInj,
+                    auto_deduct: autoDeduct
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('settings-feedback').innerHTML = '<div style=color:green;>Settings saved successfully!</div>';
+                    setTimeout(() => {
+                        document.getElementById('settings-feedback').innerHTML = '';
+                    }, 3000);
+                } else {
+                    return response.text().then(text => {
+                        document.getElementById('settings-feedback').innerHTML = '<div style=color:red;>Error: ' + text + '</div>';
+                    });
+                }
+                btn.disabled = false;
+                btn.textContent = 'Save Settings';
+            })
+            .catch(error => {
+                document.getElementById('settings-feedback').innerHTML = '<div style=color:red;>Error: ' + error.message + '</div>';
+                btn.disabled = false;
+                btn.textContent = 'Save Settings';
+            });
+        ">
+
+            <div id="settings-feedback"></div>
+
+            <div class="grid">
+                <label for="progesterone-per-injection">
+                    Progesterone per injection (mL)
+                    <input type="number"
+                           id="progesterone-per-injection"
+                           name="progesterone_per_injection"
+                           step="0.1"
+                           value="{{ .Settings.ProgesteronePerInjection }}"
+                           required>
+                </label>
+
+                <label for="auto-deduct">
+                    <input type="checkbox"
+                           id="auto-deduct"
+                           name="auto_deduct"
+                           role="switch"
+                           {{ if .Settings.AutoDeduct }}checked{{ end }}>
+                    Enable auto-deduction
+                </label>
+            </div>
+
+            <details>
+                <summary>Advanced Settings</summary>
+
+                <fieldset>
+                    <legend>Items deducted per injection</legend>
+
+                    <label>
+                        <input type="checkbox" name="deduct_draw_needle" checked disabled>
+                        1× Draw Needle
+                    </label>
+
+                    <label>
+                        <input type="checkbox" name="deduct_injection_needle" checked disabled>
+                        1× Injection Needle
+                    </label>
+
+                    <label>
+                        <input type="checkbox" name="deduct_syringe" checked disabled>
+                        1× Syringe
+                    </label>
+
+                    <label>
+                        <input type="checkbox" name="deduct_swab" checked disabled>
+                        1× Alcohol Swab
+                    </label>
+
+                    <label>
+                        <input type="checkbox" name="deduct_gauze" checked disabled>
+                        1× Gauze Pad
+                    </label>
+
+                    <small>Note: These items are always deducted per injection</small>
+                </fieldset>
+            </details>
+
+            <button type="submit">Save Settings</button>
+        </form>
+    </article>
+
+    <!-- Inventory History Summary -->
+    <article>
+        <header>
+            <h3>Recent Changes</h3>
+        </header>
+
+        <div id="recent-inventory-changes"
+             hx-get="/api/inventory/history/recent"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p aria-busy="true">Loading recent changes...</p>
+        </div>
+
+        <footer>
+            <a href="/inventory/history">View full history →</a>
+        </footer>
+    </article>
+</article>
+
+<style>
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    /* Progress bar colors */
+    progress[value]::-webkit-progress-value {
+        transition: width 0.3s ease;
+    }
+
+    progress[value] {
+        appearance: none;
+        height: 20px;
+    }
+
+    progress[value]::-webkit-progress-bar {
+        background-color: var(--pico-muted-border-color);
+        border-radius: var(--pico-border-radius);
+    }
+
+    progress[value]::-webkit-progress-value {
+        background-color: var(--pico-primary);
+        border-radius: var(--pico-border-radius);
+    }
+
+    progress[value]::-moz-progress-bar {
+        background-color: var(--pico-primary);
+        border-radius: var(--pico-border-radius);
+    }
+</style>
+{{ end }}

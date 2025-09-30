@@ -1,0 +1,221 @@
+{{ define "content" }}
+<article>
+    <header>
+        <hgroup>
+            <h1>Symptom Tracking</h1>
+            <p>Log and monitor your symptoms</p>
+        </hgroup>
+        <button onclick="window.location.href='/symptoms/log'">
+            + Log Symptoms
+        </button>
+    </header>
+
+    <!-- Quick Log Form -->
+    {{ if .ActiveCourse }}
+    <article x-data="{
+        painLevel: 5,
+        painLocation: '',
+        painType: '',
+        selectedSymptoms: [],
+        notes: ''
+    }">
+        <header>
+            <h3>Quick Log</h3>
+        </header>
+
+        <form @submit.prevent="
+                const btn = $el.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+                fetch('/api/symptoms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ .CSRFToken }}'
+                    },
+                    body: JSON.stringify({
+                        course_id: {{ .ActiveCourse.ID }},
+                        pain_level: parseInt(painLevel),
+                        pain_location: painLocation || null,
+                        pain_type: painType || null,
+                        symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : null,
+                        notes: notes || null
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = 'Save Symptom Log';
+                        response.text().then(text => {
+                            document.getElementById('symptom-feedback').innerHTML = '<div style=color:red>' + text + '</div>';
+                        });
+                    }
+                })
+                .catch(error => {
+                    btn.disabled = false;
+                    btn.textContent = 'Save Symptom Log';
+                    document.getElementById('symptom-feedback').innerHTML = '<div style=color:red>Error: ' + error.message + '</div>';
+                });
+              ">
+
+            <div id="symptom-feedback"></div>
+
+            <label>
+                <strong>Pain Level:</strong> <span x-text="painLevel"></span>/10
+                <input type="range"
+                       min="1"
+                       max="10"
+                       x-model="painLevel"
+                       style="margin-top: 0.5rem;">
+            </label>
+
+            <div class="grid">
+                <label for="pain_location">
+                    Location
+                    <select id="pain_location" x-model="painLocation" required>
+                        <option value="">Select location...</option>
+                        <option value="injection_site">Injection Site</option>
+                        <option value="abdomen">Abdomen</option>
+                        <option value="back">Back</option>
+                        <option value="head">Head</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+
+                <label for="pain_type">
+                    Type
+                    <select id="pain_type" x-model="painType" required>
+                        <option value="">Select type...</option>
+                        <option value="sharp">Sharp</option>
+                        <option value="dull">Dull</option>
+                        <option value="aching">Aching</option>
+                        <option value="cramping">Cramping</option>
+                        <option value="throbbing">Throbbing</option>
+                    </select>
+                </label>
+            </div>
+
+            <fieldset>
+                <legend>Other Symptoms</legend>
+                <label>
+                    <input type="checkbox" value="nausea" x-model="selectedSymptoms">
+                    Nausea
+                </label>
+                <label>
+                    <input type="checkbox" value="fatigue" x-model="selectedSymptoms">
+                    Fatigue
+                </label>
+                <label>
+                    <input type="checkbox" value="headache" x-model="selectedSymptoms">
+                    Headache
+                </label>
+                <label>
+                    <input type="checkbox" value="mood_changes" x-model="selectedSymptoms">
+                    Mood Changes
+                </label>
+                <label>
+                    <input type="checkbox" value="dizziness" x-model="selectedSymptoms">
+                    Dizziness
+                </label>
+                <label>
+                    <input type="checkbox" value="other" x-model="selectedSymptoms">
+                    Other
+                </label>
+            </fieldset>
+
+            <label for="notes">
+                Notes (optional)
+                <textarea id="notes"
+                          x-model="notes"
+                          rows="3"
+                          placeholder="Describe your symptoms in detail..."></textarea>
+            </label>
+
+            <button type="submit" :disabled="!painLocation || !painType">
+                Save Symptom Log
+            </button>
+        </form>
+    </article>
+    {{ else }}
+    <article>
+        <p style="text-align: center; padding: 2rem;">
+            <strong>No active course</strong><br>
+            <small>Please <a href="/courses/new">create a course</a> before logging symptoms.</small>
+        </p>
+    </article>
+    {{ end }}
+
+    <!-- Symptom History -->
+    <article>
+        <header>
+            <h3>Recent Symptoms</h3>
+        </header>
+
+        <div id="symptom-history"
+             hx-get="/api/symptoms/recent"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p aria-busy="true">Loading symptom history...</p>
+        </div>
+
+        <footer>
+            <a href="/symptoms/history">View full history →</a>
+        </footer>
+    </article>
+
+    <!-- Symptom Trends -->
+    <article>
+        <header>
+            <h3>Pain Trends (Last 30 Days)</h3>
+        </header>
+
+        <div class="chart-container">
+            <canvas id="pain-chart"></canvas>
+        </div>
+
+        <script>
+            // Pain trend chart
+            document.addEventListener('DOMContentLoaded', async () => {
+                const response = await fetch('/api/symptoms/trends?days=30');
+                const data = await response.json();
+
+                const ctx = document.getElementById('pain-chart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [{
+                            label: 'Pain Level',
+                            data: data.painLevels,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    </article>
+</article>
+{{ end }}

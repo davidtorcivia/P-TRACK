@@ -1,0 +1,376 @@
+/* Custom CSS for Injection Tracker - Complete Redesign */
+
+/* ===== THEME COLORS ===== */
+:root {
+    /* Modern professional colors */
+    --pico-primary: #2563eb;
+    --pico-primary-hover: #1d4ed8;
+    --pico-primary-background: rgba(37, 99, 235, 0.1);
+
+    --pico-success: #16a34a;
+    --pico-success-background: rgba(22, 163, 74, 0.1);
+
+    --pico-warning: #ea580c;
+    --pico-warning-background: rgba(234, 88, 12, 0.1);
+
+    --pico-danger: #dc2626;
+    --pico-danger-background: rgba(220, 38, 38, 0.1);
+
+    /* Better typography */
+    --pico-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --pico-font-size: 15px;
+    --pico-line-height: 1.6;
+
+    /* Spacing scale */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+}
+
+/* Better dark theme - deep blue instead of purple */
+[data-theme="dark"] {
+    --pico-background-color: #0f172a;
+    --pico-card-background-color: #1e293b;
+    --pico-card-border-color: #334155;
+    --pico-muted-border-color: #475569;
+    --pico-color: #e2e8f0;
+    --pico-muted-color: #94a3b8;
+
+    --pico-primary: #3b82f6;
+    --pico-primary-hover: #2563eb;
+    --pico-primary-background: rgba(59, 130, 246, 0.15);
+}
+
+/* ===== LAYOUT & CONTAINERS ===== */
+.container,
+.container-fluid {
+    max-width: 1280px !important;
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+}
+
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1320px !important;
+    }
+}
+
+/* Tighter spacing on mobile */
+@media (max-width: 768px) {
+    .container,
+    .container-fluid {
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+    }
+}
+
+/* ===== TYPOGRAPHY ===== */
+body {
+    font-size: 15px;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 0;
+}
+
+h1 { font-size: 1.875rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.125rem; }
+h5, h6 { font-size: 1rem; }
+
+small { font-size: 0.875rem; }
+
+/* ===== NAVIGATION & DROPDOWNS ===== */
+nav {
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+/* Fix dropdown styling completely */
+details.dropdown {
+    position: relative;
+}
+
+details.dropdown summary {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: transparent;
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    margin: 0;
+}
+
+details.dropdown summary:hover {
+    background: var(--pico-primary-background);
+    border-color: var(--pico-primary);
+}
+
+details.dropdown[open] summary {
+    background: var(--pico-primary-background);
+    border-color: var(--pico-primary);
+}
+
+/* Dropdown menu */
+details.dropdown ul,
+details[role="list"] summary + ul {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: auto;
+    margin-top: 0.25rem;
+    padding: var(--spacing-xs);
+    background: var(--pico-card-background-color);
+    border: 1px solid var(--pico-card-border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    min-width: 200px;
+    max-width: 300px;
+    z-index: 1000;
+    list-style: none;
+}
+
+details.dropdown ul li,
+details[role="list"] summary + ul li {
+    margin: 0;
+    padding: 0;
+}
+
+details.dropdown ul li a,
+details[role="list"] summary + ul li a {
+    display: block;
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--pico-color);
+    text-decoration: none;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    transition: background-color 0.15s ease;
+}
+
+details.dropdown ul li a:hover,
+details[role="list"] summary + ul li a:hover {
+    background: var(--pico-primary-background);
+    color: var(--pico-primary);
+}
+
+/* Right-aligned dropdown */
+nav ul li:last-child details.dropdown ul {
+    left: auto;
+    right: 0;
+}
+
+/* ===== BUTTONS ===== */
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+a[role="button"] {
+    font-size: 0.9375rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    min-height: auto;
+}
+
+button:hover,
+[role="button"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== FORMS ===== */
+input,
+select,
+textarea {
+    font-size: 0.9375rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--pico-muted-border-color);
+    padding: 0.625rem 0.875rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--pico-primary);
+    box-shadow: 0 0 0 3px var(--pico-primary-background);
+}
+
+label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: var(--spacing-xs);
+}
+
+/* ===== CARDS & ARTICLES ===== */
+article {
+    border-radius: 0.5rem;
+    border: 1px solid var(--pico-card-border-color);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+article header {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+article footer {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--pico-muted-border-color);
+}
+
+/* ===== MODALS ===== */
+dialog {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 0.75rem;
+    border: 1px solid var(--pico-card-border-color);
+    padding: 0;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+dialog::backdrop {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+dialog article {
+    margin: 0;
+    border: none;
+}
+
+/* ===== GRID SYSTEM ===== */
+.grid {
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ===== NOTIFICATION BADGE ===== */
+.notification-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--pico-muted-border-color);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.notification-icon:hover {
+    background: var(--pico-primary-background);
+    border-color: var(--pico-primary);
+}
+
+.notification-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--pico-danger);
+    color: white;
+    border-radius: 999px;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 1.25rem;
+    text-align: center;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+.error-message {
+    background: var(--pico-danger-background);
+    border-left: 3px solid var(--pico-danger);
+    padding: var(--spacing-md);
+    border-radius: 0.375rem;
+    margin-bottom: var(--spacing-md);
+    font-size: 0.9375rem;
+}
+
+.success-message {
+    background: var(--pico-success-background);
+    border-left: 3px solid var(--pico-success);
+    padding: var(--spacing-md);
+    border-radius: 0.375rem;
+    margin-bottom: var(--spacing-md);
+    font-size: 0.9375rem;
+}
+
+.warning-message {
+    background: var(--pico-warning-background);
+    border-left: 3px solid var(--pico-warning);
+    padding: var(--spacing-md);
+    border-radius: 0.375rem;
+    margin-bottom: var(--spacing-md);
+    font-size: 0.9375rem;
+}
+
+/* ===== LOADING STATES ===== */
+[aria-busy="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* ===== RESPONSIVE TWEAKS ===== */
+@media (max-width: 768px) {
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    h3 { font-size: 1.125rem; }
+
+    article {
+        padding: var(--spacing-md);
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+[x-cloak] {
+    display: none !important;
+}
+
+:focus-visible {
+    outline: 2px solid var(--pico-primary);
+    outline-offset: 2px;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
