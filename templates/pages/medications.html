@@ -185,6 +185,9 @@
                   dosage: '',
                   frequency: '',
                   startDate: new Date().toISOString().split('T')[0],
+                  scheduledTime: '',
+                  timeWindow: 60,
+                  reminderEnabled: false,
                   notes: ''
               }"
               @submit.prevent="
@@ -202,6 +205,9 @@
                         dosage: dosage,
                         frequency: frequency,
                         start_date: startDate,
+                        scheduled_time: scheduledTime || null,
+                        time_window_minutes: scheduledTime ? parseInt(timeWindow) : null,
+                        reminder_enabled: reminderEnabled,
                         notes: notes || null
                     })
                 })
@@ -263,6 +269,39 @@
                        x-model="startDate"
                        required>
             </label>
+
+            <details>
+                <summary>⏰ Schedule & Reminders (optional)</summary>
+                <div style="padding: 1rem 0;">
+                    <label for="scheduled_time">
+                        Scheduled Time (e.g., 08:00 for 8:00 AM)
+                        <input type="time"
+                               id="scheduled_time"
+                               x-model="scheduledTime"
+                               placeholder="HH:MM">
+                        <small>What time should this medication be taken?</small>
+                    </label>
+
+                    <label for="time_window" x-show="scheduledTime">
+                        Time Window (minutes)
+                        <input type="number"
+                               id="time_window"
+                               x-model="timeWindow"
+                               min="15"
+                               max="240"
+                               step="15">
+                        <small>How many minutes before/after is acceptable?</small>
+                    </label>
+
+                    <label for="reminder_enabled">
+                        <input type="checkbox"
+                               id="reminder_enabled"
+                               x-model="reminderEnabled"
+                               role="switch">
+                        Enable reminders for this medication
+                    </label>
+                </div>
+            </details>
 
             <label for="med_notes">
                 Notes (optional)

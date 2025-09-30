@@ -101,16 +101,19 @@ type SymptomLog struct {
 
 // Medication represents a medication
 type Medication struct {
-	ID        int64
-	Name      string
-	Dosage    sql.NullString
-	Frequency sql.NullString
-	StartDate sql.NullTime
-	EndDate   sql.NullTime
-	IsActive  bool
-	Notes     sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                 int64
+	Name               string
+	Dosage             sql.NullString
+	Frequency          sql.NullString
+	StartDate          sql.NullTime
+	EndDate            sql.NullTime
+	IsActive           bool
+	Notes              sql.NullString
+	ScheduledTime      sql.NullString // HH:MM format (e.g., "08:00")
+	TimeWindowMinutes  sql.NullInt64  // Minutes before/after scheduled time
+	ReminderEnabled    bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 
 	// Computed fields (set by repository)
 	TakenToday bool

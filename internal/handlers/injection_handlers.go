@@ -178,24 +178,27 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// Item doesn't exist - initialize with negative quantity to track usage
+					// Item doesn't exist - initialize with 0 quantity
 					_, err = tx.Exec(`
 						INSERT INTO inventory_items (item_type, quantity, unit, created_at, updated_at)
 						VALUES (?, ?, ?, ?, ?)
-					`, item.itemType, -item.amount, item.unit, time.Now(), time.Now())
+					`, item.itemType, 0.0, item.unit, time.Now(), time.Now())
 					if err != nil {
 						http.Error(w, fmt.Sprintf("Failed to initialize inventory for %s: %v", item.itemType, err), http.StatusInternalServerError)
 						return
 					}
-					currentQty = 0
+					currentQty = 0.0
 				} else {
 					http.Error(w, fmt.Sprintf("Failed to check inventory for %s: %v", item.itemType, err), http.StatusInternalServerError)
 					return
 				}
 			}
 
-			// Calculate new quantity
+			// Calculate new quantity (don't go below 0)
 			newQty := currentQty - item.amount
+			if newQty < 0 {
+				newQty = 0
+			}
 
 			// Update inventory
 			_, err = tx.Exec(`

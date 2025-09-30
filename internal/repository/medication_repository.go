@@ -20,8 +20,8 @@ func NewMedicationRepository(db *database.DB) *MedicationRepository {
 // Create creates a new medication
 func (r *MedicationRepository) Create(medication *models.Medication) error {
 	query := `
-		INSERT INTO medications (name, dosage, frequency, start_date, end_date, is_active, notes, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO medications (name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	result, err := r.db.Exec(query,
 		medication.Name,
@@ -31,6 +31,9 @@ func (r *MedicationRepository) Create(medication *models.Medication) error {
 		medication.EndDate,
 		medication.IsActive,
 		medication.Notes,
+		medication.ScheduledTime,
+		medication.TimeWindowMinutes,
+		medication.ReminderEnabled,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create medication: %w", err)
@@ -48,7 +51,7 @@ func (r *MedicationRepository) Create(medication *models.Medication) error {
 // GetByID retrieves a medication by ID
 func (r *MedicationRepository) GetByID(id int64) (*models.Medication, error) {
 	query := `
-		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, created_at, updated_at
+		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at
 		FROM medications
 		WHERE id = ?
 	`
@@ -62,6 +65,9 @@ func (r *MedicationRepository) GetByID(id int64) (*models.Medication, error) {
 		&medication.EndDate,
 		&medication.IsActive,
 		&medication.Notes,
+		&medication.ScheduledTime,
+		&medication.TimeWindowMinutes,
+		&medication.ReminderEnabled,
 		&medication.CreatedAt,
 		&medication.UpdatedAt,
 	)
@@ -121,7 +127,7 @@ func (r *MedicationRepository) HardDelete(id int64) error {
 // List retrieves all medications
 func (r *MedicationRepository) List() ([]*models.Medication, error) {
 	query := `
-		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, created_at, updated_at
+		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at
 		FROM medications
 		ORDER BY name
 	`
@@ -137,7 +143,7 @@ func (r *MedicationRepository) List() ([]*models.Medication, error) {
 // ListActive retrieves all active medications
 func (r *MedicationRepository) ListActive() ([]*models.Medication, error) {
 	query := `
-		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, created_at, updated_at
+		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at
 		FROM medications
 		WHERE is_active = 1
 		ORDER BY name
@@ -333,6 +339,9 @@ func (r *MedicationRepository) scanMedications(rows *sql.Rows) ([]*models.Medica
 			&medication.EndDate,
 			&medication.IsActive,
 			&medication.Notes,
+			&medication.ScheduledTime,
+			&medication.TimeWindowMinutes,
+			&medication.ReminderEnabled,
 			&medication.CreatedAt,
 			&medication.UpdatedAt,
 		)

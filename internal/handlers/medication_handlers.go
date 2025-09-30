@@ -18,24 +18,30 @@ import (
 
 // CreateMedicationRequest represents the request body for creating a medication
 type CreateMedicationRequest struct {
-	Name      string  `json:"name"`
-	Dosage    *string `json:"dosage,omitempty"`
-	Frequency *string `json:"frequency,omitempty"`
-	StartDate *string `json:"start_date,omitempty"`
-	EndDate   *string `json:"end_date,omitempty"`
-	Notes     *string `json:"notes,omitempty"`
-	IsActive  *bool   `json:"is_active,omitempty"`
+	Name              string  `json:"name"`
+	Dosage            *string `json:"dosage,omitempty"`
+	Frequency         *string `json:"frequency,omitempty"`
+	StartDate         *string `json:"start_date,omitempty"`
+	EndDate           *string `json:"end_date,omitempty"`
+	Notes             *string `json:"notes,omitempty"`
+	ScheduledTime     *string `json:"scheduled_time,omitempty"`     // HH:MM format
+	TimeWindowMinutes *int64  `json:"time_window_minutes,omitempty"` // Optional time window
+	ReminderEnabled   *bool   `json:"reminder_enabled,omitempty"`
+	IsActive          *bool   `json:"is_active,omitempty"`
 }
 
 // UpdateMedicationRequest represents the request body for updating a medication
 type UpdateMedicationRequest struct {
-	Name      *string `json:"name,omitempty"`
-	Dosage    *string `json:"dosage,omitempty"`
-	Frequency *string `json:"frequency,omitempty"`
-	StartDate *string `json:"start_date,omitempty"`
-	EndDate   *string `json:"end_date,omitempty"`
-	Notes     *string `json:"notes,omitempty"`
-	IsActive  *bool   `json:"is_active,omitempty"`
+	Name              *string `json:"name,omitempty"`
+	Dosage            *string `json:"dosage,omitempty"`
+	Frequency         *string `json:"frequency,omitempty"`
+	StartDate         *string `json:"start_date,omitempty"`
+	EndDate           *string `json:"end_date,omitempty"`
+	Notes             *string `json:"notes,omitempty"`
+	ScheduledTime     *string `json:"scheduled_time,omitempty"`
+	TimeWindowMinutes *int64  `json:"time_window_minutes,omitempty"`
+	ReminderEnabled   *bool   `json:"reminder_enabled,omitempty"`
+	IsActive          *bool   `json:"is_active,omitempty"`
 }
 
 // LogMedicationRequest represents the request body for logging medication taken/missed
@@ -125,15 +131,24 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 			isActive = *req.IsActive
 		}
 
+		// Set reminder_enabled default to false if not specified
+		reminderEnabled := false
+		if req.ReminderEnabled != nil {
+			reminderEnabled = *req.ReminderEnabled
+		}
+
 		// Create medication
 		medication := &models.Medication{
-			Name:      req.Name,
-			Dosage:    nullString(req.Dosage),
-			Frequency: nullString(req.Frequency),
-			StartDate: startDate,
-			EndDate:   endDate,
-			IsActive:  isActive,
-			Notes:     nullString(req.Notes),
+			Name:              req.Name,
+			Dosage:            nullString(req.Dosage),
+			Frequency:         nullString(req.Frequency),
+			StartDate:         startDate,
+			EndDate:           endDate,
+			IsActive:          isActive,
+			Notes:             nullString(req.Notes),
+			ScheduledTime:     nullString(req.ScheduledTime),
+			TimeWindowMinutes: nullInt64(req.TimeWindowMinutes),
+			ReminderEnabled:   reminderEnabled,
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)
@@ -613,6 +628,16 @@ func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 				statusColor = "var(--pico-success)"
 			}
 
+			// Extract string values from NullString
+			dosage := "N/A"
+			if med.Dosage.Valid {
+				dosage = med.Dosage.String
+			}
+			frequency := "N/A"
+			if med.Frequency.Valid {
+				frequency = med.Frequency.String
+			}
+
 			html += fmt.Sprintf(`
 				<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);">
 					<div>
@@ -623,7 +648,7 @@ func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 						%s
 					</div>
 				</div>
-			`, med.Name, med.Dosage, med.Frequency, statusColor, status)
+			`, med.Name, dosage, frequency, statusColor, status)
 		}
 		html += `</div>`
 
