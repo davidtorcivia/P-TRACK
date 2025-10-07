@@ -218,4 +218,453 @@
         </script>
     </article>
 </article>
+
+<!-- Symptom Edit Modal (hidden by default) -->
+<div id="symptom-edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="max-width: 600px; width: 100%; margin: 0; background: var(--pico-background-color); border-radius: 8px; padding: 2rem; position: relative;">
+        <header style="margin-bottom: 1.5rem;">
+            <button type="button" onclick="closeEditModal()"
+                    aria-label="Close"
+                    style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">
+                ✕
+            </button>
+            <h2 style="margin: 0; color: var(--pico-color);">Edit Symptom Log</h2>
+        </header>
+
+        <form onsubmit="submitEditForm(event)">
+            <label>
+                <strong>Pain Level:</strong> <span id="pain-level-display">5</span>/10
+                <input type="range"
+                       id="edit-pain-level"
+                       min="1"
+                       max="10"
+                       value="5"
+                       oninput="document.getElementById('pain-level-display').textContent = this.value"
+                       style="margin-top: 0.5rem;">
+            </label>
+
+            <div class="grid">
+                <label for="edit_pain_location">
+                    Location
+                    <select id="edit_pain_location" required>
+                        <option value="">Select location...</option>
+                        <option value="injection_site">Injection Site</option>
+                        <option value="abdomen">Abdomen</option>
+                        <option value="back">Back</option>
+                        <option value="head">Head</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+
+                <label for="edit_pain_type">
+                    Type
+                    <select id="edit_pain_type" required>
+                        <option value="">Select type...</option>
+                        <option value="sharp">Sharp</option>
+                        <option value="dull">Dull</option>
+                        <option value="aching">Aching</option>
+                        <option value="cramping">Cramping</option>
+                        <option value="throbbing">Throbbing</option>
+                    </select>
+                </label>
+            </div>
+
+            <fieldset>
+                <legend>Other Symptoms</legend>
+                <label>
+                    <input type="checkbox" value="nausea" name="symptoms">
+                    Nausea
+                </label>
+                <label>
+                    <input type="checkbox" value="fatigue" name="symptoms">
+                    Fatigue
+                </label>
+                <label>
+                    <input type="checkbox" value="headache" name="symptoms">
+                    Headache
+                </label>
+                <label>
+                    <input type="checkbox" value="mood_changes" name="symptoms">
+                    Mood Changes
+                </label>
+                <label>
+                    <input type="checkbox" value="dizziness" name="symptoms">
+                    Dizziness
+                </label>
+                <label>
+                    <input type="checkbox" value="other" name="symptoms">
+                    Other
+                </label>
+            </fieldset>
+
+            <label for="edit_notes">
+                Notes (optional)
+                <textarea id="edit_notes"
+                          rows="3"
+                          placeholder="Describe your symptoms in detail..."></textarea>
+            </label>
+
+            <div class="grid">
+                <button type="button" onclick="closeEditModal()" class="secondary">
+                    Cancel
+                </button>
+                <button type="submit">
+                    Update Symptom Log
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal (hidden by default) -->
+<div id="delete-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="max-width: 400px; width: 100%; margin: 0; background: var(--pico-background-color); border-radius: 8px; padding: 2rem;">
+        <header style="margin-bottom: 1.5rem;">
+            <h3 style="margin: 0; color: var(--pico-color);">Confirm Delete</h3>
+        </header>
+
+        <p style="margin-bottom: 1.5rem;">Are you sure you want to delete this <strong id="delete-symptom-type">symptom log</strong>? This action cannot be undone.</p>
+
+        <div class="grid">
+            <button type="button" onclick="closeDeleteModal()" class="secondary">
+                Cancel
+            </button>
+            <button type="button" onclick="confirmDelete()" class="contrast">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-overlay {
+        animation: fadeIn 0.2s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .modal-overlay {
+            align-items: flex-start;
+            padding: 0.5rem;
+        }
+    }
+</style>
+
+<script>
+// Simple modal management with plain JavaScript
+let currentEditSymptom = null;
+let currentDeleteSymptom = null;
+
+// Function to open edit modal
+function editSymptom(symptomId) {
+    console.log('editSymptom called with ID:', symptomId);
+
+    // Fetch symptom data
+    fetch('/api/symptoms/' + symptomId)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch symptom data');
+            }
+            return response.json();
+        })
+        .then(symptom => {
+            console.log('Symptom data loaded:', symptom);
+
+            // Parse symptoms array if it exists
+            let symptomsArray = [];
+            if (symptom.symptoms) {
+                try {
+                    const parsed = JSON.parse(symptom.symptoms);
+                    if (Array.isArray(parsed)) {
+                        symptomsArray = parsed;
+                    }
+                } catch(e) {
+                    console.warn('Failed to parse symptoms:', e);
+                }
+            }
+
+            // Store current symptom data
+            currentEditSymptom = {
+                id: symptomId,
+                painLevel: symptom.pain_level || 5,
+                painLocation: symptom.pain_location || '',
+                painType: symptom.pain_type || '',
+                selectedSymptoms: symptomsArray,
+                notes: symptom.notes || ''
+            };
+
+            // Populate form fields
+            const modal = document.getElementById('symptom-edit-modal');
+            if (modal) {
+                // Set form values
+                const painLevelInput = modal.querySelector('#edit-pain-level');
+                const painLevelDisplay = modal.querySelector('#pain-level-display');
+                const painLocationSelect = modal.querySelector('#edit_pain_location');
+                const painTypeSelect = modal.querySelector('#edit_pain_type');
+                const notesTextarea = modal.querySelector('#edit_notes');
+
+                if (painLevelInput) {
+                    painLevelInput.value = currentEditSymptom.painLevel;
+                }
+                if (painLevelDisplay) {
+                    painLevelDisplay.textContent = currentEditSymptom.painLevel;
+                }
+
+                if (painLocationSelect) {
+                    painLocationSelect.value = currentEditSymptom.painLocation;
+                }
+
+                if (painTypeSelect) {
+                    painTypeSelect.value = currentEditSymptom.painType;
+                }
+
+                if (notesTextarea) {
+                    notesTextarea.value = currentEditSymptom.notes;
+                }
+
+                // Clear and set symptom checkboxes
+                const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = currentEditSymptom.selectedSymptoms.includes(checkbox.value);
+                });
+
+                // Show modal
+                modal.style.display = 'flex';
+                console.log('Edit modal shown');
+            } else {
+                console.error('Edit modal not found');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading symptom data:', error);
+            alert('Error loading symptom data: ' + error.message);
+        });
+}
+
+// Function to close edit modal
+function closeEditModal() {
+    const modal = document.getElementById('symptom-edit-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        console.log('Edit modal hidden');
+    }
+    currentEditSymptom = null;
+}
+
+// Function to open delete modal
+function deleteSymptom(symptomId, symptomType) {
+    console.log('deleteSymptom called with ID:', symptomId, 'type:', symptomType);
+
+    currentDeleteSymptom = {
+        id: symptomId,
+        type: symptomType
+    };
+
+    const modal = document.getElementById('delete-modal');
+    if (modal) {
+        // Update modal text
+        const typeText = modal.querySelector('#delete-symptom-type');
+        if (typeText) {
+            typeText.textContent = symptomType;
+        }
+
+        // Show modal
+        modal.style.display = 'flex';
+        console.log('Delete modal shown');
+    } else {
+        console.error('Delete modal not found');
+    }
+}
+
+// Function to close delete modal
+function closeDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        console.log('Delete modal hidden');
+    }
+    currentDeleteSymptom = null;
+}
+
+// Function to submit edit form
+function submitEditForm(event) {
+    event.preventDefault();
+
+    if (!currentEditSymptom) {
+        alert('No symptom data available');
+        return;
+    }
+
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Updating...';
+
+    // Get form data
+    const painLevel = parseInt(form.querySelector('#edit-pain-level').value);
+    const painLocation = form.querySelector('#edit_pain_location').value;
+    const painType = form.querySelector('#edit_pain_type').value;
+    const notes = form.querySelector('#edit_notes').value;
+
+    // Get selected symptoms
+    const selectedSymptoms = [];
+    form.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedSymptoms.push(checkbox.value);
+    });
+
+    // Get CSRF token
+    fetch('/api/csrf-token')
+        .then(response => response.json())
+        .then(data => {
+            return fetch('/api/symptoms/' + currentEditSymptom.id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': data.csrf_token
+                },
+                body: JSON.stringify({
+                    course_id: {{ .ActiveCourse.ID }},
+                    pain_level: painLevel,
+                    pain_location: painLocation || null,
+                    pain_type: painType || null,
+                    symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : null,
+                    notes: notes || null
+                })
+            });
+        })
+        .then(response => {
+            if (response.ok) {
+                closeEditModal();
+                window.location.reload();
+            } else {
+                return response.text().then(text => {
+                    alert('Error: ' + text);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error updating symptom:', error);
+            alert('Error: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+}
+
+// Function to confirm delete
+function confirmDelete() {
+    if (!currentDeleteSymptom) {
+        alert('No symptom data available');
+        return;
+    }
+
+    const modal = document.getElementById('delete-modal');
+    const deleteBtn = modal.querySelector('button[type="button"]:last-child');
+    const originalText = deleteBtn.textContent;
+
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = 'Deleting...';
+
+    // Get CSRF token
+    fetch('/api/csrf-token')
+        .then(response => response.json())
+        .then(data => {
+            return fetch('/api/symptoms/' + currentDeleteSymptom.id, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': data.csrf_token
+                }
+            });
+        })
+        .then(response => {
+            if (response.ok) {
+                closeDeleteModal();
+                window.location.reload();
+            } else {
+                return response.text().then(text => {
+                    alert('Error: ' + text);
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = originalText;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting symptom:', error);
+            alert('Error: ' + error.message);
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = originalText;
+        });
+}
+
+// Event delegation for symptom action buttons
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up event delegation');
+
+    // Listen for clicks on symptom action buttons using event delegation
+    document.body.addEventListener('click', function(e) {
+        const button = e.target.closest('[data-action]');
+        if (!button) return;
+
+        console.log('Button clicked:', button);
+        const action = button.dataset.action;
+        const symptomId = button.dataset.symptomId;
+
+        console.log('Action:', action, 'Symptom ID:', symptomId);
+
+        if (action === 'edit-symptom') {
+            e.preventDefault();
+            editSymptom(symptomId);
+        } else if (action === 'delete-symptom') {
+            e.preventDefault();
+            deleteSymptom(symptomId, 'symptom log');
+        }
+    });
+});
+
+// Also set up event delegation on the symptom-history container to handle HTMX loaded content
+document.addEventListener('htmx:afterSwap', function(e) {
+    console.log('HTMX content swapped, setting up event delegation for:', e.target);
+
+    // Check if this is the symptom history container
+    if (e.target && e.target.id === 'symptom-history') {
+        console.log('Symptom history loaded via HTMX');
+
+        // The event delegation on document.body should handle this,
+        // but let's add a fallback for Firefox compatibility
+        e.target.addEventListener('click', function(e) {
+            const button = e.target.closest('[data-action]');
+            if (!button) return;
+
+            console.log('HTMX Button clicked:', button);
+            const action = button.dataset.action;
+            const symptomId = button.dataset.symptomId;
+
+            console.log('HTMX Action:', action, 'Symptom ID:', symptomId);
+
+            if (action === 'edit-symptom') {
+                e.preventDefault();
+                e.stopPropagation();
+                editSymptom(symptomId);
+            } else if (action === 'delete-symptom') {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteSymptom(symptomId, 'symptom log');
+            }
+        });
+    }
+});
+</script>
 {{ end }}
