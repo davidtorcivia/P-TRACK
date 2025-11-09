@@ -1,280 +1,216 @@
 {{ define "content" }}
-<div class="container py-8">
+<div style="margin-top: 2rem; margin-bottom: 2rem;">
     <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold mb-2">Symptom Tracking</h1>
-        <p class="text-lg text-secondary">Log and monitor your symptoms</p>
-    </div>
+    <header>
+        <hgroup>
+            <h1>Symptom Tracking</h1>
+            <p>Log and monitor your symptoms</p>
+        </hgroup>
+    </header>
 
     <!-- Quick Actions -->
-    <div class="flex flex-wrap gap-3 mb-8">
-        <button onclick="window.location.href='/symptoms/log'" class="btn btn-primary">
-            <span class="mr-2">➕</span>
-            Log Symptoms
-        </button>
-        <button onclick="window.location.href='/symptoms/history'" class="btn btn-outline">
-            <span class="mr-2">📊</span>
-            View History
-        </button>
+    <div class="grid-2" style="margin-bottom: 2rem;">
+        <a href="/symptoms/history" role="button" class="outline">View History</a>
     </div>
 
     {{ if .ActiveCourse }}
     <!-- Quick Log Form -->
-    <div class="card mb-8">
-        <div class="card-header bg-success-bg">
-            <div class="flex items-center justify-between">
+    <article>
+        <header>
+            <hgroup>
+                <h3>Quick Symptom Log</h3>
+                <p>Record today's symptoms</p>
+            </hgroup>
+        </header>
+
+        <form x-data="{
+            painLevel: 5,
+            painLocation: '',
+            painType: '',
+            selectedSymptoms: [],
+            notes: ''
+        }" @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+            btn.textContent = 'Saving...';
+
+            fetch('/api/symptoms', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name=\"csrf-token\"]').content
+                },
+                body: JSON.stringify({
+                    course_id: {{ .ActiveCourse.ID }},
+                    pain_level: parseInt(painLevel),
+                    pain_location: painLocation,
+                    pain_type: painType,
+                    symptoms: selectedSymptoms,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    painLevel = 5;
+                    painLocation = '';
+                    painType = '';
+                    selectedSymptoms = [];
+                    notes = '';
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-busy');
+                    btn.textContent = 'Log Symptoms';
+
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'alert-success';
+                    successDiv.textContent = 'Symptoms logged successfully!';
+                    $el.parentNode.insertBefore(successDiv, $el);
+
+                    setTimeout(() => successDiv.remove(), 3000);
+                } else {
+                    return response.text().then(text => {
+                        alert('Error: ' + text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                        btn.textContent = 'Log Symptoms';
+                    });
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+                btn.textContent = 'Log Symptoms';
+            });
+        ">
+            <div class="grid-3">
+                <!-- Pain Level -->
                 <div>
-                    <h3 class="card-title">Quick Symptom Log</h3>
-                    <p class="card-subtitle">Record today's symptoms</p>
+                    <label for="painLevel">
+                        Pain Level
+                        <span x-text="': ' + painLevel + '/10'" style="color: var(--pico-primary);"></span>
+                    </label>
+                    <input type="range"
+                           id="painLevel"
+                           x-model="painLevel"
+                           min="1"
+                           max="10">
+                    <small>1 (Mild) &mdash; 10 (Severe)</small>
                 </div>
-                <div class="w-12 h-12 bg-success-bg rounded-full flex items-center justify-center">
-                    <span class="text-2xl">📝</span>
+
+                <!-- Pain Location -->
+                <div>
+                    <label for="painLocation">Pain Location</label>
+                    <select id="painLocation" x-model="painLocation">
+                        <option value="">Select location</option>
+                        <option value="injection_site">Injection Site</option>
+                        <option value="abdomen">Abdomen</option>
+                        <option value="back">Back</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Pain Type -->
+                <div>
+                    <label for="painType">Pain Type</label>
+                    <select id="painType" x-model="painType">
+                        <option value="">Select type</option>
+                        <option value="sharp">Sharp</option>
+                        <option value="dull">Dull</option>
+                        <option value="aching">Aching</option>
+                        <option value="cramping">Cramping</option>
+                        <option value="other">Other</option>
+                    </select>
                 </div>
             </div>
-        </div>
-        <div class="card-body">
-            <form x-data="{
-                painLevel: 5,
-                painLocation: '',
-                painType: '',
-                selectedSymptoms: [],
-                notes: ''
-            }" @submit.prevent="
-                const btn = $el.querySelector('button[type=submit]');
-                btn.disabled = true;
-                btn.innerHTML = '<span class=\"animate-pulse\">⏳</span> Saving...';
 
-                fetch('/api/symptoms', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': document.querySelector('meta[name=\"csrf-token\"]').content
-                    },
-                    body: JSON.stringify({
-                        course_id: {{ .ActiveCourse.ID }},
-                        pain_level: parseInt(painLevel),
-                        pain_location: painLocation,
-                        pain_type: painType,
-                        symptoms: selectedSymptoms,
-                        notes: notes
-                    })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        // Reset form
-                        painLevel = 5;
-                        painLocation = '';
-                        painType = '';
-                        selectedSymptoms = [];
-                        notes = '';
-                        btn.disabled = false;
-                        btn.innerHTML = '<span class=\"mr-2\">✅</span>Log Symptoms';
-
-                        // Show success message
-                        const successDiv = document.createElement('div');
-                        successDiv.className = 'alert alert-success mb-4';
-                        successDiv.innerHTML = '<span class=\"mr-2\">✅</span>Symptoms logged successfully!';
-                        $el.parentNode.insertBefore(successDiv, $el);
-
-                        setTimeout(() => successDiv.remove(), 3000);
-                    } else {
-                        return response.text().then(text => {
-                            alert('Error: ' + text);
-                            btn.disabled = false;
-                            btn.innerHTML = '<span class=\"mr-2\">📝</span>Log Symptoms';
-                        });
-                    }
-                })
-                .catch(error => {
-                    alert('Error: ' + error.message);
-                    btn.disabled = false;
-                    btn.innerHTML = '<span class=\"mr-2\">📝</span>Log Symptoms';
-                });
-            " class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Pain Level -->
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Pain Level</label>
-                        <div class="space-y-3">
-                            <input type="range"
-                                   x-model="painLevel"
-                                   min="1"
-                                   max="10"
-                                   class="w-full">
-                            <div class="flex justify-between items-center">
-                                <div class="text-3xl font-bold text-success-primary" x-text="painLevel"></div>
-                                <div class="text-sm text-muted">Level 1-10</div>
-                            </div>
-                            <div class="flex justify-between text-xs text-muted">
-                                <span>1 (Mild)</span>
-                                <span>10 (Severe)</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pain Location -->
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Pain Location</label>
-                        <select x-model="painLocation" class="form-select">
-                            <option value="">Select location</option>
-                            <option value="injection site">Injection Site</option>
-                            <option value="abdomen">Abdomen</option>
-                            <option value="back">Back</option>
-                            <option value="head">Head</option>
-                            <option value="chest">Chest</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-
-                    <!-- Pain Type -->
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Pain Type</label>
-                        <select x-model="painType" class="form-select">
-                            <option value="">Select type</option>
-                            <option value="sharp">Sharp</option>
-                            <option value="dull">Dull</option>
-                            <option value="aching">Aching</option>
-                            <option value="cramping">Cramping</option>
-                            <option value="burning">Burning</option>
-                            <option value="throbbing">Throbbing</option>
-                        </select>
-                    </div>
+            <!-- Symptoms Checklist -->
+            <fieldset>
+                <legend>Additional Symptoms</legend>
+                <div class="grid-4">
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="nausea">
+                        Nausea
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="fatigue">
+                        Fatigue
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="headache">
+                        Headache
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="mood_changes">
+                        Mood Changes
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="bloating">
+                        Bloating
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="breast_tenderness">
+                        Breast Tenderness
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="spotting">
+                        Spotting
+                    </label>
+                    <label>
+                        <input type="checkbox" x-model="selectedSymptoms" value="hot_flashes">
+                        Hot Flashes
+                    </label>
                 </div>
+            </fieldset>
 
-                <!-- Symptoms Checklist -->
-                <div class="form-group">
-                    <label class="form-label font-semibold">Additional Symptoms</label>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="nausea"
-                                   class="form-checkbox">
-                            <span class="text-sm">Nausea</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="fatigue"
-                                   class="form-checkbox">
-                            <span class="text-sm">Fatigue</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="headache"
-                                   class="form-checkbox">
-                            <span class="text-sm">Headache</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="mood_changes"
-                                   class="form-checkbox">
-                            <span class="text-sm">Mood Changes</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="bloating"
-                                   class="form-checkbox">
-                            <span class="text-sm">Bloating</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="breast_tenderness"
-                                   class="form-checkbox">
-                            <span class="text-sm">Breast Tenderness</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="spotting"
-                                   class="form-checkbox">
-                            <span class="text-sm">Spotting</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="hot_flashes"
-                                   class="form-checkbox">
-                            <span class="text-sm">Hot Flashes</span>
-                        </label>
-                    </div>
-                </div>
+            <!-- Notes -->
+            <label for="notes">
+                Notes
+                <textarea id="notes"
+                          x-model="notes"
+                          rows="4"
+                          placeholder="Any additional observations or details..."></textarea>
+            </label>
 
-                <!-- Notes -->
-                <div class="form-group">
-                    <label class="form-label font-semibold">Notes</label>
-                    <textarea x-model="notes"
-                              rows="4"
-                              class="form-textarea"
-                              placeholder="Any additional observations or details..."></textarea>
-                </div>
-
-                <!-- Submit Button -->
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="btn btn-primary btn-lg">
-                        <span class="mr-2">📝</span>
-                        Log Symptoms
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+            <!-- Submit Button -->
+            <button type="submit">Log Symptoms</button>
+        </form>
+    </article>
 
     <!-- Recent Symptoms -->
-    <div class="card">
-        <div class="card-header">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="card-title">Recent Symptoms</h3>
-                    <p class="card-subtitle">Your latest symptom logs</p>
-                </div>
-                <div class="w-10 h-10 bg-success-bg rounded-full flex items-center justify-center">
-                    <span class="text-success-primary">📊</span>
-                </div>
+    <article>
+        <header>
+            <hgroup>
+                <h3>Recent Symptoms</h3>
+                <p>Your latest symptom logs</p>
+            </hgroup>
+        </header>
+        <div id="recent-symptoms"
+             hx-get="/api/symptoms/recent"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div style="text-align: center; padding: 2rem;">
+                <small aria-busy="true">Loading recent symptoms...</small>
             </div>
         </div>
-        <div class="card-body">
-            <div id="recent-symptoms"
-                 hx-get="/api/symptoms/recent"
-                 hx-trigger="load"
-                 hx-swap="innerHTML"
-                 class="space-y-4">
-                <div class="text-center py-12 text-muted">
-                    <div class="inline-flex items-center gap-3">
-                        <div class="w-8 h-8 bg-success-bg rounded-full animate-spin"></div>
-                        <span>Loading recent symptoms...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-footer">
-            <a href="/symptoms/history" class="btn btn-outline">
-                <span class="mr-2">📊</span>
-                View Full History
-            </a>
-        </div>
-    </div>
+        <footer>
+            <a href="/symptoms/history" role="button" class="outline">View Full History</a>
+        </footer>
+    </article>
 
     {{ else }}
     <!-- No Active Course -->
-    <div class="card">
-        <div class="card-body text-center py-12">
-            <div class="w-20 h-20 bg-warning-bg rounded-full flex items-center justify-center mx-auto mb-6">
-                <span class="text-3xl">⚠️</span>
-            </div>
-            <h3 class="text-xl font-bold mb-4">No Active Course</h3>
-            <p class="text-muted mb-6">You need an active course to start tracking symptoms.</p>
-            <a href="/courses" class="btn btn-primary">
-                <span class="mr-2">📋</span>
-                Manage Courses
-            </a>
-        </div>
-    </div>
+    <article style="text-align: center;">
+        <header>
+            <hgroup>
+                <h2>No Active Course</h2>
+                <p>You need an active course to start tracking symptoms.</p>
+            </hgroup>
+        </header>
+        <footer>
+            <a href="/courses" role="button">Manage Courses</a>
+        </footer>
+    </article>
     {{ end }}
 </div>
 {{ end }}

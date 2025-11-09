@@ -33,7 +33,7 @@ class ThemeManager {
         // Update meta theme-color for mobile browsers
         const metaThemeColor = document.querySelector('meta[name="theme-color"]');
         if (metaThemeColor) {
-            metaThemeColor.content = theme === 'dark' ? '#0f172a' : '#0891b2';
+            metaThemeColor.content = theme === 'dark' ? '#1C1917' : '#FAFAF9';
         }
 
         // Save preference
@@ -102,7 +102,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         get icon() {
-            return this.isDark ? '☀️' : '🌙';
+            return this.isDark ? 'Light' : 'Dark';
         },
 
         get label() {

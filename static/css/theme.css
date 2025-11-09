@@ -1,0 +1,624 @@
+/* Progesterone Injection Tracker - Professional Theme
+ * Based on Pico CSS with custom warm color palette
+ * Features: Light/Dark mode, Mobile-first responsive design
+ */
+
+/* =========================================
+   ROOT VARIABLES - LIGHT THEME
+   ========================================= */
+:root:not([data-theme="dark"]) {
+    /* Primary Colors - Warm Terracotta */
+    --pico-primary: #C2410C;
+    --pico-primary-hover: #EA580C;
+    --pico-primary-focus: rgba(194, 65, 12, 0.125);
+    --pico-primary-inverse: #FFF;
+
+    /* Secondary/Accent - Teal */
+    --pico-secondary: #0D9488;
+    --pico-secondary-hover: #14B8A6;
+    --pico-secondary-focus: rgba(13, 148, 136, 0.125);
+
+    /* Semantic Colors */
+    --pico-success: #059669;
+    --pico-success-hover: #10B981;
+    --pico-success-focus: rgba(5, 150, 105, 0.125);
+
+    --pico-warning: #D97706;
+    --pico-warning-hover: #F59E0B;
+    --pico-warning-focus: rgba(217, 119, 6, 0.125);
+
+    --pico-danger: #DC2626;
+    --pico-danger-hover: #EF4444;
+    --pico-danger-focus: rgba(220, 38, 38, 0.125);
+
+    /* Background & Surface Colors */
+    --pico-background-color: #FAFAF9;
+    --pico-color: #1C1917;
+    --pico-muted-color: #78716C;
+
+    --pico-card-background-color: #FFFFFF;
+    --pico-card-border-color: #E7E5E4;
+    --pico-card-box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+
+    /* Form Elements */
+    --pico-form-element-background-color: #FFFFFF;
+    --pico-form-element-border-color: #D6D3D1;
+    --pico-form-element-color: #1C1917;
+    --pico-form-element-focus-color: var(--pico-primary);
+
+    /* Typography */
+    --pico-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --pico-font-family-monospace: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+    --pico-font-size: 16px;
+    --pico-line-height: 1.6;
+    --pico-font-weight: 400;
+
+    /* Border Radius */
+    --pico-border-radius: 0.5rem;
+
+    /* Shadows */
+    --pico-box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --pico-box-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* =========================================
+   DARK THEME
+   ========================================= */
+[data-theme="dark"] {
+    /* Primary Colors - Lighter terracotta for dark mode */
+    --pico-primary: #F97316;
+    --pico-primary-hover: #FB923C;
+    --pico-primary-focus: rgba(249, 115, 22, 0.25);
+    --pico-primary-inverse: #1C1917;
+
+    /* Secondary/Accent - Lighter teal */
+    --pico-secondary: #14B8A6;
+    --pico-secondary-hover: #2DD4BF;
+    --pico-secondary-focus: rgba(20, 184, 166, 0.25);
+
+    /* Semantic Colors */
+    --pico-success: #10B981;
+    --pico-success-hover: #34D399;
+    --pico-success-focus: rgba(16, 185, 129, 0.25);
+
+    --pico-warning: #F59E0B;
+    --pico-warning-hover: #FBBF24;
+    --pico-warning-focus: rgba(245, 158, 11, 0.25);
+
+    --pico-danger: #EF4444;
+    --pico-danger-hover: #F87171;
+    --pico-danger-focus: rgba(239, 68, 68, 0.25);
+
+    /* Background & Surface Colors - Warm dark slate */
+    --pico-background-color: #1C1917;
+    --pico-color: #F5F5F4;
+    --pico-muted-color: #A8A29E;
+
+    --pico-card-background-color: #292524;
+    --pico-card-border-color: #44403C;
+    --pico-card-box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+
+    /* Form Elements */
+    --pico-form-element-background-color: #1C1917;
+    --pico-form-element-border-color: #44403C;
+    --pico-form-element-color: #F5F5F4;
+
+    /* Shadows enhanced for dark mode */
+    --pico-box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --pico-box-shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+}
+
+/* =========================================
+   GLOBAL STYLES
+   ========================================= */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* =========================================
+   TYPOGRAPHY ENHANCEMENTS
+   ========================================= */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--pico-color);
+}
+
+h1 { font-size: 2.25rem; line-height: 1.2; }
+h2 { font-size: 1.875rem; line-height: 1.25; }
+h3 { font-size: 1.5rem; line-height: 1.3; }
+h4 { font-size: 1.25rem; line-height: 1.4; }
+h5 { font-size: 1.125rem; line-height: 1.5; }
+h6 { font-size: 1rem; line-height: 1.5; }
+
+p, li {
+    color: var(--pico-muted-color);
+}
+
+small, .text-small {
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.text-muted {
+    color: var(--pico-muted-color);
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+/* Responsive typography */
+@media (max-width: 768px) {
+    h1 { font-size: 1.75rem; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.25rem; }
+}
+
+/* =========================================
+   NAVIGATION
+   ========================================= */
+nav {
+    background-color: var(--pico-card-background-color);
+    border-bottom: 1px solid var(--pico-card-border-color);
+    box-shadow: var(--pico-box-shadow);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+nav ul {
+    margin-bottom: 0;
+}
+
+nav ul li a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border-radius: var(--pico-border-radius);
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: var(--pico-muted-color);
+    font-weight: 500;
+}
+
+nav ul li a:hover,
+nav ul li a.active {
+    background-color: var(--pico-primary-focus);
+    color: var(--pico-primary);
+}
+
+nav ul li a svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
+button,
+[type="button"],
+[type="submit"],
+[type="reset"],
+[role="button"],
+a[role="button"] {
+    font-weight: 500;
+    border-radius: var(--pico-border-radius);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+button:hover,
+[type="button"]:hover,
+[type="submit"]:hover,
+[type="reset"]:hover,
+[role="button"]:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--pico-box-shadow);
+}
+
+button:active,
+[type="button"]:active {
+    transform: translateY(0);
+}
+
+/* Button Variants */
+.button-outline,
+[role="button"].outline {
+    background-color: transparent;
+    border: 1px solid var(--pico-primary);
+    color: var(--pico-primary);
+}
+
+.button-outline:hover,
+[role="button"].outline:hover {
+    background-color: var(--pico-primary-focus);
+}
+
+.button-secondary {
+    background-color: var(--pico-secondary);
+    border-color: var(--pico-secondary);
+}
+
+.button-secondary:hover {
+    background-color: var(--pico-secondary-hover);
+    border-color: var(--pico-secondary-hover);
+}
+
+.button-success {
+    background-color: var(--pico-success);
+    border-color: var(--pico-success);
+}
+
+.button-warning {
+    background-color: var(--pico-warning);
+    border-color: var(--pico-warning);
+}
+
+.button-danger {
+    background-color: var(--pico-danger);
+    border-color: var(--pico-danger);
+}
+
+/* =========================================
+   FORMS
+   ========================================= */
+input,
+select,
+textarea {
+    border-radius: var(--pico-border-radius);
+    font-size: 1rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--pico-primary);
+    box-shadow: 0 0 0 3px var(--pico-primary-focus);
+}
+
+label {
+    font-weight: 500;
+    color: var(--pico-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Range input styling */
+input[type="range"] {
+    height: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    background-color: var(--pico-primary);
+}
+
+input[type="range"]::-moz-range-thumb {
+    background-color: var(--pico-primary);
+}
+
+/* =========================================
+   CARDS & ARTICLES
+   ========================================= */
+article {
+    background-color: var(--pico-card-background-color);
+    border: 1px solid var(--pico-card-border-color);
+    border-radius: var(--pico-border-radius);
+    box-shadow: var(--pico-card-box-shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+article header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--pico-card-border-color);
+}
+
+article header h1,
+article header h2,
+article header h3,
+article header h4 {
+    margin-bottom: 0.25rem;
+}
+
+article footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--pico-card-border-color);
+}
+
+/* =========================================
+   MODALS / DIALOGS
+   ========================================= */
+dialog {
+    max-width: 90vw;
+    width: 100%;
+    border-radius: calc(var(--pico-border-radius) * 1.5);
+    border: 1px solid var(--pico-card-border-color);
+    box-shadow: var(--pico-box-shadow-lg);
+}
+
+dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+@media (min-width: 576px) {
+    dialog {
+        max-width: 500px;
+    }
+}
+
+/* =========================================
+   TABLES
+   ========================================= */
+table {
+    border-collapse: collapse;
+}
+
+table thead {
+    border-bottom: 2px solid var(--pico-card-border-color);
+}
+
+table thead th {
+    font-weight: 600;
+    text-align: left;
+    padding: 0.75rem;
+}
+
+table tbody tr {
+    border-bottom: 1px solid var(--pico-card-border-color);
+    transition: background-color 0.2s ease;
+}
+
+table tbody tr:hover {
+    background-color: var(--pico-primary-focus);
+}
+
+table tbody td {
+    padding: 0.75rem;
+}
+
+/* =========================================
+   ALERTS / NOTIFICATIONS
+   ========================================= */
+.alert {
+    padding: 1rem;
+    border-radius: var(--pico-border-radius);
+    margin-bottom: 1rem;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    background-color: var(--pico-success-focus);
+    border-color: var(--pico-success);
+    color: var(--pico-success);
+}
+
+.alert-warning {
+    background-color: var(--pico-warning-focus);
+    border-color: var(--pico-warning);
+    color: var(--pico-warning);
+}
+
+.alert-danger {
+    background-color: var(--pico-danger-focus);
+    border-color: var(--pico-danger);
+    color: var(--pico-danger);
+}
+
+.alert-info {
+    background-color: var(--pico-secondary-focus);
+    border-color: var(--pico-secondary);
+    color: var(--pico-secondary);
+}
+
+/* =========================================
+   GRID SYSTEM
+   ========================================= */
+.grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================
+   UTILITY CLASSES
+   ========================================= */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
+
+.p-0 { padding: 0; }
+.p-1 { padding: 0.5rem; }
+.p-2 { padding: 1rem; }
+.p-3 { padding: 1.5rem; }
+.p-4 { padding: 2rem; }
+
+/* =========================================
+   LOADING STATES
+   ========================================= */
+[aria-busy="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+[aria-busy="true"]::after {
+    content: "";
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.5rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* =========================================
+   ACCESSIBILITY
+   ========================================= */
+[x-cloak] {
+    display: none !important;
+}
+
+:focus-visible {
+    outline: 2px solid var(--pico-primary);
+    outline-offset: 2px;
+    border-radius: var(--pico-border-radius);
+}
+
+/* =========================================
+   RESPONSIVE CONTAINERS
+   ========================================= */
+.container-fluid {
+    width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (min-width: 576px) {
+    .container,
+    .container-fluid {
+        max-width: 540px;
+    }
+}
+
+@media (min-width: 768px) {
+    .container,
+    .container-fluid {
+        max-width: 720px;
+    }
+}
+
+@media (min-width: 992px) {
+    .container,
+    .container-fluid {
+        max-width: 960px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container,
+    .container-fluid {
+        max-width: 1140px;
+    }
+}
+
+@media (min-width: 1400px) {
+    .container,
+    .container-fluid {
+        max-width: 1320px;
+    }
+}
+
+/* =========================================
+   STATISTICS CARDS
+   ========================================= */
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.stat-card .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--pico-primary);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .stat-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--pico-muted-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* =========================================
+   SMOOTH TRANSITIONS
+   ========================================= */
+.transition {
+    transition: all 0.2s ease;
+}
+
+/* =========================================
+   PRINT STYLES
+   ========================================= */
+@media print {
+    nav,
+    footer,
+    button,
+    [role="button"],
+    .no-print {
+        display: none !important;
+    }
+
+    article {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+}
