@@ -206,6 +206,7 @@ func main() {
 		r.Get("/injections", handlers.HandleInjectionsPage(db, csrfProtection))
 		r.Get("/symptoms", handlers.HandleSymptomsPage(db, csrfProtection))
 		r.Get("/symptoms/log", handlers.HandleLogSymptomPage(db))
+		r.Get("/symptoms/{id}/edit", handlers.HandleEditSymptomPage(db, csrfProtection))
 		r.Get("/symptoms/history", handlers.HandleSymptomsHistoryPage(db, csrfProtection))
 		r.Get("/medications", handlers.HandleMedicationsPage(db, csrfProtection))
 		r.Get("/medications/log", handlers.HandleLogMedicationPage(db))

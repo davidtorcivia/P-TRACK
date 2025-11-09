@@ -139,8 +139,9 @@ func (c *CSRFProtection) ValidateToken(token string) bool {
 		return false
 	}
 
-	// Token is valid, remove it (one-time use)
-	c.tokens.Delete(token)
+	// Token is valid - keep it for now to allow HTMX retries
+	// In a production environment, you might want one-time use tokens
+	// c.tokens.Delete(token)
 	return true
 }
 

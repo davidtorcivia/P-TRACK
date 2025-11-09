@@ -89,12 +89,7 @@
                 <label for="administered-by">
                     Administered By
                     <select id="administered-by" name="administered_by">
-                        <option value="{{ .CurrentUser.ID }}" selected>{{ .CurrentUser.Username }}</option>
-                        {{ range .FamilyMembers }}
-                        {{ if ne .ID $.CurrentUser.ID }}
-                        <option value="{{ .ID }}">{{ .Username }}</option>
-                        {{ end }}
-                        {{ end }}
+                        <option value="{{ .UserID }}" selected>You</option>
                     </select>
                 </label>
             </div>
@@ -114,45 +109,57 @@
                             submitting = true;
                             const btn = $el;
                             btn.disabled = true;
-                            btn.textContent = 'Saving...';
+                            btn.textContent = 'Getting token...';
 
-                            const adminBy = document.getElementById('administered-by')?.value || {{ .UserID }};
+                            // First, get a fresh CSRF token
+                            fetch('/api/csrf-token')
+                                .then(response => response.json())
+                                .then(data => {
+                                    btn.textContent = 'Saving...';
+                                    const adminBy = document.getElementById('administered-by')?.value || {{ .UserID }};
 
-                            fetch('/api/injections', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-Token': '{{ .CSRFToken }}'
-                                },
-                                body: JSON.stringify({
-                                    course_id: {{ .ActiveCourse.ID }},
-                                    side: selectedSide,
-                                    pain_level: showDetails ? parseInt(painLevel) : null,
-                                    has_knots: hasKnots,
-                                    site_reaction: siteReaction !== 'none' ? siteReaction : null,
-                                    notes: notes || null,
-                                    administered_by: parseInt(adminBy)
-                                })
-                            })
-                            .then(response => {
-                                if (response.ok) {
-                                    showInjectionModal = false;
-                                    window.location.reload();
-                                } else {
-                                    return response.text().then(text => {
-                                        alert('Error: ' + text);
+                                    fetch('/api/injections', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-Token': data.csrf_token
+                                        },
+                                        body: JSON.stringify({
+                                            course_id: {{ .ActiveCourse.ID }},
+                                            side: selectedSide,
+                                            pain_level: showDetails ? parseInt(painLevel) : null,
+                                            has_knots: hasKnots,
+                                            site_reaction: siteReaction !== 'none' ? siteReaction : null,
+                                            notes: notes || null,
+                                            administered_by: parseInt(adminBy)
+                                        })
+                                    })
+                                    .then(response => {
+                                        if (response.ok) {
+                                            showInjectionModal = false;
+                                            window.location.reload();
+                                        } else {
+                                            return response.text().then(text => {
+                                                alert('Error: ' + text);
+                                                btn.disabled = false;
+                                                btn.textContent = 'Save Injection';
+                                                submitting = false;
+                                            });
+                                        }
+                                    })
+                                    .catch(error => {
+                                        alert('Error: ' + error.message);
                                         btn.disabled = false;
                                         btn.textContent = 'Save Injection';
                                         submitting = false;
                                     });
-                                }
-                            })
-                            .catch(error => {
-                                alert('Error: ' + error.message);
-                                btn.disabled = false;
-                                btn.textContent = 'Save Injection';
-                                submitting = false;
-                            });
+                                })
+                                .catch(error => {
+                                    alert('Error getting token: ' + error.message);
+                                    btn.disabled = false;
+                                    btn.textContent = 'Save Injection';
+                                    submitting = false;
+                                });
                         "
                         :disabled="selectedSide === '' || submitting">
                     Save Injection

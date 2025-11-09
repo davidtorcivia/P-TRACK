@@ -1,4 +1,202 @@
-// Main application JavaScript
+/**
+ * Injection Tracker - Enhanced JavaScript
+ * Modern interactions and utilities
+ */
+
+// Initialize Alpine.js store for global state
+document.addEventListener('alpine:init', () => {
+    // Notification Store
+    Alpine.store('notificationCount', {
+        count: 0,
+
+        init() {
+            this.fetchCount();
+            // Refresh every 30 seconds
+            setInterval(() => this.fetchCount(), 30000);
+        },
+
+        fetchCount() {
+            fetch('/api/notifications/count')
+                .then(response => response.json())
+                .then(data => {
+                    this.count = data.count || 0;
+                })
+                .catch(error => {
+                    console.error('Error fetching notification count:', error);
+                });
+        },
+
+        increment() {
+            this.count++;
+        },
+
+        decrement() {
+            if (this.count > 0) this.count--;
+        }
+    });
+
+    // App Store
+    Alpine.store('app', {
+        isLoading: false,
+        sidebarOpen: false,
+
+        startLoading() {
+            this.isLoading = true;
+        },
+
+        stopLoading() {
+            this.isLoading = false;
+        },
+
+        toggleSidebar() {
+            this.sidebarOpen = !this.sidebarOpen;
+        }
+    });
+});
+
+// CSRF token handling for HTMX requests
+document.addEventListener('htmx:configRequest', (event) => {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (csrfToken) {
+        event.detail.headers['X-CSRF-Token'] = csrfToken;
+    }
+});
+
+// Global loading states for HTMX
+document.addEventListener('htmx:beforeRequest', () => {
+    Alpine.store('app').startLoading();
+});
+
+document.addEventListener('htmx:afterRequest', () => {
+    Alpine.store('app').stopLoading();
+});
+
+// Enhanced flash message handling
+document.addEventListener('DOMContentLoaded', () => {
+    // Auto-hide flash messages
+    const flashMessages = document.querySelectorAll('.alert');
+    flashMessages.forEach((message, index) => {
+        setTimeout(() => {
+            message.style.opacity = '0';
+            message.style.transform = 'translateY(-10px)';
+            setTimeout(() => message.remove(), 300);
+        }, 5000 + (index * 200)); // Stagger multiple messages
+    });
+
+    // Initialize tooltips
+    initializeTooltips();
+
+    // Smooth scroll for anchor links
+    initializeSmoothScroll();
+
+    // Form enhancements
+    enhanceForms();
+
+    // Initialize existing app functionality
+    initTheme();
+    checkOfflineStatus();
+    initPWA();
+});
+
+// Tooltip system
+function initializeTooltips() {
+    const tooltipElements = document.querySelectorAll('[x-tooltip]');
+
+    tooltipElements.forEach(element => {
+        const text = element.getAttribute('x-tooltip');
+        let tooltip = null;
+
+        element.addEventListener('mouseenter', (e) => {
+            tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = text;
+            tooltip.style.cssText = `
+                position: absolute;
+                background: var(--color-bg-tertiary);
+                color: var(--color-text-primary);
+                padding: var(--space-2) var(--space-3);
+                border-radius: var(--radius-md);
+                font-size: var(--text-xs);
+                font-weight: var(--font-medium);
+                box-shadow: var(--shadow-lg);
+                z-index: var(--z-tooltip);
+                pointer-events: none;
+                white-space: nowrap;
+                opacity: 0;
+                transform: translateY(-5px);
+                transition: all 150ms ease;
+            `;
+
+            document.body.appendChild(tooltip);
+
+            const rect = element.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+
+            // Position tooltip above element
+            tooltip.style.left = rect.left + (rect.width / 2) - (tooltipRect.width / 2) + 'px';
+            tooltip.style.top = rect.top - tooltipRect.height - 8 + 'px';
+
+            // Animate in
+            requestAnimationFrame(() => {
+                tooltip.style.opacity = '1';
+                tooltip.style.transform = 'translateY(0)';
+            });
+        });
+
+        element.addEventListener('mouseleave', () => {
+            if (tooltip) {
+                tooltip.style.opacity = '0';
+                tooltip.style.transform = 'translateY(-5px)';
+                setTimeout(() => {
+                    if (tooltip) {
+                        tooltip.remove();
+                        tooltip = null;
+                    }
+                }, 150);
+            }
+        });
+    });
+}
+
+// Smooth scroll for anchor links
+function initializeSmoothScroll() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+}
+
+// Form enhancements
+function enhanceForms() {
+    // Auto-resize textareas
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        });
+    });
+
+    // Better focus handling
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            input.parentElement.classList.add('focused');
+        });
+
+        input.addEventListener('blur', () => {
+            input.parentElement.classList.remove('focused');
+        });
+    });
+}
 
 // Theme management
 function initTheme() {
@@ -24,71 +222,70 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     }
 });
 
-// PWA install prompt
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    showInstallPrompt();
-});
-
-function showInstallPrompt() {
-    const promptDiv = document.createElement('div');
-    promptDiv.className = 'install-prompt';
-    promptDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong>Install Injection Tracker</strong>
-                <p style="margin: 0.5rem 0 0 0;">Add to home screen for quick access</p>
-            </div>
-            <div>
-                <button onclick="installPWA()" style="margin-right: 0.5rem;">Install</button>
-                <button onclick="dismissInstallPrompt()" class="outline">Later</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(promptDiv);
-}
-
-function installPWA() {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-            }
-            deferredPrompt = null;
-            dismissInstallPrompt();
-        });
-    }
-}
-
-function dismissInstallPrompt() {
-    const prompt = document.querySelector('.install-prompt');
-    if (prompt) {
-        prompt.remove();
-    }
-}
-
 // Offline detection
-window.addEventListener('online', () => {
-    const indicator = document.querySelector('.offline-indicator');
-    if (indicator) {
-        indicator.remove();
-    }
-    // Try to sync any pending offline data
-    syncOfflineData();
-});
+function checkOfflineStatus() {
+    window.addEventListener('online', () => {
+        const indicator = document.querySelector('.offline-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+        showToast('Connection restored!', 'success');
+        syncOfflineData();
+    });
 
-window.addEventListener('offline', () => {
-    if (!document.querySelector('.offline-indicator')) {
-        const indicator = document.createElement('div');
-        indicator.className = 'offline-indicator';
-        indicator.textContent = '⚠️ You are currently offline. Changes will be saved when connection is restored.';
-        document.body.appendChild(indicator);
+    window.addEventListener('offline', () => {
+        if (!document.querySelector('.offline-indicator')) {
+            const indicator = document.createElement('div');
+            indicator.className = 'offline-indicator alert alert-warning';
+            indicator.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>You are currently offline. Changes will be saved when connection is restored.</span>
+                </div>
+            `;
+            document.body.prepend(indicator);
+        }
+        showToast('You are offline', 'warning');
+    });
+
+    // Check initial status
+    if (!navigator.onLine) {
+        window.dispatchEvent(new Event('offline'));
     }
-});
+}
+
+// PWA functionality
+function initPWA() {
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(() => showInstallPrompt(), 3000);
+    });
+
+    function showInstallPrompt() {
+        if (deferredPrompt) {
+            showToast('Add Injection Tracker to your home screen for quick access!', 'info', 5000);
+            // You could show a more prominent install UI here
+        }
+    }
+
+    window.app = {
+        ...window.app,
+        installPWA: () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showToast('App installed successfully!', 'success');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+    };
+}
 
 // Offline data sync
 async function syncOfflineData() {
@@ -109,142 +306,152 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
-    // Escape: Close modals
-    if (e.key === 'Escape') {
-        // Alpine.js handles this via @keydown.escape.window
+    // Ctrl/Cmd + /: Show keyboard shortcuts
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        showKeyboardShortcuts();
     }
 });
 
-// Auto-save form data (for longer forms)
-function autoSaveForm(formId, storageKey) {
-    const form = document.getElementById(formId);
-    if (!form) return;
+// Show keyboard shortcuts modal
+function showKeyboardShortcuts() {
+    const shortcuts = [
+        { key: 'Ctrl + K', description: 'Quick injection log' },
+        { key: 'Ctrl + /', description: 'Show keyboard shortcuts' },
+        { key: 'Escape', description: 'Close modal' }
+    ];
 
-    // Load saved data
-    const savedData = localStorage.getItem(storageKey);
-    if (savedData) {
-        const data = JSON.parse(savedData);
-        Object.keys(data).forEach(key => {
-            const input = form.querySelector(`[name="${key}"]`);
-            if (input) {
-                if (input.type === 'checkbox') {
-                    input.checked = data[key];
-                } else {
-                    input.value = data[key];
-                }
-            }
-        });
-    }
+    let html = '<div class="space-y-2">';
+    shortcuts.forEach(shortcut => {
+        html += `
+            <div class="flex justify-between">
+                <span class="font-medium">${shortcut.description}</span>
+                <kbd class="px-2 py-1 bg-surface border rounded text-xs">${shortcut.key}</kbd>
+            </div>
+        `;
+    });
+    html += '</div>';
 
-    // Save on input
-    form.addEventListener('input', debounce(() => {
-        const formData = new FormData(form);
-        const data = {};
-        for (let [key, value] of formData.entries()) {
-            data[key] = value;
+    showModal('Keyboard Shortcuts', html);
+}
+
+// Simple modal system
+function showModal(title, content) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal max-w-md">
+            <div class="modal-header">
+                <h3 class="modal-title">${title}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            </div>
+            <div class="modal-body">
+                ${content}
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
         }
-        localStorage.setItem(storageKey, JSON.stringify(data));
-    }, 500));
-
-    // Clear on submit
-    form.addEventListener('submit', () => {
-        localStorage.removeItem(storageKey);
     });
 }
 
-// Debounce utility
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+// Utility functions
+const Utils = {
+    // Format dates
+    formatDate: (date) => {
+        return new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(new Date(date));
+    },
 
-// Format dates consistently
-function formatDate(dateString, format = 'MM/DD/YYYY') {
-    const date = new Date(dateString);
-    const userFormat = localStorage.getItem('dateFormat') || format;
+    // Format relative time
+    timeAgo: (date) => {
+        const now = new Date();
+        const past = new Date(date);
+        const diffMs = now - past;
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
 
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+        if (diffSecs < 60) return 'just now';
+        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
 
-    switch (userFormat) {
-        case 'DD/MM/YYYY':
-            return `${day}/${month}/${year}`;
-        case 'YYYY-MM-DD':
-            return `${year}-${month}-${day}`;
-        default: // MM/DD/YYYY
-            return `${month}/${day}/${year}`;
-    }
-}
+        return Utils.formatDate(date);
+    },
 
-// Format time consistently
-function formatTime(dateString, format = '12h') {
-    const date = new Date(dateString);
-    const userFormat = localStorage.getItem('timeFormat') || format;
-
-    if (userFormat === '24h') {
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    } else {
-        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    }
-}
-
-// Haptic feedback for mobile
-function hapticFeedback(type = 'light') {
-    if ('vibrate' in navigator) {
-        switch (type) {
-            case 'light':
-                navigator.vibrate(10);
-                break;
-            case 'medium':
-                navigator.vibrate(20);
-                break;
-            case 'heavy':
-                navigator.vibrate(30);
-                break;
+    // Copy to clipboard
+    copyToClipboard: async (text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('Copied to clipboard!', 'success');
+            return true;
+        } catch (err) {
+            console.error('Failed to copy: ', err);
+            return false;
         }
-    }
-}
+    },
 
-// Add haptic feedback to buttons
-document.addEventListener('click', (e) => {
-    if (e.target.matches('button, [role="button"], input[type="submit"]')) {
-        hapticFeedback('light');
-    }
-});
+    // Download data as file
+    downloadFile: (data, filename, type = 'text/plain') => {
+        const blob = new Blob([data], { type });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    },
 
-// Confirmation dialog with better UX
-function confirmAction(message, onConfirm, onCancel) {
-    if (confirm(message)) {
-        if (onConfirm) onConfirm();
-    } else {
-        if (onCancel) onCancel();
+    // Debounce function
+    debounce: (func, wait) => {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
-}
+};
 
-// Toast notifications
+// Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    toast.className = `alert alert-${type} fixed top-4 right-4 z-50 max-w-sm shadow-lg`;
     toast.style.cssText = `
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        padding: 1rem 1.5rem;
-        background: var(--pico-card-background-color);
-        border-left: 4px solid var(--pico-${type === 'error' ? 'del' : type}-color);
-        border-radius: var(--pico-border-radius);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
         animation: slideIn 0.3s ease;
+    `;
+
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+
+    toast.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span>${icons[type] || icons.info}</span>
+            <span>${message}</span>
+        </div>
     `;
 
     document.body.appendChild(toast);
@@ -255,7 +462,7 @@ function showToast(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
-// Animation keyframes (add to CSS if needed)
+// Add animation keyframes
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -279,27 +486,59 @@ style.textContent = `
             opacity: 0;
         }
     }
+
+    .tooltip {
+        animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
 `;
 document.head.appendChild(style);
+
+// Haptic feedback for mobile
+function hapticFeedback(type = 'light') {
+    if ('vibrate' in navigator) {
+        switch (type) {
+            case 'light':
+                navigator.vibrate(10);
+                break;
+            case 'medium':
+                navigator.vibrate(20);
+                break;
+            case 'heavy':
+                navigator.vibrate(30);
+                break;
+        }
+    }
+}
+
+// Add haptic feedback to buttons
+document.addEventListener('click', (e) => {
+    if (e.target.matches('button, [role="button"], input[type="submit"], .btn')) {
+        hapticFeedback('light');
+    }
+});
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/static/sw.js')
             .then((registration) => {
                 console.log('Service Worker registered:', registration.scope);
 
                 // Check for updates periodically
                 setInterval(() => {
                     registration.update();
-                }, 60000); // Check every minute
+                }, 60000);
 
                 // Handle update found
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // New version available
                             showUpdateNotification();
                         }
                     });
@@ -308,153 +547,34 @@ if ('serviceWorker' in navigator) {
             .catch((err) => {
                 console.error('Service Worker registration failed:', err);
             });
-
-        // Listen for messages from service worker
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'SW_UPDATED') {
-                showUpdateNotification();
-            }
-        });
     });
 }
 
 // Show update notification
 function showUpdateNotification() {
     const notification = document.createElement('div');
-    notification.className = 'update-notification';
-    notification.style.cssText = `
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        right: 1rem;
-        background: var(--pico-primary);
-        color: white;
-        padding: 1rem;
-        border-radius: var(--pico-border-radius);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        z-index: 1002;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    `;
+    notification.className = 'alert alert-info fixed top-4 left-4 right-4 z-50 shadow-lg';
     notification.innerHTML = `
-        <span>A new version is available!</span>
-        <button onclick="location.reload()" style="background: white; color: var(--pico-primary); border: none;">
-            Update Now
-        </button>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span>🔄</span>
+                <span>A new version is available!</span>
+            </div>
+            <button onclick="location.reload()" class="btn btn-sm btn-primary">
+                Update Now
+            </button>
+        </div>
     `;
     document.body.appendChild(notification);
 }
 
-// Request notification permission
-function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-                console.log('Notification permission granted');
-                // Subscribe to push notifications if service worker is ready
-                subscribeUserToPush();
-            }
-        });
-    }
-}
+// Export functions and utilities globally
+window.Utils = Utils;
+window.showToast = showToast;
+window.hapticFeedback = hapticFeedback;
+window.showModal = showModal;
 
-// Subscribe to push notifications
-async function subscribeUserToPush() {
-    try {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY || '')
-        });
-
-        // Send subscription to server
-        await fetch('/api/notifications/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(subscription)
-        });
-
-        console.log('Push subscription successful');
-    } catch (err) {
-        console.error('Failed to subscribe to push:', err);
-    }
-}
-
-// Helper for VAPID key conversion
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-
-    // Check if user is online
-    if (!navigator.onLine) {
-        window.dispatchEvent(new Event('offline'));
-    }
-
-    // Request notification permission after a delay (better UX)
-    setTimeout(() => {
-        if (localStorage.getItem('notificationsPrompted') !== 'true') {
-            requestNotificationPermission();
-            localStorage.setItem('notificationsPrompted', 'true');
-        }
-    }, 5000);
-
-    // Log page view (for analytics if implemented)
-    console.log('Page loaded:', window.location.pathname);
-});
-
-// HTMX Configuration and Event Listeners
-document.addEventListener('htmx:configRequest', (event) => {
-    // Add CSRF token to all HTMX requests
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (csrfToken) {
-        event.detail.headers['X-CSRF-Token'] = csrfToken;
-    }
-
-    // Add authentication token from cookie
-    const authToken = getCookie('auth_token');
-    if (authToken) {
-        event.detail.headers['Authorization'] = `Bearer ${authToken}`;
-    }
-});
-
-document.body.addEventListener('htmx:afterSwap', (event) => {
-    // Reinitialize any dynamic content
-    console.log('Content swapped');
-
-    // Trigger Alpine.js to reinitialize new elements
-    if (window.Alpine) {
-        window.Alpine.initTree(event.detail.elt);
-    }
-});
-
-document.body.addEventListener('htmx:beforeRequest', (event) => {
-    // Show loading indicator
-    const target = event.detail.target;
-    if (target) {
-        target.setAttribute('aria-busy', 'true');
-    }
-});
-
-document.body.addEventListener('htmx:afterRequest', (event) => {
-    // Hide loading indicator
-    const target = event.detail.target;
-    if (target) {
-        target.removeAttribute('aria-busy');
-    }
-});
-
+// Enhanced HTMX error handling
 document.body.addEventListener('htmx:responseError', (event) => {
     const status = event.detail.xhr.status;
     if (status === 401) {
@@ -469,28 +589,12 @@ document.body.addEventListener('htmx:responseError', (event) => {
     }
 });
 
-document.body.addEventListener('htmx:timeout', (event) => {
-    showToast('Request timed out. Please check your connection.', 'error');
-});
-
-document.body.addEventListener('htmx:sendError', (event) => {
-    showToast('Network error. Check your connection.', 'error');
-});
-
-// Cookie helper
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
+// Performance monitoring
+if ('performance' in window) {
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            console.log(`Page load time: ${Math.round(perfData.loadEventEnd - perfData.loadEventStart)}ms`);
+        }, 0);
+    });
 }
-
-// Export functions for use in templates
-window.app = {
-    formatDate,
-    formatTime,
-    showToast,
-    confirmAction,
-    hapticFeedback,
-    installPWA,
-    dismissInstallPrompt
-};

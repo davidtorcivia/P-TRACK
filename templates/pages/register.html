@@ -1,10 +1,16 @@
 {{ define "content" }}
-<div style="max-width: 500px; margin: 2rem auto;">
-    <article>
-        <hgroup>
-            <h1>Create Account</h1>
-            <p>Register for Injection Tracker</p>
-        </hgroup>
+<div class="min-h-screen flex items-center justify-center py-12 px-4">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-brand-primary-bg text-brand-primary">
+                <span class="text-3xl">👤</span>
+            </div>
+            <h1 class="text-3xl font-bold mb-2 text-primary">Create Account</h1>
+            <p class="text-secondary">Register for Injection Tracker</p>
+        </div>
+
+        <div class="card">
 
         <form hx-post="/api/auth/register"
               hx-target="#register-error"
@@ -14,62 +20,76 @@
 
             <div id="register-error"></div>
 
-            <label for="username">
-                Username
-                <input type="text"
-                       id="username"
-                       name="username"
-                       placeholder="Choose a username"
-                       required
-                       autofocus
-                       minlength="3"
-                       maxlength="50">
-                <small>3-50 characters, letters, numbers, and underscores only</small>
-            </label>
+            <div class="form-group">
+                <label for="username" class="form-label">
+                    Username
+                    <input type="text"
+                           id="username"
+                           name="username"
+                           placeholder="Choose a username"
+                           class="form-input"
+                           required
+                           autofocus
+                           minlength="3"
+                           maxlength="50">
+                    <small class="text-muted">3-50 characters, letters, numbers, and underscores only</small>
+                </label>
+            </div>
 
-            <label for="email">
-                Email (optional)
-                <input type="email"
-                       id="email"
-                       name="email"
-                       placeholder="your@email.com">
-                <small>For password recovery only</small>
-            </label>
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    Email (optional)
+                    <input type="email"
+                           id="email"
+                           name="email"
+                           placeholder="your@email.com"
+                           class="form-input">
+                    <small class="text-muted">For password recovery only</small>
+                </label>
+            </div>
 
-            <label for="password">
-                Password
-                <input type="password"
-                       id="password"
-                       name="password"
-                       placeholder="Choose a strong password"
-                       required
-                       minlength="8"
-                       x-model="password"
-                       @input="passwordMatch = password === confirmPassword || confirmPassword === ''">
-                <small>Minimum 8 characters</small>
-            </label>
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    Password
+                    <input type="password"
+                           id="password"
+                           name="password"
+                           placeholder="Choose a strong password"
+                           class="form-input"
+                           required
+                           minlength="8"
+                           x-model="password"
+                           @input="passwordMatch = password === confirmPassword || confirmPassword === ''">
+                    <small class="text-muted">Minimum 8 characters</small>
+                </label>
+            </div>
 
-            <label for="confirm_password">
-                Confirm Password
-                <input type="password"
-                       id="confirm_password"
-                       name="confirm_password"
-                       placeholder="Re-enter your password"
-                       required
-                       x-model="confirmPassword"
-                       @input="passwordMatch = password === confirmPassword"
-                       :aria-invalid="!passwordMatch && confirmPassword !== ''">
-                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--pico-del-color);">
-                    Passwords do not match
-                </small>
-            </label>
+            <div class="form-group">
+                <label for="confirm_password" class="form-label">
+                    Confirm Password
+                    <input type="password"
+                           id="confirm_password"
+                           name="confirm_password"
+                           placeholder="Re-enter your password"
+                           class="form-input"
+                           required
+                           x-model="confirmPassword"
+                           @input="passwordMatch = password === confirmPassword"
+                           :aria-invalid="!passwordMatch && confirmPassword !== ''">
+                    <small x-show="!passwordMatch && confirmPassword !== ''" class="text-danger">
+                        Passwords do not match
+                    </small>
+                </label>
+            </div>
 
-            <label for="agree">
-                <input type="checkbox" id="agree" name="agree" required>
-                I understand this is for personal use and not HIPAA compliant
-            </label>
+            <div class="form-group">
+                <label for="agree" class="flex items-center gap-2">
+                    <input type="checkbox" id="agree" name="agree" required class="form-checkbox">
+                    <span class="text-sm text-secondary">I understand this is for personal use and not HIPAA compliant</span>
+                </label>
+            </div>
 
-            <button type="submit" id="register-btn" :disabled="!passwordMatch">
+            <button type="submit" id="register-btn" :disabled="!passwordMatch" class="btn btn-primary btn-lg w-full">
                 <span id="register-spinner" class="htmx-indicator">
                     <span aria-busy="true">Creating account...</span>
                 </span>
@@ -79,21 +99,25 @@
             </button>
         </form>
 
-        <footer>
-            <small>
-                Already have an account? <a href="/login">Log in here</a>
-            </small>
-        </footer>
-    </article>
+        <div class="mt-6 text-center">
+            <p class="text-sm text-secondary">
+                Already have an account? <a href="/login" class="text-brand-primary hover:text-brand-primary-dark font-medium">Log in here</a>
+            </p>
+        </div>
+        </div>
 
-    <!-- Privacy Notice -->
-    <article style="margin-top: 2rem;">
-        <small>
-            <strong>Privacy Notice:</strong> Your data is stored locally on your device/server.
-            This application is intended for personal family use and stores sensitive medical information.
-            Please ensure proper security measures are in place.
-        </small>
-    </article>
+        <!-- Privacy Notice -->
+        <div class="alert alert-info">
+            <div class="flex items-start gap-2">
+                <span class="text-lg">🔒</span>
+                <div class="text-sm">
+                    <strong>Privacy Notice:</strong> Your data is stored locally on your device/server.
+                    This application is intended for personal family use and stores sensitive medical information.
+                    Please ensure proper security measures are in place.
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>

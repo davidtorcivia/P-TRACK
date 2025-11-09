@@ -1,136 +1,188 @@
 {{ define "content" }}
-<div x-data="{ showInjectionModal: false }">
-    <!-- Active Course Info -->
+{{ if .ActiveCourse }}
+<div class="container">
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <a href="/injections" class="btn btn-secondary w-full">
+            <span>💉</span>
+            Log Injection
+        </a>
+        <a href="/symptoms" class="btn btn-secondary w-full">
+            <span>📝</span>
+            Log Symptoms
+        </a>
+        <a href="/medications" class="btn btn-secondary w-full">
+            <span>💊</span>
+            Log Medication
+        </a>
+    </div>
+
+    <!-- Welcome Section -->
     <article>
         <header>
             <hgroup>
-                <h2>{{ if .ActiveCourse }}{{ .ActiveCourse.Name }}{{ else }}No Active Course{{ end }}</h2>
-                <p>
-                    {{ if .LastInjection }}
-                        Last injection: {{ .LastInjection.TimeAgo }} ({{ .LastInjection.Side }})
-                    {{ else }}
-                        No injections logged yet
-                    {{ end }}
-                </p>
+                <h1>Welcome back! 👋</h1>
+                <p>Tracking progress for <strong>{{ .ActiveCourse.Name }}</strong>
+                {{ if .LastInjection }}
+                    • Last injection <strong>{{ .LastInjection.TimeAgo }}</strong>
+                {{ end }}
+            </p>
             </hgroup>
         </header>
+    </article>
 
-        <!-- Large Log Injection Button -->
-        <div style="text-align: center; margin: 2rem 0;">
-            <button @click="showInjectionModal = true"
-                    style="font-size: 1.5rem; padding: 1.5rem 3rem; width: 100%;"
-                    {{ if not .ActiveCourse }}disabled{{ end }}>
-                💉 LOG INJECTION NOW
-            </button>
-            {{ if not .ActiveCourse }}
-            <p style="margin-top: 1rem;">
-                <a href="/courses/new" style="font-size: 1.1rem;">📋 Create a course to start tracking</a>
-            </p>
+    <!-- Low Stock Alerts -->
+    {{ if .LowStockItems }}
+    <div class="message" style="background-color: var(--del-color-bg); border-color: var(--del-color-border);">
+        <strong>⚠️ Low Stock Alerts</strong>
+        <div class="grid">
+            {{ range .LowStockItems }}
+            <div>
+                <strong>{{ .ItemType }}:</strong> {{ .Quantity }} {{ .Unit }} remaining
+                {{ if .ExpirationDate }}
+                • Expires {{ .ExpirationDate }}
+                {{ end }}
+            </div>
             {{ end }}
         </div>
-
-        <!-- Next Injection Info -->
-        {{ if .NextInjection }}
         <footer>
-            <small>
-                {{ if .NextInjection.Overdue }}
-                    ⚠️ Next injection overdue by {{ .NextInjection.TimeUntil }}
-                {{ else }}
-                    ⏱️ Next injection due in {{ .NextInjection.TimeUntil }}
-                {{ end }}
-            </small>
+            <a href="/inventory" class="btn btn-primary">📦 Manage Inventory</a>
         </footer>
-        {{ end }}
-    </article>
-
-    <!-- Quick Actions -->
-    <div class="grid">
-        <button onclick="window.location.href='/symptoms'" class="outline">
-            📝 Log Symptoms
-        </button>
-        <button onclick="window.location.href='/medications'" class="outline">
-            💊 View Medications
-        </button>
-        <button onclick="window.location.href='/calendar'" class="outline">
-            📅 View Calendar
-        </button>
-        <button onclick="window.location.href='/inventory'" class="outline">
-            📦 Check Inventory
-        </button>
     </div>
-
-    <!-- Low Stock Warnings -->
-    {{ if .LowStockItems }}
-    <article style="background-color: var(--pico-warning-background); border-left: 4px solid var(--pico-warning);">
-        <header>
-            <strong>⚠️ Low Stock Alerts</strong>
-        </header>
-        <ul>
-            {{ range .LowStockItems }}
-            <li>
-                <strong>{{ .ItemType }}</strong>: {{ .Quantity }} {{ .Unit }} remaining
-                {{ if .ExpirationDate }}(Expires: {{ .ExpirationDate }}){{ end }}
-            </li>
-            {{ end }}
-        </ul>
-        <footer>
-            <a href="/inventory">Manage inventory →</a>
-        </footer>
-    </article>
     {{ end }}
 
     <!-- Recent Activity -->
     <article>
         <header>
-            <h3>Recent Activity</h3>
+            <hgroup>
+                <h3>Recent Activity</h3>
+                <p>Your latest injections and logs</p>
+            </hgroup>
         </header>
         <div id="recent-activity"
              hx-get="/api/dashboard/recent"
-             hx-trigger="load, every 30s"
+             hx-trigger="load"
              hx-swap="innerHTML">
-            <p aria-busy="true">Loading recent activity...</p>
+            <div style="text-align: center; padding: 2rem;">
+                <small>Loading recent activity...</small>
+            </div>
         </div>
+        <footer>
+            <a href="/injections" class="btn btn-outline">📋 View All History</a>
+        </footer>
     </article>
 
-    <!-- Statistics -->
-    {{ if .Stats }}
+    <!-- Stats and Info Grid -->
     <div class="grid">
-        <article>
-            <header>Total Injections</header>
-            <h2 style="text-align: center; margin: 0;">{{ .Stats.TotalInjections }}</h2>
-            <footer>
-                <small>Left: {{ .Stats.LeftCount }} | Right: {{ .Stats.RightCount }}</small>
-            </footer>
-        </article>
-        <article>
-            <header>This Week</header>
-            <h2 style="text-align: center; margin: 0;">{{ .Stats.ThisWeek }}</h2>
-            <footer>
-                <small>Average: {{ .Stats.WeeklyAverage }}/week</small>
-            </footer>
-        </article>
-        <article>
-            <header>Current Course</header>
-            <h2 style="text-align: center; margin: 0;">{{ .Stats.CourseDays }}</h2>
-            <footer>
-                <small>days active</small>
-            </footer>
-        </article>
-    </div>
-    {{ end }}
+        <!-- Stats Column -->
+        <div>
+            <h2>Statistics</h2>
 
-    <!-- Include Injection Modal -->
-    <div x-show="showInjectionModal"
-         x-cloak
-         style="display: none;"
-         @keydown.escape.window="showInjectionModal = false">
-        {{ template "injection_modal" . }}
+            <article>
+                <header>
+                    <h3>Total Injections</h3>
+                </header>
+                <p><strong>{{ .Stats.TotalInjections }}</strong></p>
+                <div class="grid">
+                    <small>L: {{ .Stats.LeftCount }}</small>
+                    <small>R: {{ .Stats.RightCount }}</small>
+                </div>
+            </article>
+
+            <article>
+                <header>
+                    <h3>Next Injection Site</h3>
+                </header>
+                <p><strong>{{ .Stats.NextInjectionSite }}</strong></p>
+                <small>{{ .Stats.LastInjectionSide }} → {{ .Stats.NextInjectionSite }}</small>
+            </article>
+
+            <article>
+                <header>
+                    <h3>Course Duration</h3>
+                </header>
+                <p><strong>{{ .Stats.CourseDays }}</strong> days active</p>
+                <small>Since {{ .ActiveCourse.StartDate }}</small>
+            </article>
+        </div>
+
+        <!-- Course Info Column -->
+        <div>
+            <h2>Course Information</h2>
+            <article>
+                <div>
+                    <p><strong>Course Name:</strong> {{ .ActiveCourse.Name }}</p>
+                    <p><strong>Start Date:</strong> {{ .ActiveCourse.StartDate }}</p>
+                    {{ if .ActiveCourse.ExpectedEndDate }}
+                    <p><strong>Expected End:</strong> {{ .ActiveCourse.ExpectedEndDate }}</p>
+                    {{ end }}
+                    {{ if .ActiveCourse.Notes }}
+                    <p><strong>Notes:</strong> {{ .ActiveCourse.Notes }}</p>
+                    {{ end }}
+                </div>
+                <footer>
+                    <a href="/courses" class="btn btn-outline">📋 Manage Courses</a>
+                </footer>
+            </article>
+        </div>
     </div>
 </div>
+{{ else }}
+<!-- No Course State -->
+<div class="container">
+    <article style="text-align: center;">
+        <header>
+            <hgroup>
+                <h1>Welcome to Injection Tracker! 🚀</h1>
+                <p>Let's get started by creating your first treatment course.</p>
+            </hgroup>
+        </header>
 
-<style>
-    [x-cloak] {
-        display: none !important;
-    }
-</style>
+        <div style="margin: 2rem 0;">
+            <p>No active course. Create one to start tracking injections.</p>
+        </div>
+
+        <footer>
+            <a href="/courses" class="btn btn-primary btn-xl">
+                ➕ Create Your First Course
+            </a>
+        </footer>
+    </article>
+
+    <!-- Quick Links to show what's available -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="card">
+            <div class="p-6 text-center">
+                <div class="text-3xl mb-3">💉</div>
+                <h3 class="text-lg font-semibold text-primary mb-2">Injections</h3>
+                <p class="text-sm text-secondary">Log injection sites, pain levels, and notes with automatic rotation tracking</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="p-6 text-center">
+                <div class="text-3xl mb-3">📝</div>
+                <h3 class="text-lg font-semibold text-primary mb-2">Symptoms</h3>
+                <p class="text-sm text-secondary">Track daily symptoms, pain levels, and side effects throughout your treatment</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="p-6 text-center">
+                <div class="text-3xl mb-3">💊</div>
+                <h3 class="text-lg font-semibold text-primary mb-2">Medications</h3>
+                <p class="text-sm text-secondary">Manage medications with dosage tracking and adherence monitoring</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="p-6 text-center">
+                <div class="text-3xl mb-3">📦</div>
+                <h3 class="text-lg font-semibold text-primary mb-2">Inventory</h3>
+                <p class="text-sm text-secondary">Monitor supplies and get alerts when stock is running low</p>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
 {{ end }}

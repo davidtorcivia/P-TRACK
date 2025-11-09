@@ -1,13 +1,20 @@
 package handlers
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"injection-tracker/internal/database"
 	"injection-tracker/internal/middleware"
 	"injection-tracker/internal/models"
 	"injection-tracker/internal/repository"
 	"injection-tracker/internal/web"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // getBasePageData returns common data for all authenticated pages
@@ -122,6 +129,91 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = activeCourse
+
+			// Get last injection for this course
+			var lastInjection struct {
+				ID        int64
+				Timestamp time.Time
+				Side      string
+				TimeAgo   string
+			}
+			var lastSide string
+			err := db.QueryRow(`
+				SELECT id, timestamp, side
+				FROM injections
+				WHERE course_id = ?
+				ORDER BY timestamp DESC
+				LIMIT 1
+			`, activeCourse.ID).Scan(&lastInjection.ID, &lastInjection.Timestamp, &lastInjection.Side)
+			if err == nil {
+				lastInjection.TimeAgo = formatTimeAgoWeb(lastInjection.Timestamp)
+				lastSide = lastInjection.Side
+				data["LastInjection"] = &lastInjection
+			}
+
+			// Get basic statistics for the active course
+			stats := map[string]interface{}{}
+
+			// Total injections
+			var totalInjections int
+			db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ?", activeCourse.ID).Scan(&totalInjections)
+			stats["TotalInjections"] = totalInjections
+
+			// Side counts
+			var leftCount, rightCount int
+			db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ? AND side = 'left'", activeCourse.ID).Scan(&leftCount)
+			db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ? AND side = 'right'", activeCourse.ID).Scan(&rightCount)
+			stats["LeftCount"] = leftCount
+			stats["RightCount"] = rightCount
+
+			// Next injection site (opposite of last injection)
+			nextSide := "Left" // Default recommendation
+			if lastSide == "left" {
+				nextSide = "Right"
+			} else if lastSide == "right" {
+				nextSide = "Left"
+			}
+			stats["NextInjectionSite"] = nextSide
+			stats["LastInjectionSide"] = strings.Title(lastSide)
+			if lastSide == "" {
+				stats["LastInjectionSide"] = "None"
+			}
+
+			// Course duration
+			stats["CourseDays"] = activeCourse.DaysActive()
+
+			data["Stats"] = stats
+
+			// Get low stock items
+			lowStockItems := []map[string]interface{}{}
+			rows, err := db.Query(`
+				SELECT item_type, quantity, unit, expiration_date, low_stock_threshold
+				FROM inventory_items
+				WHERE low_stock_threshold IS NOT NULL
+				AND quantity <= low_stock_threshold
+				ORDER BY item_type
+			`)
+			if err == nil {
+				defer rows.Close()
+				for rows.Next() {
+					var item struct {
+						ItemType          string
+						Quantity          float64
+						Unit              string
+						ExpirationDate    sql.NullTime
+						LowStockThreshold float64
+					}
+					if err := rows.Scan(&item.ItemType, &item.Quantity, &item.Unit, &item.ExpirationDate, &item.LowStockThreshold); err == nil {
+						lowStockItems = append(lowStockItems, map[string]interface{}{
+							"ItemType":       item.ItemType,
+							"Quantity":       item.Quantity,
+							"Unit":           item.Unit,
+							"ExpirationDate": item.ExpirationDate,
+						})
+					}
+				}
+			}
+			data["LowStockItems"] = lowStockItems
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -429,15 +521,61 @@ func HandleLogSymptomPage(db *database.DB) http.HandlerFunc {
 	}
 }
 
+// HandleEditSymptomPage renders the edit symptom page
+func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		data["Title"] = "Edit Symptom - Injection Tracker"
+
+		// Get symptom ID from URL
+		idStr := chi.URLParam(r, "id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid symptom log ID", http.StatusBadRequest)
+			return
+		}
+
+		// Get symptom log
+		symptomRepo := repository.NewSymptomRepository(db)
+		symptom, err := symptomRepo.GetByID(id)
+		if err != nil {
+			http.Error(w, "Symptom log not found", http.StatusNotFound)
+			return
+		}
+
+		// Get active course for the template
+		courseRepo := repository.NewCourseRepository(db)
+		activeCourse, err := courseRepo.GetActiveCourse()
+		if err == nil && activeCourse != nil {
+			data["ActiveCourse"] = activeCourse
+		}
+
+		data["Symptom"] = symptom
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "symptom_edit.html", data); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 // HandleSymptomsHistoryPage renders the symptoms history page
 func HandleSymptomsHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Symptom History - Injection Tracker"
 
+		// Get active course for consistency with other pages
+		courseRepo := repository.NewCourseRepository(db)
+		activeCourse, err := courseRepo.GetActiveCourse()
+		if err == nil && activeCourse != nil {
+			data["ActiveCourse"] = activeCourse
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "symptoms-history.html", data); err != nil {
-			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -458,19 +596,162 @@ func HandleLogMedicationPage(db *database.DB) http.HandlerFunc {
 	}
 }
 
+// formatTimeAgoWeb returns a human-readable time ago string
+func formatTimeAgoWeb(t time.Time) string {
+	duration := time.Since(t)
+	if duration.Hours() < 1 {
+		minutes := int(duration.Minutes())
+		if minutes == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", minutes)
+	} else if duration.Hours() < 24 {
+		hours := int(duration.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	} else {
+		days := int(duration.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
+}
+
 // HandleGetRecentActivity returns recent activity HTML for dashboard
 func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
 		_ = userID // TODO: Use this to fetch user-specific activity
 
-		// For now, return empty state
+		// Get recent activity from different tables
+		activities := []map[string]interface{}{}
+
+		// Recent injections (last 5)
+		rows, err := db.Query(`
+			SELECT 'injection' as type, timestamp, side, pain_level, notes, id
+			FROM injections
+			ORDER BY timestamp DESC
+			LIMIT 5
+		`)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var activity struct {
+					Type       string
+					Timestamp  time.Time
+					Side       string
+					PainLevel  sql.NullInt64
+					Notes      sql.NullString
+					ID         int64
+				}
+				if err := rows.Scan(&activity.Type, &activity.Timestamp, &activity.Side, &activity.PainLevel, &activity.Notes, &activity.ID); err == nil {
+					activities = append(activities, map[string]interface{}{
+						"Type":      activity.Type,
+						"Side":      activity.Side,
+						"PainLevel": activity.PainLevel.Int64,
+						"Notes":     activity.Notes.String,
+						"TimeAgo":   formatTimeAgoWeb(activity.Timestamp),
+						"UserName":  "You", // TODO: Get actual username
+					})
+				}
+			}
+		}
+
+		// Recent symptoms (last 3)
+		rows, err = db.Query(`
+			SELECT 'symptom' as type, timestamp, pain_level, pain_location, notes, id
+			FROM symptom_logs
+			ORDER BY timestamp DESC
+			LIMIT 3
+		`)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var activity struct {
+					Type         string
+					Timestamp    time.Time
+					PainLevel    sql.NullInt64
+					PainLocation sql.NullString
+					Notes        sql.NullString
+					ID           int64
+				}
+				if err := rows.Scan(&activity.Type, &activity.Timestamp, &activity.PainLevel, &activity.PainLocation, &activity.Notes, &activity.ID); err == nil {
+					activities = append(activities, map[string]interface{}{
+						"Type":         activity.Type,
+						"PainLevel":    activity.PainLevel.Int64,
+						"PainLocation": activity.PainLocation.String,
+						"Notes":        activity.Notes.String,
+						"TimeAgo":      formatTimeAgoWeb(activity.Timestamp),
+						"UserName":     "You", // TODO: Get actual username
+					})
+				}
+			}
+		}
+
+		// Sort by timestamp (combined from different queries)
+		// For now, just return injections first, then symptoms
+
+		if len(activities) == 0 {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`
+				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
+					<p>No recent activity yet.</p>
+					<small>Start by creating a course and logging your first injection!</small>
+				</div>
+			`))
+			return
+		}
+
+		// Render recent activity template
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`
-			<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
-				<p>No recent activity yet.</p>
-				<small>Start by creating a course and logging your first injection!</small>
-			</div>
-		`))
+		html := `<ul style="list-style: none; padding: 0;">`
+
+		for _, activity := range activities {
+			html += `<li style="padding: 0.75rem 0; border-bottom: 1px solid var(--pico-muted-border-color);">
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<div>
+						<strong>`
+
+			switch activity["Type"].(string) {
+			case "injection":
+				html += fmt.Sprintf("💉 Injection (%s)", activity["Side"])
+				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
+					html += fmt.Sprintf(` <span style="font-size: 1.5rem;" title="Pain Level: %d/10">`, painLevel)
+					if painLevel > 7 {
+						html += "😣"
+					} else if painLevel > 4 {
+						html += "😐"
+					} else {
+						html += "😊"
+					}
+					html += "</span>"
+				}
+			case "symptom":
+				html += "📝 Symptom Log"
+				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
+					html += fmt.Sprintf(" (Pain: %d/10)", painLevel)
+				}
+				if location, ok := activity["PainLocation"].(string); ok && location != "" {
+					html += fmt.Sprintf(" - %s", location)
+				}
+			}
+
+			html += fmt.Sprintf(`</strong><br><small>%s • %s</small>`, activity["TimeAgo"], activity["UserName"])
+
+			if notes, ok := activity["Notes"].(string); ok && notes != "" {
+				if len(notes) > 50 {
+					notes = notes[:50] + "..."
+				}
+				html += fmt.Sprintf("<br><small>%s</small>", notes)
+			}
+
+			html += `</div></div></li>`
+		}
+
+		html += `</ul>`
+		w.Write([]byte(html))
 	}
 }

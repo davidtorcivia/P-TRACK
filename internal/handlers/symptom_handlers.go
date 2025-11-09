@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"injection-tracker/internal/database"
@@ -98,8 +99,26 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Convert to JSON-serializable format
+		response := make([]map[string]interface{}, len(symptoms))
+		for i, symptom := range symptoms {
+			response[i] = map[string]interface{}{
+				"id":            symptom.ID,
+				"course_id":     symptom.CourseID,
+				"logged_by":     nullInt64ToInt(symptom.LoggedBy),
+				"timestamp":     symptom.Timestamp.Format(time.RFC3339),
+				"pain_level":    nullInt64ToInt(symptom.PainLevel),
+				"pain_location": nullStringToString(symptom.PainLocation),
+				"pain_type":     nullStringToString(symptom.PainType),
+				"symptoms":      nullStringToString(symptom.Symptoms),
+				"notes":         nullStringToString(symptom.Notes),
+				"created_at":    symptom.CreatedAt.Format(time.RFC3339),
+				"updated_at":    symptom.UpdatedAt.Format(time.RFC3339),
+			}
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(symptoms)
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
@@ -220,8 +239,23 @@ func HandleGetSymptom(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Convert to JSON-serializable format
+		response := map[string]interface{}{
+			"id":            symptom.ID,
+			"course_id":     symptom.CourseID,
+			"logged_by":     nullInt64ToInt(symptom.LoggedBy),
+			"timestamp":     symptom.Timestamp.Format(time.RFC3339),
+			"pain_level":    nullInt64ToInt(symptom.PainLevel),
+			"pain_location": nullStringToString(symptom.PainLocation),
+			"pain_type":     nullStringToString(symptom.PainType),
+			"symptoms":      nullStringToString(symptom.Symptoms),
+			"notes":         nullStringToString(symptom.Notes),
+			"created_at":    symptom.CreatedAt.Format(time.RFC3339),
+			"updated_at":    symptom.UpdatedAt.Format(time.RFC3339),
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(symptom)
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
@@ -460,7 +494,21 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 			)
 
 			if symptomsJSON != "" && symptomsJSON != "[]" && symptomsJSON != "null" {
-				html += fmt.Sprintf(`<div><strong>Symptoms:</strong> %s</div>`, symptomsJSON)
+				// Parse JSON symptoms array
+				var symptoms []string
+				if err := json.Unmarshal([]byte(symptomsJSON), &symptoms); err == nil && len(symptoms) > 0 {
+					html += `<div><strong>Symptoms:</strong> `
+					for i, symptom := range symptoms {
+						if i > 0 {
+							html += ", "
+						}
+						// Format symptom names nicely
+						formattedSymptom := strings.ReplaceAll(symptom, "_", " ")
+						formattedSymptom = strings.Title(formattedSymptom)
+						html += formattedSymptom
+					}
+					html += `</div>`
+				}
 			}
 
 			if symptom.Notes.Valid && symptom.Notes.String != "" {
@@ -471,20 +519,15 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 			html += fmt.Sprintf(`
 				<footer style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
 					<div class="grid" style="grid-template-columns: 1fr 1fr;">
-						<button onclick="if(confirm('Delete this symptom log?')) {
-							fetch('/api/symptoms/%d', {
-								method: 'DELETE',
-								headers: {'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content || ''}
-							}).then(() => window.location.reload());
-						}" class="outline secondary" style="font-size: 0.9rem;">
+						<button data-action="delete-symptom" data-symptom-id="%d" class="outline secondary" style="font-size: 0.9rem;">
 							Delete
 						</button>
-						<button onclick="alert('Edit functionality coming soon')" class="outline" style="font-size: 0.9rem;">
+						<button data-action="edit-symptom" data-symptom-id="%d" class="outline" style="font-size: 0.9rem;">
 							Edit
 						</button>
 					</div>
 				</footer>
-			`, symptom.ID)
+			`, symptom.ID, symptom.ID)
 
 			html += `</article>`
 		}
@@ -500,6 +543,22 @@ func nullStringValue(ns sql.NullString, defaultVal string) string {
 		return ns.String
 	}
 	return defaultVal
+}
+
+// nullStringToString returns the string value or empty if null
+func nullStringToString(ns sql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return ""
+}
+
+// nullInt64ToInt returns the int64 value or 0 if null
+func nullInt64ToInt(ni sql.NullInt64) *int64 {
+	if ni.Valid {
+		return &ni.Int64
+	}
+	return nil
 }
 
 // formatTimeAgo returns a human-readable time ago string
@@ -525,6 +584,7 @@ func formatTimeAgo(t time.Time) string {
 		return fmt.Sprintf("%d days ago", days)
 	}
 }
+
 
 // HandleGetSymptomTrends returns symptom trend data for charts
 func HandleGetSymptomTrends(db *database.DB) http.HandlerFunc {

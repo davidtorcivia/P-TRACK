@@ -1,67 +1,105 @@
 {{ define "content" }}
-<div style="max-width: 500px; margin: 2rem auto;">
-    <article>
-        <hgroup>
-            <h1>Welcome Back</h1>
-            <p>Log in to your Injection Tracker account</p>
-        </hgroup>
+<div class="min-h-screen flex items-center justify-center py-12 px-4">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style="background-color: var(--brand-primary-50); color: var(--brand-primary);">
+                <span class="text-3xl">💉</span>
+            </div>
+            <h1 class="text-3xl font-bold mb-2" style="color: var(--color-text-primary);">Welcome Back</h1>
+            <p style="color: var(--color-text-secondary);">Log in to your Injection Tracker account</p>
+        </div>
 
-        <form hx-post="/api/auth/login"
-              hx-target="#login-error"
-              hx-swap="innerHTML"
-              hx-indicator="#login-spinner">
+        <!-- Login Form -->
+        <div class="card">
+            <form hx-post="/api/auth/login"
+                  hx-target="#login-error"
+                  hx-swap="innerHTML"
+                  hx-indicator="#login-spinner"
+                  class="space-y-6">
 
-            <div id="login-error"></div>
+                <!-- Error Container -->
+                <div id="login-error"></div>
 
-            <label for="username">
-                Username
-                <input type="text"
-                       id="username"
-                       name="username"
-                       placeholder="Enter your username"
-                       required
-                       autofocus>
-            </label>
+                <!-- Username Field -->
+                <div class="form-group">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text"
+                           id="username"
+                           name="username"
+                           class="form-input"
+                           placeholder="Enter your username"
+                           required
+                           autofocus>
+                </div>
 
-            <label for="password">
-                Password
-                <input type="password"
-                       id="password"
-                       name="password"
-                       placeholder="Enter your password"
-                       required>
-            </label>
+                <!-- Password Field -->
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password"
+                           id="password"
+                           name="password"
+                           class="form-input"
+                           placeholder="Enter your password"
+                           required>
+                </div>
 
-            <label for="remember">
-                <input type="checkbox" id="remember" name="remember" role="switch">
-                Remember me for 2 weeks
-            </label>
+                <!-- Remember Me -->
+                <div class="flex items-center">
+                    <input type="checkbox"
+                           id="remember"
+                           name="remember"
+                           class="form-checkbox">
+                    <label for="remember" class="ml-2 text-sm" style="color: var(--color-text-secondary);">
+                        Remember me for 2 weeks
+                    </label>
+                </div>
 
-            <button type="submit" id="login-btn">
-                <span id="login-spinner" class="htmx-indicator">
-                    <span aria-busy="true">Logging in...</span>
-                </span>
-                <span class="htmx-indicator-none">
-                    Log In
-                </span>
-            </button>
-        </form>
+                <!-- Submit Button -->
+                <button type="submit"
+                        id="login-btn"
+                        class="btn btn-primary w-full btn-lg">
+                    <span id="login-spinner" class="htmx-indicator hidden">
+                        <span class="animate-pulse">⏳ Logging in...</span>
+                    </span>
+                    <span class="htmx-indicator-default">
+                        <span>🔐</span>
+                        <span>Log In</span>
+                    </span>
+                </button>
+            </form>
 
-        <footer>
-            <small>
-                Don't have an account? <a href="/register">Register here</a><br>
-                <a href="/forgot-password">Forgot your password?</a>
-            </small>
-        </footer>
-    </article>
+            <!-- Footer Links -->
+            <div class="mt-6 text-center space-y-2">
+                <p class="text-sm" style="color: var(--color-text-secondary);">
+                    Don't have an account?
+                    <a href="/register" style="color: var(--brand-primary); text-decoration: none;"
+                       onmouseover="this.style.color='var(--brand-primary-dark)'"
+                       onmouseout="this.style.color='var(--brand-primary)'">
+                        Register here
+                    </a>
+                </p>
+                <p class="text-sm">
+                    <a href="/forgot-password" style="color: var(--brand-primary); text-decoration: none;"
+                       onmouseover="this.style.color='var(--brand-primary-dark)'"
+                       onmouseout="this.style.color='var(--brand-primary)'">
+                        Forgot your password?
+                    </a>
+                </p>
+            </div>
+        </div>
 
-    <!-- Security Notice -->
-    <article style="margin-top: 2rem;">
-        <small>
-            <strong>Note:</strong> This application stores sensitive medical information.
-            Please ensure you're using a secure device and connection.
-        </small>
-    </article>
+        <!-- Security Notice -->
+        <div class="alert alert-info">
+            <div class="flex items-start gap-2">
+                <span class="text-lg">🔒</span>
+                <div class="text-sm">
+                    <strong>Security Notice:</strong> This application stores sensitive medical information.
+                    Please ensure you're using a secure device and connection.
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -69,10 +107,15 @@
         display: none;
     }
     .htmx-request .htmx-indicator {
-        display: inline;
+        display: block;
     }
-    .htmx-request .htmx-indicator-none {
+    .htmx-request .htmx-indicator-default {
         display: none;
+    }
+
+    /* Center the login form on the page */
+    .min-h-screen {
+        min-height: 100vh;
     }
 </style>
 {{ end }}

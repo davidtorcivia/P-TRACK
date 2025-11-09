@@ -17,8 +17,13 @@ type DB struct {
 
 // Open creates a new database connection with secure settings
 func Open(dbPath string) (*DB, error) {
+	// Clean up the path for Windows
+	if len(dbPath) > 1 && dbPath[0] == '.' && dbPath[1] == '/' {
+		dbPath = dbPath[2:]
+	}
+
 	// SQLite connection string with security settings
-	dsn := fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=10000", dbPath)
+	dsn := fmt.Sprintf("%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=10000", dbPath)
 
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {

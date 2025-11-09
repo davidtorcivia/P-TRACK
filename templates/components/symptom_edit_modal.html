@@ -1,0 +1,181 @@
+{{ define "symptom_edit_modal" }}
+<div class="modal-overlay"
+     @click.self="showEditModal = false"
+     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+
+    <article x-data="{
+        painLevel: {{ if .Symptom.PainLevel.Valid }}{{ .Symptom.PainLevel.Int64 }}{{ else }}5{{ end }},
+        painLocation: '{{ if .Symptom.PainLocation.Valid }}{{ .Symptom.PainLocation.String }}{{ else }}{{ end }}',
+        painType: '{{ if .Symptom.PainType.Valid }}{{ .Symptom.PainType.String }}{{ else }}{{ end }}',
+        selectedSymptoms: {{ if .Symptom.Symptoms.Valid }}{{ .Symptom.Symptoms.String }}{{ else }}[]{{ end }},
+        notes: '{{ if .Symptom.Notes.Valid }}{{ .Symptom.Notes.String }}{{ else }}{{ end }}',
+        submitting: false
+    }" style="max-width: 600px; width: 100%; margin: 0;">
+
+        <header>
+            <button @click="showEditModal = false"
+                    aria-label="Close"
+                    class="close"
+                    style="float: right; background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+                ✕
+            </button>
+            <h2>Edit Symptom Log</h2>
+        </header>
+
+        <form @submit.prevent="
+                submitting = true;
+                const btn = $el.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+
+                // First, get a fresh CSRF token
+                fetch('/api/csrf-token')
+                    .then(response => response.json())
+                    .then(data => {
+                        btn.textContent = 'Saving...';
+
+                        fetch('/api/symptoms/{{ .Symptom.ID }}', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': data.csrf_token
+                            },
+                            body: JSON.stringify({
+                                course_id: {{ .ActiveCourse.ID }},
+                                pain_level: parseInt(painLevel),
+                                pain_location: painLocation || null,
+                                pain_type: painType || null,
+                                symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : null,
+                                notes: notes || null
+                            })
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                showEditModal = false;
+                                window.location.reload();
+                            } else {
+                                return response.text().then(text => {
+                                    alert('Error: ' + text);
+                                    btn.disabled = false;
+                                    btn.textContent = 'Update Symptom Log';
+                                    submitting = false;
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            alert('Error: ' + error.message);
+                            btn.disabled = false;
+                            btn.textContent = 'Update Symptom Log';
+                            submitting = false;
+                        });
+                    })
+                    .catch(error => {
+                        alert('Error getting token: ' + error.message);
+                        btn.disabled = false;
+                        btn.textContent = 'Update Symptom Log';
+                        submitting = false;
+                    });
+            ">
+
+            <label>
+                <strong>Pain Level:</strong> <span x-text="painLevel"></span>/10
+                <input type="range"
+                       min="1"
+                       max="10"
+                       x-model="painLevel"
+                       style="margin-top: 0.5rem;">
+            </label>
+
+            <div class="grid">
+                <label for="edit_pain_location">
+                    Location
+                    <select id="edit_pain_location" x-model="painLocation" required>
+                        <option value="">Select location...</option>
+                        <option value="injection_site" {{ if eq .Symptom.PainLocation.String "injection_site" }}selected{{ end }}>Injection Site</option>
+                        <option value="abdomen" {{ if eq .Symptom.PainLocation.String "abdomen" }}selected{{ end }}>Abdomen</option>
+                        <option value="back" {{ if eq .Symptom.PainLocation.String "back" }}selected{{ end }}>Back</option>
+                        <option value="head" {{ if eq .Symptom.PainLocation.String "head" }}selected{{ end }}>Head</option>
+                        <option value="other" {{ if eq .Symptom.PainLocation.String "other" }}selected{{ end }}>Other</option>
+                    </select>
+                </label>
+
+                <label for="edit_pain_type">
+                    Type
+                    <select id="edit_pain_type" x-model="painType" required>
+                        <option value="">Select type...</option>
+                        <option value="sharp" {{ if eq .Symptom.PainType.String "sharp" }}selected{{ end }}>Sharp</option>
+                        <option value="dull" {{ if eq .Symptom.PainType.String "dull" }}selected{{ end }}>Dull</option>
+                        <option value="aching" {{ if eq .Symptom.PainType.String "aching" }}selected{{ end }}>Aching</option>
+                        <option value="cramping" {{ if eq .Symptom.PainType.String "cramping" }}selected{{ end }}>Cramping</option>
+                        <option value="throbbing" {{ if eq .Symptom.PainType.String "throbbing" }}selected{{ end }}>Throbbing</option>
+                    </select>
+                </label>
+            </div>
+
+            <fieldset>
+                <legend>Other Symptoms</legend>
+                <label>
+                    <input type="checkbox" value="nausea" x-model="selectedSymptoms">
+                    Nausea
+                </label>
+                <label>
+                    <input type="checkbox" value="fatigue" x-model="selectedSymptoms">
+                    Fatigue
+                </label>
+                <label>
+                    <input type="checkbox" value="headache" x-model="selectedSymptoms">
+                    Headache
+                </label>
+                <label>
+                    <input type="checkbox" value="mood_changes" x-model="selectedSymptoms">
+                    Mood Changes
+                </label>
+                <label>
+                    <input type="checkbox" value="dizziness" x-model="selectedSymptoms">
+                    Dizziness
+                </label>
+                <label>
+                    <input type="checkbox" value="other" x-model="selectedSymptoms">
+                    Other
+                </label>
+            </fieldset>
+
+            <label for="edit_notes">
+                Notes (optional)
+                <textarea id="edit_notes"
+                          x-model="notes"
+                          rows="3"
+                          placeholder="Describe your symptoms in detail..."></textarea>
+            </label>
+
+            <div class="grid">
+                <button type="button" @click="showEditModal = false" class="secondary">
+                    Cancel
+                </button>
+                <button type="submit" :disabled="submitting">
+                    Update Symptom Log
+                </button>
+            </div>
+        </form>
+    </article>
+</div>
+
+<style>
+    .modal-overlay {
+        animation: fadeIn 0.2s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .modal-overlay {
+            align-items: flex-start;
+            padding: 0.5rem;
+        }
+    }
+</style>
+{{ end }}

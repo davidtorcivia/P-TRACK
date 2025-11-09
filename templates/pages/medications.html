@@ -1,326 +1,162 @@
 {{ define "content" }}
-<div x-data="{ showNewMedicationModal: false }">
-<article>
-    <header>
-        <hgroup>
-            <h1>Medications</h1>
-            <p>Track pills, supplements, and other medications</p>
-        </hgroup>
-        <button @click="showNewMedicationModal = true">
-            + Add Medication
+<div class="container py-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl lg:text-4xl font-bold mb-2">Medications</h1>
+        <p class="text-lg text-secondary">Track pills, supplements, and other medications</p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex flex-wrap gap-3 mb-8">
+        <button onclick="window.location.href='/medications/new'" class="btn btn-primary">
+            <span class="mr-2">➕</span>
+            Add Medication
         </button>
-    </header>
+        <button onclick="window.location.href='/medications'" class="btn btn-outline">
+            <span class="mr-2">💊</span>
+            Log Medication
+        </button>
+    </div>
 
     <!-- Active Medications -->
-    <article>
-        <header>
-            <h3>Active Medications</h3>
-        </header>
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold mb-6">Active Medications</h2>
 
         {{ if .ActiveMedications }}
-        <div class="grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {{ range .ActiveMedications }}
-            <article>
-                <header>
-                    <h4 style="margin-bottom: 0.25rem;">{{ .Name }}</h4>
-                    <small>{{ .Dosage }} • {{ .Frequency }}</small>
-                </header>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ .Name }}</h3>
+                    <p class="card-subtitle">{{ .Dosage }} • {{ .Frequency }}</p>
+                </div>
+                <div class="card-body">
+                    <!-- Today's Status -->
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium">Today</span>
+                            {{ if .TakenToday }}
+                            <span class="badge badge-success">✓ Taken</span>
+                            {{ else }}
+                            <span class="badge badge-warning">⏰ Pending</span>
+                            {{ end }}
+                        </div>
 
-                <div style="margin: 1rem 0;">
-                    <!-- Today's status -->
-                    {{ if .TakenToday }}
-                    <p style="color: var(--pico-success);">✓ Taken today</p>
-                    {{ else }}
-                    <p style="color: var(--pico-warning);">⚠️ Not taken yet</p>
-                    {{ end }}
+                        <!-- Quick Log Button -->
+                        <form method="POST" action="/api/medications/{{ .ID }}/log">
+                            <input type="hidden" name="taken" value="{{ if not .TakenToday }}true{{ else }}false{{ end }}">
+                            <button type="submit" class="btn {{ if .TakenToday }}btn-secondary{{ else }}btn-primary{{ end }} w-full">
+                                {{ if .TakenToday }}
+                                Mark as Missed
+                                {{ else }}
+                                Mark as Taken
+                                {{ end }}
+                            </button>
+                        </form>
+                    </div>
 
-                    <!-- Quick log button -->
-                    <button onclick="
-                            const btn = this;
-                            btn.disabled = true;
-                            fetch('/api/medications/{{ .ID }}/log', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-Token': '{{ $.CSRFToken }}'
-                                },
-                                body: JSON.stringify({taken: true})
-                            }).then(() => window.location.reload())
-                            .catch(() => btn.disabled = false);"
-                            class="outline"
-                            style="width: 100%;"
-                            {{ if .TakenToday }}disabled{{ end }}>
-                        {{ if .TakenToday }}Already Taken{{ else }}Mark as Taken{{ end }}
+                    <!-- Medication Details -->
+                    <div class="space-y-2 text-sm">
+                        {{ if .Notes }}
+                        <div>
+                            <span class="font-medium">Notes:</span>
+                            <p class="text-muted">{{ .Notes }}</p>
+                        </div>
+                        {{ end }}
+
+                        {{ if .StartDate }}
+                        <div>
+                            <span class="font-medium">Started:</span>
+                            <span class="text-muted">{{ .StartDate }}</span>
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button onclick="editMedication({{ .ID }})" class="btn btn-sm btn-ghost">
+                        ✏️ Edit
                     </button>
                 </div>
-
-                <footer>
-                    <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
-                        <button onclick="alert('Edit functionality coming soon')"
-                                class="outline" style="font-size: 0.9rem;">
-                            Edit
-                        </button>
-                        <button onclick="if(confirm('Stop tracking {{ .Name }}?')) {
-                                    fetch('/api/medications/{{ .ID }}', {
-                                        method: 'DELETE',
-                                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                                    }).then(() => window.location.reload());
-                                }"
-                                class="outline secondary" style="font-size: 0.9rem;">
-                            Deactivate
-                        </button>
-                        <button onclick="window.location.href='/medications/{{ .ID }}/logs'"
-                                class="outline" style="font-size: 0.9rem;">
-                            View History
-                        </button>
-                    </div>
-                </footer>
-            </article>
+            </div>
             {{ end }}
         </div>
         {{ else }}
-        <p style="text-align: center; color: var(--pico-muted-color);">
-            No active medications. <a href="#" @click="showNewMedicationModal = true">Add one</a>
-        </p>
+        <div class="card">
+            <div class="card-body text-center py-12">
+                <div class="text-4xl mb-4">💊</div>
+                <h3 class="text-lg font-semibold mb-2">No active medications</h3>
+                <p class="text-muted mb-4">Add your first medication to start tracking.</p>
+                <button onclick="window.location.href='/medications/new'" class="btn btn-primary">
+                    <span class="mr-2">➕</span>
+                    Add First Medication
+                </button>
+            </div>
+        </div>
         {{ end }}
-    </article>
-
-    <!-- Today's Schedule -->
-    <article>
-        <header>
-            <h3>Today's Schedule</h3>
-        </header>
-
-        <div id="daily-schedule"
-             hx-get="/api/medications/schedule/today"
-             hx-trigger="load, every 60s"
-             hx-swap="innerHTML">
-            <p aria-busy="true">Loading schedule...</p>
-        </div>
-    </article>
-
-    <!-- Adherence Chart -->
-    <article>
-        <header>
-            <h3>Adherence (Last 30 Days)</h3>
-        </header>
-
-        <div class="chart-container">
-            <canvas id="adherence-chart"></canvas>
-        </div>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', async () => {
-                const response = await fetch('/api/medications/adherence?days=30');
-                const data = await response.json();
-
-                const ctx = document.getElementById('adherence-chart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.medications,
-                        datasets: [{
-                            label: 'Taken',
-                            data: data.taken,
-                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        }, {
-                            label: 'Missed',
-                            data: data.missed,
-                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                stacked: true,
-                            },
-                            y: {
-                                stacked: true,
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            });
-        </script>
-    </article>
+    </div>
 
     <!-- Inactive Medications -->
     {{ if .InactiveMedications }}
-    <details>
-        <summary>Inactive Medications ({{ len .InactiveMedications }})</summary>
-
-        <div style="padding: 1rem;">
-            <ul style="list-style: none; padding: 0;">
-                {{ range .InactiveMedications }}
-                <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--pico-muted-border-color);">
-                    <strong>{{ .Name }}</strong> - {{ .Dosage }}
-                    <small>({{ .FormattedEndDate }})</small>
-                    <button hx-post="/api/medications/{{ .ID }}/reactivate"
-                            hx-confirm="Reactivate this medication?"
-                            class="outline"
-                            style="float: right;">
-                        Reactivate
-                    </button>
-                </li>
-                {{ end }}
-            </ul>
-        </div>
-    </details>
-    {{ end }}
-</article>
-
-<!-- New Medication Modal -->
-<dialog :open="showNewMedicationModal" @click="if($event.target === $el) showNewMedicationModal = false">
-    <article style="max-width: 600px; margin: 2rem auto;">
-        <header>
-            <button @click="showNewMedicationModal = false" aria-label="Close" rel="prev" style="float: right;"></button>
-            <h2>Add Medication</h2>
-        </header>
-
-        <form x-data="{
-                  name: '',
-                  dosage: '',
-                  frequency: '',
-                  startDate: new Date().toISOString().split('T')[0],
-                  scheduledTime: '',
-                  timeWindow: 60,
-                  reminderEnabled: false,
-                  notes: ''
-              }"
-              @submit.prevent="
-                const btn = $el.querySelector('button[type=submit]');
-                btn.disabled = true;
-                btn.textContent = 'Adding...';
-                fetch('/api/medications', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ .CSRFToken }}'
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        dosage: dosage,
-                        frequency: frequency,
-                        start_date: startDate,
-                        scheduled_time: scheduledTime || null,
-                        time_window_minutes: scheduledTime ? parseInt(timeWindow) : null,
-                        reminder_enabled: reminderEnabled,
-                        notes: notes || null
-                    })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        showNewMedicationModal = false;
-                        window.location.reload();
-                    } else {
-                        btn.disabled = false;
-                        btn.textContent = 'Add Medication';
-                        response.text().then(text => {
-                            document.getElementById('medication-feedback').innerHTML = '<div class=error-message>' + text + '</div>';
-                        });
-                    }
-                })
-                .catch(error => {
-                    btn.disabled = false;
-                    btn.textContent = 'Add Medication';
-                    document.getElementById('medication-feedback').innerHTML = '<div class=error-message>Error: ' + error.message + '</div>';
-                });
-              ">
-
-            <div id="medication-feedback"></div>
-
-            <label for="med_name">
-                Medication Name *
-                <input type="text"
-                       id="med_name"
-                       x-model="name"
-                       placeholder="e.g., Prenatal Vitamin, Progesterone Pills"
-                       required
-                       autofocus>
-            </label>
-
-            <div class="grid">
-                <label for="dosage">
-                    Dosage *
-                    <input type="text"
-                           id="dosage"
-                           x-model="dosage"
-                           placeholder="e.g., 200mg, 1 tablet"
-                           required>
-                </label>
-
-                <label for="frequency">
-                    Frequency *
-                    <input type="text"
-                           id="frequency"
-                           x-model="frequency"
-                           placeholder="e.g., Once daily, Twice daily"
-                           required>
-                </label>
-            </div>
-
-            <label for="start_date">
-                Start Date *
-                <input type="date"
-                       id="start_date"
-                       x-model="startDate"
-                       required>
-            </label>
-
-            <details>
-                <summary>⏰ Schedule & Reminders (optional)</summary>
-                <div style="padding: 1rem 0;">
-                    <label for="scheduled_time">
-                        Scheduled Time (e.g., 08:00 for 8:00 AM)
-                        <input type="time"
-                               id="scheduled_time"
-                               x-model="scheduledTime"
-                               placeholder="HH:MM">
-                        <small>What time should this medication be taken?</small>
-                    </label>
-
-                    <label for="time_window" x-show="scheduledTime">
-                        Time Window (minutes)
-                        <input type="number"
-                               id="time_window"
-                               x-model="timeWindow"
-                               min="15"
-                               max="240"
-                               step="15">
-                        <small>How many minutes before/after is acceptable?</small>
-                    </label>
-
-                    <label for="reminder_enabled">
-                        <input type="checkbox"
-                               id="reminder_enabled"
-                               x-model="reminderEnabled"
-                               role="switch">
-                        Enable reminders for this medication
-                    </label>
+    <div>
+        <h2 class="text-2xl font-semibold mb-6">Past Medications</h2>
+        <div class="card">
+            <div class="card-body">
+                <div class="space-y-4">
+                    {{ range .InactiveMedications }}
+                    <div class="flex items-center justify-between p-4 bg-surface rounded-lg">
+                        <div>
+                            <h4 class="font-medium">{{ .Name }}</h4>
+                            <p class="text-sm text-muted">{{ .Dosage }} • {{ .Frequency }}</p>
+                            {{ if .EndDate }}
+                            <p class="text-xs text-muted">Ended: {{ .EndDate }}</p>
+                            {{ end }}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="reactivateMedication({{ .ID }})" class="btn btn-sm btn-outline">
+                                Reactivate
+                            </button>
+                            <button onclick="editMedication({{ .ID }})" class="btn btn-sm btn-ghost">
+                                ✏️
+                            </button>
+                        </div>
+                    </div>
+                    {{ end }}
                 </div>
-            </details>
-
-            <label for="med_notes">
-                Notes (optional)
-                <textarea id="med_notes"
-                          x-model="notes"
-                          rows="2"
-                          placeholder="Any special instructions..."></textarea>
-            </label>
-
-            <footer>
-                <button type="button" @click="showNewMedicationModal = false" class="secondary">
-                    Cancel
-                </button>
-                <button type="submit" :disabled="!name || !dosage || !frequency">
-                    Add Medication
-                </button>
-            </footer>
-        </form>
-    </article>
-</dialog>
+            </div>
+        </div>
+    </div>
+    {{ end }}
 </div>
+
+<script>
+function editMedication(id) {
+    // TODO: Implement edit modal
+    console.log('Edit medication:', id);
+}
+
+function reactivateMedication(id) {
+    if (confirm('Reactivate this medication?')) {
+        fetch(`/api/medications/${id}}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                is_active: true
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to reactivate medication');
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
+    }
+}
+</script>
 {{ end }}

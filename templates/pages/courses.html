@@ -1,221 +1,467 @@
 {{ define "content" }}
-<div x-data="{ showNewCourseModal: {{ if eq .Action "new" }}true{{ else }}false{{ end }} }">
-<article>
-    <header>
-        <hgroup>
-            <h1>Treatment Courses</h1>
-            <p>Manage your treatment cycles and periods</p>
-        </hgroup>
-        <button @click="showNewCourseModal = true">
-            + New Course
-        </button>
-    </header>
-
-    <!-- Active Course -->
-    {{ if .ActiveCourse }}
-    <article style="border-left: 4px solid var(--pico-primary);">
-        <header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <hgroup>
-                    <h2>{{ .ActiveCourse.Name }}</h2>
-                    <p>
-                        Started: {{ .ActiveCourse.FormattedStartDate }} ({{ .ActiveCourse.DaysActive }} days)
-                    </p>
-                </hgroup>
-                <span style="padding: 0.5rem 1rem; background-color: var(--pico-primary); color: white; border-radius: var(--pico-border-radius);">
-                    ACTIVE
-                </span>
-            </div>
-        </header>
-
-        <div class="grid">
+<div x-data="{
+    showNewCourseModal: {{ if eq .Action "new" }}true{{ else }}false{{ end }},
+    showEditCourseModal: false,
+    showCloseCourseModal: false,
+    showReactivateCourseModal: false,
+    editingCourseId: null,
+    closingCourseId: null,
+    reactivatingCourseId: null,
+    reactivatingCourseName: ''
+}">
+    <div class="container py-6">
+        <!-- Header with proper button text -->
+        <div class="flex items-center justify-between mb-8">
             <div>
-                <strong>Total Injections:</strong> {{ .ActiveCourse.InjectionCount }}<br>
-                <strong>Expected End:</strong> {{ .ActiveCourse.FormattedExpectedEndDate }}<br>
-                {{ if .ActiveCourse.Notes }}
-                <strong>Notes:</strong> {{ .ActiveCourse.Notes }}
-                {{ end }}
+                <h1 class="text-2xl font-bold text-primary">Treatment Courses</h1>
+                <p class="text-secondary">Manage your treatment cycles</p>
             </div>
+            <button @click="showNewCourseModal = true" class="btn btn-primary">
+                <span>+</span>
+                {{ if .PastCourses }}Create a Course{{ else }}Create Your First Course{{ end }}
+            </button>
         </div>
 
-        <footer>
-            <button onclick="if(confirm('Are you sure you want to close this course?')) {
-                        fetch('/api/courses/{{ .ActiveCourse.ID }}/close', {
-                            method: 'POST',
-                            headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                        }).then(() => window.location.reload());
-                    }"
-                    class="secondary">
-                Close Course
-            </button>
-        </footer>
-    </article>
-    {{ else }}
-    <article style="text-align: center;">
-        <p>No active course. Create one to start tracking injections.</p>
-        <button @click="showNewCourseModal = true">
-            Create Your First Course
-        </button>
-    </article>
-    {{ end }}
-
-    <!-- Past Courses -->
-    {{ if .PastCourses }}
-    <article>
-        <header>
-            <h2>Past Courses</h2>
-        </header>
-
-        {{ range .PastCourses }}
-        <details>
-            <summary>
-                <strong>{{ .Name }}</strong>
-                <small>({{ .FormattedStartDate }} - {{ .FormattedEndDate }})</small>
-            </summary>
-
-            <div style="padding: 1rem;">
-                <div class="grid">
-                    <div>
-                        <strong>Duration:</strong> {{ .DurationDays }} days<br>
-                        <strong>Total Injections:</strong> {{ .InjectionCount }}<br>
-                        <strong>Average per week:</strong> {{ .AveragePerWeek }}<br>
-                        {{ if .Notes }}
-                        <strong>Notes:</strong> {{ .Notes }}
+        <!-- Active Course - Compact Design -->
+        {{ if .ActiveCourse }}
+        <div class="card mb-6 border-l-4" style="border-color: var(--brand-primary);">
+            <div class="p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h2 class="text-xl font-semibold text-primary">{{ .ActiveCourse.Name }}</h2>
+                            <span class="badge badge-success text-xs">ACTIVE</span>
+                        </div>
+                        <p class="text-sm text-secondary mb-2">
+                            Started {{ .ActiveCourse.FormattedStartDate }} • {{ .ActiveCourse.DaysActive }} days
+                            {{ if .ActiveCourse.ExpectedEndDate }}• Ends {{ .ActiveCourse.FormattedExpectedEndDate }}{{ end }}
+                        </p>
+                        {{ if .ActiveCourse.Notes }}
+                        <p class="text-sm text-secondary italic">{{ .ActiveCourse.Notes }}</p>
                         {{ end }}
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="editingCourseId = {{ .ActiveCourse.ID }}; showEditCourseModal = true"
+                                class="btn btn-sm btn-outline">
+                            <span>✏️</span>
+                            Edit
+                        </button>
+                        <button @click="closingCourseId = {{ .ActiveCourse.ID }}; showCloseCourseModal = true"
+                                class="btn btn-sm btn-secondary">
+                            <span>🔒</span>
+                            Close
+                        </button>
                     </div>
                 </div>
 
-                <footer style="margin-top: 1rem;">
-                    <div class="grid">
-                        <button onclick="if(confirm('Are you sure you want to reactivate this course?')) {
-                                    fetch('/api/courses/{{ .ID }}/activate', {
-                                        method: 'POST',
-                                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                                    }).then(() => window.location.reload());
-                                }"
-                                class="outline secondary">
-                            Reactivate
-                        </button>
-                        <button onclick="if(confirm('Are you sure? This will delete all associated injections and symptoms!')) {
-                                    fetch('/api/courses/{{ .ID }}', {
-                                        method: 'DELETE',
-                                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                                    }).then(() => window.location.reload());
-                                }"
-                                class="outline"
-                                style="color: var(--pico-del-color);">
-                            Delete
-                        </button>
+                <!-- Stats Row -->
+                <div class="flex gap-6 text-sm">
+                    <div>
+                        <span class="text-2xl font-bold text-brand-primary">{{ .ActiveCourse.InjectionCount }}</span>
+                        <span class="text-secondary block">Injections</span>
                     </div>
-                </footer>
+                    <div>
+                        <span class="text-lg font-semibold text-primary">{{ .ActiveCourse.AveragePerWeek }}</span>
+                        <span class="text-secondary block">Per Week</span>
+                    </div>
+                    <div>
+                        <span class="text-lg font-semibold text-primary">{{ .ActiveCourse.DurationDays }}</span>
+                        <span class="text-secondary block">Duration Days</span>
+                    </div>
+                </div>
             </div>
-        </details>
+        </div>
         {{ end }}
-    </article>
-    {{ end }}
-</article>
 
-<!-- New Course Modal -->
-<dialog :open="showNewCourseModal" @click="if($event.target === $el) showNewCourseModal = false">
-    <article style="max-width: 600px; margin: 2rem auto;">
-        <header>
-            <button @click="showNewCourseModal = false" aria-label="Close" rel="prev" style="float: right;"></button>
-            <h2>Create New Course</h2>
-        </header>
+        <!-- Past Courses - Compact Grid -->
+        {{ if .PastCourses }}
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold text-primary mb-4">Past Courses</h2>
+            <div class="grid gap-3">
+                {{ range .PastCourses }}
+                <div class="card p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="font-semibold text-primary">{{ .Name }}</h3>
+                                <span class="badge badge-secondary text-xs">Completed</span>
+                            </div>
+                            <p class="text-sm text-secondary">
+                                {{ .FormattedStartDate }} - {{ .FormattedEndDate }}
+                                • {{ .DurationDays }} days • {{ .InjectionCount }} injections
+                            </p>
+                            {{ if .Notes }}
+                            <p class="text-sm text-secondary italic mt-1">{{ .Notes }}</p>
+                            {{ end }}
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="editingCourseId = {{ .ID }}; showEditCourseModal = true"
+                                    class="btn btn-sm btn-outline">
+                                <span>✏️</span>
+                            </button>
+                          <button @click="reactivatingCourseId = {{ .ID }}; reactivatingCourseName = {{ js .Name }}; showReactivateCourseModal = true"
+                                    class="btn btn-sm btn-outline">
+                                <span>🔄</span>
+                            </button>
+                            <button onclick="if(confirm('Delete {{ .Name }}? This cannot be undone.')) {
+                                        fetch('/api/courses/{{ .ID }}', {
+                                            method: 'DELETE',
+                                            headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                                        }).then(() => window.location.reload());
+                                    }"
+                                    class="btn btn-sm btn-outline text-danger">
+                                <span>🗑️</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+        </div>
+        {{ end }}
 
-        <form x-data="{
-                  name: '',
-                  startDate: new Date().toISOString().split('T')[0],
-                  expectedEndDate: '',
-                  notes: ''
-              }"
-              @submit.prevent="
-                const btn = $el.querySelector('button[type=submit]');
-                btn.disabled = true;
-                btn.textContent = 'Creating...';
-                fetch('/api/courses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ $.CSRFToken }}'
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        start_date: startDate,
-                        expected_end_date: expectedEndDate || null,
-                        notes: notes || null
-                    })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        showNewCourseModal = false;
-                        window.location.reload();
-                    } else {
-                        btn.disabled = false;
-                        btn.textContent = 'Create Course';
-                        response.text().then(text => {
-                            document.getElementById('course-feedback').innerHTML = '<div class=error-message>' + text + '</div>';
-                        });
-                    }
-                })
-                .catch(error => {
-                    btn.disabled = false;
-                    btn.textContent = 'Create Course';
-                    document.getElementById('course-feedback').innerHTML = '<div class=error-message>Error: ' + error.message + '</div>';
-                });
-              ">
+        <!-- No Courses State -->
+        {{ if not .ActiveCourse and not .PastCourses }}
+        <div class="text-center py-12">
+            <div class="w-16 h-16 bg-brand-primary-bg text-brand-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="text-2xl">📋</span>
+            </div>
+            <h2 class="text-xl font-semibold text-primary mb-2">No Courses Yet</h2>
+            <p class="text-secondary mb-6">Create your first treatment course to start tracking</p>
+            <button @click="showNewCourseModal = true" class="btn btn-primary btn-lg">
+                <span>+</span>
+                Create Your First Course
+            </button>
+        </div>
+        {{ end }}
+    </div>
 
-            <div id="course-feedback"></div>
-
-            <label for="course_name">
-                Course Name *
-                <input type="text"
-                       id="course_name"
-                       name="name"
-                       x-model="name"
-                       placeholder="e.g., IVF Cycle 1, Pregnancy Support"
-                       required
-                       autofocus>
-            </label>
-
-            <div class="grid">
-                <label for="start_date">
-                    Start Date *
-                    <input type="date"
-                           id="start_date"
-                           name="start_date"
-                           x-model="startDate"
-                           required>
-                </label>
-
-                <label for="expected_end_date">
-                    Expected End Date
-                    <input type="date"
-                           id="expected_end_date"
-                           name="expected_end_date"
-                           x-model="expectedEndDate">
-                </label>
+    <!-- New Course Modal -->
+    <div x-show="showNewCourseModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="modal-overlay"
+         @click="if($event.target === $el) showNewCourseModal = false">
+        <div class="modal" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Course</h3>
+                <button @click="showNewCourseModal = false" class="modal-close" aria-label="Close">×</button>
             </div>
 
-            <label for="notes">
-                Notes (optional)
-                <textarea id="notes"
-                          name="notes"
-                          x-model="notes"
-                          rows="3"
-                          placeholder="Any notes about this treatment course..."></textarea>
-            </label>
+            <form x-data="{
+                      name: '',
+                      startDate: new Date().toISOString().split('T')[0],
+                      expectedEndDate: '',
+                      notes: ''
+                  }"
+                  @submit.prevent="
+                    const btn = $el.querySelector('button[type=submit]');
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class=animate-pulse>⏳ Creating...</span>';
+                    fetch('/api/courses', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify({
+                            name: name,
+                            start_date: startDate,
+                            expected_end_date: expectedEndDate || null,
+                            notes: notes || null
+                        })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            showNewCourseModal = false;
+                            window.location.reload();
+                        } else {
+                            btn.disabled = false;
+                            btn.innerHTML = 'Create Course';
+                            response.text().then(text => {
+                                document.getElementById('course-feedback').innerHTML = '<div class=alert alert-danger>' + text + '</div>';
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Create Course';
+                        document.getElementById('course-feedback').innerHTML = '<div class=alert alert-danger>Error: ' + error.message + '</div>';
+                    });
+                  ">
 
-            <footer>
-                <button type="button" @click="showNewCourseModal = false" class="secondary">
-                    Cancel
-                </button>
-                <button type="submit" :disabled="!name || !startDate">
-                    Create Course
-                </button>
-            </footer>
-        </form>
-    </article>
-</dialog>
+                <div class="modal-body">
+                    <div id="course-feedback"></div>
+
+                    <div class="form-group">
+                        <label for="course_name" class="form-label">
+                            Course Name *
+                            <input type="text"
+                                   id="course_name"
+                                   name="name"
+                                   x-model="name"
+                                   placeholder="e.g., IVF Cycle 1, Pregnancy Support"
+                                   class="form-input"
+                                   required
+                                   autofocus>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label for="start_date" class="form-label">
+                                Start Date *
+                                <input type="date"
+                                       id="start_date"
+                                       name="start_date"
+                                       x-model="startDate"
+                                       class="form-input"
+                                       required>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expected_end_date" class="form-label">
+                                Expected End Date
+                                <input type="date"
+                                       id="expected_end_date"
+                                       name="expected_end_date"
+                                       x-model="expectedEndDate"
+                                       class="form-input">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes" class="form-label">
+                            Notes (optional)
+                            <textarea id="notes"
+                                      name="notes"
+                                      x-model="notes"
+                                      rows="2"
+                                      class="form-textarea"
+                                      placeholder="Any notes about this treatment course..."></textarea>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" @click="showNewCourseModal = false" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" :disabled="!name || !startDate" class="btn btn-primary">Create Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Close Course Modal -->
+    <div x-show="showCloseCourseModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="modal-overlay"
+         @click="if($event.target === $el) showCloseCourseModal = false">
+        <div class="modal" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">Close Course</h3>
+                <button @click="showCloseCourseModal = false" class="modal-close" aria-label="Close">×</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-secondary mb-4">Are you sure you want to close this course? This will mark it as completed.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button @click="showCloseCourseModal = false" class="btn btn-secondary">Cancel</button>
+                <button @click="
+                    fetch('/api/courses/' + closingCourseId + '/close', {
+                        method: 'POST',
+                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                    }).then(() => window.location.reload());
+                " class="btn btn-primary">Close Course</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Course Modal -->
+    <div x-show="showEditCourseModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="modal-overlay"
+         @click="if($event.target === $el) showEditCourseModal = false">
+        <div class="modal" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Course</h3>
+                <button @click="showEditCourseModal = false" class="modal-close" aria-label="Close">×</button>
+            </div>
+
+            <div x-init="
+            if (editingCourseId) {
+                fetch('/api/courses/' + editingCourseId)
+                    .then(response => response.json())
+                    .then(course => {
+                        document.getElementById('edit_course_name').value = course.name || '';
+                        document.getElementById('edit_start_date').value = course.start_date || '';
+                        document.getElementById('edit_expected_end_date').value = course.expected_end_date || '';
+                        document.getElementById('edit_notes').value = course.notes || '';
+                    })
+                    .catch(error => {
+                        document.getElementById('edit-course-feedback').innerHTML = '<div class=alert alert-danger>Error loading course data</div>';
+                    });
+            }
+        ">
+            <form @submit.prevent="
+                    const btn = $el.querySelector('button[type=submit]');
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class=animate-pulse>⏳ Updating...</span>';
+                    fetch('/api/courses/' + editingCourseId, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify({
+                            name: document.getElementById('edit_course_name').value,
+                            start_date: document.getElementById('edit_start_date').value,
+                            expected_end_date: document.getElementById('edit_expected_end_date').value || null,
+                            notes: document.getElementById('edit_notes').value || null
+                        })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            showEditCourseModal = false;
+                            window.location.reload();
+                        } else {
+                            btn.disabled = false;
+                            btn.innerHTML = 'Update Course';
+                            response.text().then(text => {
+                                document.getElementById('edit-course-feedback').innerHTML = '<div class=alert alert-danger>' + text + '</div>';
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Update Course';
+                        document.getElementById('edit-course-feedback').innerHTML = '<div class=alert alert-danger>Error: ' + error.message + '</div>';
+                    });
+                  ">
+
+                <div class="modal-body">
+                    <div id="edit-course-feedback"></div>
+
+                    <div class="form-group">
+                        <label for="edit_course_name" class="form-label">
+                            Course Name *
+                            <input type="text"
+                                   id="edit_course_name"
+                                   name="name"
+                                   placeholder="e.g., IVF Cycle 1, Pregnancy Support"
+                                   class="form-input"
+                                   required
+                                   autofocus>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label for="edit_start_date" class="form-label">
+                                Start Date *
+                                <input type="date"
+                                       id="edit_start_date"
+                                       name="start_date"
+                                       class="form-input"
+                                       required>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit_expected_end_date" class="form-label">
+                                Expected End Date
+                                <input type="date"
+                                       id="edit_expected_end_date"
+                                       name="expected_end_date"
+                                       class="form-input">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_notes" class="form-label">
+                            Notes (optional)
+                            <textarea id="edit_notes"
+                                      name="notes"
+                                      rows="2"
+                                      class="form-textarea"
+                                      placeholder="Any notes about this treatment course..."></textarea>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" @click="showEditCourseModal = false" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reactivate Course Modal -->
+    <div x-show="showReactivateCourseModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="modal-overlay"
+         @click="if($event.target === $el) showReactivateCourseModal = false">
+        <div class="modal" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">Reactivate Course</h3>
+                <button @click="showReactivateCourseModal = false" class="modal-close" aria-label="Close">×</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-secondary mb-4">Are you sure you want to reactivate "<span x-text="reactivatingCourseName"></span>"? This will make it the active course again.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button @click="showReactivateCourseModal = false" class="btn btn-secondary">Cancel</button>
+                <button @click="
+                    fetch('/api/courses/' + reactivatingCourseId + '/activate', {
+                        method: 'POST',
+                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                    }).then(() => window.location.reload());
+                " class="btn btn-primary">Reactivate Course</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    input[type="date"] {
+        color-scheme: light dark;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(0.5);
+        cursor: pointer;
+        border-radius: 4px;
+        margin-right: 8px;
+    }
+
+    [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(0.8);
+    }
+</style>
 {{ end }}

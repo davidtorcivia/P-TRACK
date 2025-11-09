@@ -16,7 +16,13 @@
       "Bash(timeout 180 docker-compose build)",
       "Bash(git init)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(go test:*)",
+      "Bash(timeout:*)",
+      "Bash(docker logs:*)",
+      "Bash(curl:*)",
+      "Bash(go run:*)",
+      "Bash(./injection-tracker.exe:*)"
     ],
     "deny": [],
     "ask": []
