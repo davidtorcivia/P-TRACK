@@ -228,7 +228,46 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
-		data["Title"] = "Injections - Injection Tracker"
+		data["Title"] = "Injections"
+
+		// Get active course
+		courseRepo := repository.NewCourseRepository(db)
+		activeCourse, err := courseRepo.GetActiveCourse()
+		if err == nil && activeCourse != nil {
+			data["ActiveCourse"] = activeCourse
+
+			// Get injections for this course
+			rows, err := db.Query(`
+				SELECT id, timestamp, side, pain_level, notes
+				FROM injections
+				WHERE course_id = ?
+				ORDER BY timestamp DESC
+				LIMIT 50
+			`, activeCourse.ID)
+			if err == nil {
+				defer rows.Close()
+				injections := []map[string]interface{}{}
+				for rows.Next() {
+					var id int64
+					var timestamp time.Time
+					var side string
+					var painLevel sql.NullInt64
+					var notes sql.NullString
+
+					if err := rows.Scan(&id, &timestamp, &side, &painLevel, &notes); err == nil {
+						injections = append(injections, map[string]interface{}{
+							"ID":        id,
+							"Date":      timestamp.Format("Jan 2, 2006"),
+							"Time":      timestamp.Format("3:04 PM"),
+							"Side":      strings.Title(side),
+							"PainLevel": painLevel.Int64,
+							"Notes":     notes.String,
+						})
+					}
+				}
+				data["Injections"] = injections
+			}
+		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "injections.html", data); err != nil {
@@ -432,23 +471,45 @@ func getInventoryIcon(itemType string) string {
 func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
-		data["Title"] = "Courses - Injection Tracker"
-		data["Action"] = r.URL.Query().Get("action")
+		data["Title"] = "Courses"
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			activeData := map[string]interface{}{
+				"ID":        activeCourse.ID,
+				"Name":      activeCourse.Name,
+				"StartDate": activeCourse.StartDate.Format("Jan 2, 2006"),
+				"Notes":     "",
+			}
+			if activeCourse.ExpectedEndDate.Valid {
+				activeData["ExpectedEndDate"] = activeCourse.ExpectedEndDate.Time.Format("Jan 2, 2006")
+			}
+			if activeCourse.Notes.Valid {
+				activeData["Notes"] = activeCourse.Notes.String
+			}
+			data["ActiveCourse"] = activeData
 		}
 
 		// Get past courses
 		courses, err := courseRepo.List()
 		if err == nil {
-			pastCourses := []*models.Course{}
+			pastCourses := []map[string]interface{}{}
 			for _, course := range courses {
 				if !course.IsActive {
-					pastCourses = append(pastCourses, course)
+					pastData := map[string]interface{}{
+						"ID":        course.ID,
+						"Name":      course.Name,
+						"StartDate": course.StartDate.Format("Jan 2, 2006"),
+					}
+					if course.ActualEndDate.Valid {
+						pastData["ActualEndDate"] = course.ActualEndDate.Time.Format("Jan 2, 2006")
+					}
+					if course.Notes.Valid {
+						pastData["Notes"] = course.Notes.String
+					}
+					pastCourses = append(pastCourses, pastData)
 				}
 			}
 			if len(pastCourses) > 0 {

@@ -42,11 +42,13 @@
 <article>
     <hgroup>
         <h4>{{ .Name }}</h4>
-        <p>Completed</p>
+        <p><small>{{ .StartDate }}{{ if .ActualEndDate }} - {{ .ActualEndDate }}{{ end }}</small></p>
     </hgroup>
-    <p>{{ .StartDate }} - {{ if .ActualEndDate }}{{ .ActualEndDate }}{{ end }}</p>
+    {{ if .Notes }}
+    <p><small>{{ .Notes }}</small></p>
+    {{ end }}
     <footer>
-        <div class="grid-3">
+        <div class="grid-2">
             <button onclick="
                 fetch('/api/courses/{{ .ID }}/activate', {
                     method: 'POST',
