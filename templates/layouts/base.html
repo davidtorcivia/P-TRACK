@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ .CSRFToken }}">
-    <meta name="description" content="Track progesterone injections, medications, and symptoms">
-
     <title>{{ if .Title }}{{ .Title }} - {{ end }}Injection Tracker</title>
 
-    <!-- Pico CSS Framework -->
+    <!-- Pico CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-
-    <!-- Custom Theme -->
     <link rel="stylesheet" href="/static/css/theme.css">
 
     <!-- HTMX -->
@@ -23,45 +19,29 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-    <!-- Theme Management (must load early) -->
+    <!-- Theme -->
     <script src="/static/js/theme.js"></script>
 
-    <!-- PWA Manifest -->
+    <!-- PWA -->
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#FAFAF9">
-
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 </head>
 <body>
     {{ if .IsAuthenticated }}
-    <!-- Navigation -->
     <nav class="container-fluid">
         <ul>
-            <li>
-                <a href="/dashboard" class="contrast" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
-                        <path d="M3 9V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"></path>
-                        <path d="M9 2h6"></path>
-                    </svg>
-                    <strong>Injection Tracker</strong>
-                </a>
-            </li>
+            <li><strong>Injection Tracker</strong></li>
         </ul>
         <ul>
-            <li><a href="/dashboard" {{ if eq .Page "dashboard" }}class="contrast"{{ end }}>Dashboard</a></li>
-            <li><a href="/courses" {{ if eq .Page "courses" }}class="contrast"{{ end }}>Courses</a></li>
-            <li><a href="/injections" {{ if eq .Page "injections" }}class="contrast"{{ end }}>Injections</a></li>
-            <li><a href="/symptoms" {{ if eq .Page "symptoms" }}class="contrast"{{ end }}>Symptoms</a></li>
-            <li><a href="/medications" {{ if eq .Page "medications" }}class="contrast"{{ end }}>Medications</a></li>
-            <li><a href="/inventory" {{ if eq .Page "inventory" }}class="contrast"{{ end }}>Inventory</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/courses">Courses</a></li>
+            <li><a href="/injections">Injections</a></li>
+            <li><a href="/symptoms">Symptoms</a></li>
+            <li><a href="/medications">Medications</a></li>
+            <li><a href="/inventory">Inventory</a></li>
             <li>
                 <details class="dropdown">
-                    <summary role="button" class="secondary outline">
-                        Account
-                    </summary>
+                    <summary>Account</summary>
                     <ul dir="rtl">
                         <li><a href="/settings">Settings</a></li>
                         <li><a href="/reports">Reports</a></li>
@@ -79,70 +59,48 @@
             </li>
             <li>
                 <button type="button"
-                        class="outline secondary"
                         x-data="theme()"
                         @click="toggle()"
                         x-text="icon"
                         :aria-label="label"
-                        style="padding: 0.5rem 1rem;">
+                        class="contrast outline">
                 </button>
             </li>
         </ul>
     </nav>
     {{ end }}
 
-    <!-- Main Content -->
     <main class="container">
-        <!-- Flash Messages -->
         {{ if .SuccessMessage }}
-        <div class="alert-success"
-             x-data="{ show: true }"
-             x-show="show"
-             x-init="setTimeout(() => show = false, 5000)"
-             x-transition>
-            {{ .SuccessMessage }}
-        </div>
+        <div class="alert-success">{{ .SuccessMessage }}</div>
         {{ end }}
 
         {{ if .ErrorMessage }}
-        <div class="alert-danger"
-             x-data="{ show: true }"
-             x-show="show"
-             x-init="setTimeout(() => show = false, 5000)"
-             x-transition>
-            {{ .ErrorMessage }}
-        </div>
+        <div class="alert-danger">{{ .ErrorMessage }}</div>
         {{ end }}
 
-        <!-- Page Content -->
         {{ template "content" . }}
     </main>
 
-    <!-- Footer -->
     <footer class="container-fluid">
-        <small class="text-muted">
+        <small>
             <nav>
                 <ul>
-                    <li>© 2025 Injection Tracker v1.0</li>
+                    <li>Injection Tracker v1.0</li>
                 </ul>
                 <ul>
-                    <li><a href="/help" class="secondary">Help</a></li>
-                    <li><a href="/privacy" class="secondary">Privacy</a></li>
-                    <li><a href="/about" class="secondary">About</a></li>
+                    <li><a href="/help">Help</a></li>
+                    <li><a href="/about">About</a></li>
                 </ul>
             </nav>
         </small>
     </footer>
 
-    <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js')
-                .then(reg => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker registration failed', err));
+            navigator.serviceWorker.register('/static/sw.js');
         }
 
-        // Add CSRF token to all HTMX requests
         document.body.addEventListener('htmx:configRequest', (event) => {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             if (csrfToken) {
@@ -151,7 +109,6 @@
         });
     </script>
 
-    <!-- Custom JavaScript -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>
