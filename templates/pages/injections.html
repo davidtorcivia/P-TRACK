@@ -1,302 +1,156 @@
 {{ define "content" }}
-<div class="container py-8">
-    <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl lg:text-4xl font-bold mb-2">Injection History</h1>
-        <p class="text-lg text-secondary">View and manage all injection records</p>
-    </div>
+<hgroup>
+    <h2>Injection History</h2>
+    <p>View and manage all injection records</p>
+</hgroup>
 
-    <!-- Quick Actions -->
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-        <div class="flex flex-wrap gap-3">
-            <button onclick="window.location.href='/injections'" class="btn btn-primary">
-                <span class="mr-2">💉</span>
-                Log New Injection
-            </button>
-            <button onclick="window.location.href='/courses'" class="btn btn-outline">
-                <span class="mr-2">📋</span>
-                Manage Courses
-            </button>
-        </div>
-
-        <!-- Filters Toggle -->
-        <div x-data="{ showFilters: false }">
-            <button @click="showFilters = !showFilters" class="btn btn-ghost">
-                <span x-text="showFilters ? '▼' : '▶'"></span>
-                <span class="ml-2">Filters</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Filters Panel -->
-    <div x-data="{ showFilters: false }">
-        <div x-show="showFilters"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 transform -translate-y-2"
-             x-transition:enter-end="opacity-100 transform translate-y-0"
-             class="card mb-6">
-            <div class="card-body">
-                <form hx-get="/api/injections"
-                      hx-target="#injections-table"
-                      hx-swap="innerHTML"
-                      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-                    <div class="form-group">
-                        <label for="filter-course" class="form-label">Course</label>
-                        <select id="filter-course" name="course_id" class="form-select">
-                            <option value="">All Courses</option>
-                            {{ range .Courses }}
-                            <option value="{{ .ID }}" {{ if eq .ID $.FilterCourseID }}selected{{ end }}>
-                                {{ .Name }}
-                            </option>
-                            {{ end }}
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="filter-side" class="form-label">Side</label>
-                        <select id="filter-side" name="side" class="form-select">
-                            <option value="">All Sides</option>
-                            <option value="left" {{ if eq .FilterSide "left" }}selected{{ end }}>Left</option>
-                            <option value="right" {{ if eq .FilterSide "right" }}selected{{ end }}>Right</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="filter-date-from" class="form-label">From Date</label>
-                        <input type="date" id="filter-date-from" name="date_from"
-                               value="{{ .FilterDateFrom }}" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="filter-date-to" class="form-label">To Date</label>
-                        <input type="date" id="filter-date-to" name="date_to"
-                               value="{{ .FilterDateTo }}" class="form-input">
-                    </div>
-
-                    <div class="md:col-span-2 lg:col-span-4 flex gap-3">
-                        <button type="submit" class="btn btn-primary">
-                            Apply Filters
-                        </button>
-                        <button type="button"
-                                onclick="window.location.href='/injections'"
-                                class="btn btn-secondary">
-                            Clear Filters
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Injections Table -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Injection Records</h3>
-            <p class="card-subtitle">
-                {{ if .Stats }}
-                Total: {{ .Stats.TotalInjections }} injections
-                {{ end }}
-            </p>
-        </div>
-        <div class="card-body">
-            <div id="injections-table">
-                <div class="overflow-x-auto">
-                    <table class="table w-full">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Side</th>
-                                <th>Pain Level</th>
-                                <th>Site Reaction</th>
-                                <th>Administered By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{ if .Injections }}
-                            {{ range .Injections }}
-                            <tr class="hover:bg-surface">
-                                <td>
-                                    <div class="font-medium">{{ .FormattedDate }}</div>
-                                    <div class="text-sm text-muted">{{ .FormattedTime }}</div>
-                                </td>
-                                <td>
-                                    <span class="badge {{ if eq .Side "left" }}badge-left{{ else }}badge-right{{ end }}">
-                                        {{ if eq .Side "left" }}⬅️{{ else }}➡️{{ end }} {{ .Side }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {{ if .PainLevel }}
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-medium">{{ .PainLevel }}/10</span>
-                                        <span class="text-lg">{{ painLevelEmoji .PainLevel }}</span>
-                                    </div>
-                                    {{ else }}
-                                    <span class="text-muted">-</span>
-                                    {{ end }}
-                                </td>
-                                <td>
-                                    {{ if .SiteReaction }}
-                                    <span class="badge badge-{{ .SiteReaction }}">
-                                        {{ .SiteReaction }}
-                                    </span>
-                                    {{ else }}
-                                    <span class="text-muted">None</span>
-                                    {{ end }}
-                                </td>
-                                <td>
-                                    <div class="text-sm">
-                                        <div class="font-medium">{{ .AdministeredByName }}</div>
-                                        {{ if .TimeAgo }}
-                                        <div class="text-muted">{{ .TimeAgo }}</div>
-                                        {{ end }}
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="flex gap-2">
-                                        <button onclick="editInjection({{ .ID }})"
-                                                class="btn btn-sm btn-ghost"
-                                                title="Edit">
-                                            ✏️
-                                        </button>
-                                        <button onclick="deleteInjection({{ .ID }})"
-                                                class="btn btn-sm btn-ghost text-danger"
-                                                title="Delete">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {{ end }}
-                            {{ else }}
-                            <tr>
-                                <td colspan="6" class="text-center py-12">
-                                    <div class="text-muted">
-                                        <div class="text-4xl mb-4">💉</div>
-                                        <h3 class="text-lg font-semibold mb-2">No injections recorded</h3>
-                                        <p class="mb-4">Start tracking your injections by logging your first one.</p>
-                                        <button onclick="window.location.href='/injections'" class="btn btn-primary">
-                                            <span class="mr-2">💉</span>
-                                            Log First Injection
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {{ end }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        {{ if .Injections }}
-        <div class="card-footer">
-            <div class="flex flex-col lg:flex-row justify-between items-center gap-4">
-                <div class="text-sm text-muted">
-                    Showing {{ len .Injections }} of {{ .Stats.TotalInjections }} injections
-                </div>
-
-                <!-- Pagination -->
-                {{ if .Pagination }}
-                <div class="flex gap-2">
-                    {{ if .Pagination.HasPrev }}
-                    <a href="?page={{ .Pagination.Prev }}{{ if .FilterParams }}&{{ .FilterParams }}{{ end }}"
-                       class="btn btn-outline btn-sm">
-                        ← Previous
-                    </a>
-                    {{ end }}
-
-                    <span class="px-3 py-1 text-sm text-muted">
-                        Page {{ .Pagination.Current }} of {{ .Pagination.Total }}
-                    </span>
-
-                    {{ if .Pagination.HasNext }}
-                    <a href="?page={{ .Pagination.Next }}{{ if .FilterParams }}&{{ .FilterParams }}{{ end }}"
-                       class="btn btn-outline btn-sm">
-                        Next →
-                    </a>
-                    {{ end }}
-                </div>
-                {{ end }}
-            </div>
-        </div>
-        {{ end }}
-    </div>
-
-    <!-- Statistics Section -->
-    {{ if .Stats }}
-    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="card">
-            <div class="p-6 text-center">
-                <div class="text-2xl font-bold text-brand-primary mb-2">{{ .Stats.TotalInjections }}</div>
-                <p class="text-sm text-muted">Total Injections</p>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="p-6 text-center">
-                <div class="text-lg font-bold text-success-primary mb-2">{{ .Stats.LeftCount }}</div>
-                <p class="text-sm text-muted">Left Side</p>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="p-6 text-center">
-                <div class="text-lg font-bold text-info-primary mb-2">{{ .Stats.RightCount }}</div>
-                <p class="text-sm text-muted">Right Side</p>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="p-6 text-center">
-                <div class="text-lg font-bold text-warning-primary mb-2">{{ .Stats.AveragePainLevel }}</div>
-                <p class="text-sm text-muted">Avg Pain Level</p>
-            </div>
-        </div>
-    </div>
-    {{ end }}
+{{ if .ActiveCourse }}
+<div class="grid-2">
+    <a href="#log-injection" role="button">Log New Injection</a>
+    <a href="/courses" role="button" class="outline">Manage Courses</a>
 </div>
 
-<script>
-function editInjection(id) {
-    // TODO: Implement edit modal
-    console.log('Edit injection:', id);
-}
+<!-- Injections Table -->
+<article>
+    <header><h3>All Injections</h3></header>
+    <div id="injections-table">
+        {{ if .Injections }}
+        <figure>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Side</th>
+                        <th>Pain</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range .Injections }}
+                    <tr>
+                        <td>{{ .Date }}</td>
+                        <td>{{ .Time }}</td>
+                        <td>{{ .Side }}</td>
+                        <td>{{ if .PainLevel }}{{ .PainLevel }}/10{{ else }}-{{ end }}</td>
+                        <td>{{ if .Notes }}{{ .Notes }}{{ else }}-{{ end }}</td>
+                        <td>
+                            <a href="#edit-{{ .ID }}" role="button" class="outline" style="padding: 0.25rem 0.5rem; margin: 0;">Edit</a>
+                            <button onclick="if(confirm('Delete this injection?')) {
+                                fetch('/api/injections/{{ .ID }}', {
+                                    method: 'DELETE',
+                                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                                }).then(() => window.location.reload());
+                            }" class="outline" style="padding: 0.25rem 0.5rem;">Delete</button>
+                        </td>
+                    </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </figure>
+        {{ else }}
+        <p>No injections recorded yet.</p>
+        {{ end }}
+    </div>
+</article>
 
-function deleteInjection(id) {
-    if (confirm('Are you sure you want to delete this injection record?')) {
-        fetch(`/api/injections/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                alert('Failed to delete injection');
-            }
-        })
-        .catch(error => {
-            alert('Error: ' + error.message);
-        });
-    }
-}
+{{ else }}
+<article style="text-align: center;">
+    <hgroup>
+        <h3>No Active Course</h3>
+        <p>Create a course to start tracking injections</p>
+    </hgroup>
+    <a href="/courses" role="button">Manage Courses</a>
+</article>
+{{ end }}
 
-// Auto-open filters if any filter is applied
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasFilters = urlParams.toString().length > 0;
-    if (hasFilters) {
-        const filterButtons = document.querySelectorAll('[x-data*="showFilters"]');
-        filterButtons.forEach(button => {
-            if (button.__x) {
-                button.__x.$data.showFilters = true;
-            }
-        });
-    }
-});
-</script>
+<!-- Log Injection Modal -->
+<dialog id="log-injection">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev"></button>
+            <h3>Log Injection</h3>
+        </header>
+        <form x-data="{
+            side: 'left',
+            painLevel: 5,
+            hasKnots: false,
+            siteReaction: '',
+            notes: ''
+        }" @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/injections', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name=\"csrf-token\"]').content
+                },
+                body: JSON.stringify({
+                    course_id: {{ .ActiveCourse.ID }},
+                    side: side,
+                    pain_level: parseInt(painLevel),
+                    has_knots: hasKnots,
+                    site_reaction: siteReaction,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    response.text().then(text => alert('Error: ' + text));
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+                alert('Error: ' + error.message);
+            });
+        ">
+            <fieldset>
+                <legend>Which side?</legend>
+                <label><input type="radio" x-model="side" value="left" name="side"> Left</label>
+                <label><input type="radio" x-model="side" value="right" name="side"> Right</label>
+            </fieldset>
+
+            <label>
+                Pain Level: <span x-text="painLevel"></span>/10
+                <input type="range" x-model="painLevel" min="1" max="10">
+            </label>
+
+            <label>
+                <input type="checkbox" x-model="hasKnots">
+                Knots/Hardness
+            </label>
+
+            <label>
+                Site Reaction
+                <select x-model="siteReaction">
+                    <option value="">None</option>
+                    <option value="redness">Redness</option>
+                    <option value="swelling">Swelling</option>
+                    <option value="bruising">Bruising</option>
+                </select>
+            </label>
+
+            <label>
+                Notes
+                <textarea x-model="notes" rows="2"></textarea>
+            </label>
+
+            <footer>
+                <div class="grid-2">
+                    <button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button>
+                    <button type="submit">Log Injection</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
 {{ end }}

@@ -1,44 +1,21 @@
 /* Injection Tracker - Clean Professional Theme */
 
-/* ===== ROOT VARIABLES - LIGHT THEME ===== */
-:root {
-    /* Minimal color palette */
-    --pico-primary-500: #0d9488;
-    --pico-primary-600: #0f766e;
-
-    /* Override Pico defaults for cleaner look */
-    --pico-font-size: 15px;
-    --pico-border-radius: 0.25rem;
-    --pico-spacing: 1rem;
-
-    /* Tighter line height */
-    --pico-line-height: 1.5;
-}
-
-/* ===== DARK THEME ===== */
-[data-theme="dark"] {
-    --pico-primary-500: #14b8a6;
-    --pico-primary-600: #0d9488;
-}
-
-/* ===== GLOBAL FIXES ===== */
-body {
-    font-size: 15px;
-    line-height: 1.5;
-}
-
-/* Fix container width for desktop */
+/* Container sizing */
 .container {
     max-width: 1200px;
 }
 
-/* Tighter spacing */
-h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
-h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-h4 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+/* Spacing */
+h1, h2, h3, h4 {
+    margin-bottom: 0.5rem;
+}
 
-/* Fix navigation */
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.1rem; }
+
+/* Navigation fixes */
 nav ul {
     margin-bottom: 0;
 }
@@ -47,19 +24,14 @@ nav ul li {
     padding: 0;
 }
 
-/* Better button sizing */
+/* Buttons */
 button,
 [role="button"] {
     padding: 0.5rem 1rem;
     font-size: 0.95rem;
 }
 
-/* Fix dropdown alignment */
-details.dropdown summary {
-    padding: 0.5rem 1rem;
-}
-
-/* Cards with better spacing */
+/* Cards */
 article {
     margin-bottom: 1.5rem;
 }
@@ -74,11 +46,23 @@ article footer {
     padding-top: 0.75rem;
 }
 
-/* Form elements */
-input,
-select,
-textarea {
-    font-size: 0.95rem;
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th {
+    text-align: left;
+    font-weight: 600;
+}
+
+table td, table th {
+    padding: 0.75rem;
+}
+
+table tbody tr {
+    border-bottom: 1px solid var(--pico-muted-border-color);
 }
 
 /* Grid helpers */
@@ -108,7 +92,7 @@ textarea {
     }
 }
 
-/* Stats card */
+/* Stats */
 .stat-card {
     text-align: center;
 }
@@ -116,7 +100,7 @@ textarea {
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--pico-primary-500);
+    color: var(--pico-primary);
 }
 
 .stat-label {
@@ -151,13 +135,14 @@ textarea {
     background-color: rgba(220, 38, 38, 0.2);
 }
 
-/* Remove extra spacing */
+/* Main spacing */
 main {
     padding-top: 1.5rem;
     padding-bottom: 1.5rem;
 }
 
-/* Better footer */
-footer small {
-    font-size: 0.85rem;
+/* Footer */
+footer {
+    padding: 1rem 0;
+    margin-top: 2rem;
 }

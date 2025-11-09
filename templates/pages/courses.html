@@ -4,7 +4,7 @@
     <p>Manage your treatment cycles</p>
 </hgroup>
 
-<a href="#new-course" role="button">Create Course</a>
+<a href="javascript:document.getElementById('new-course').showModal()" role="button">Create Course</a>
 
 <!-- Active Course -->
 {{ if .ActiveCourse }}
@@ -24,8 +24,12 @@
     {{ end }}
     <footer>
         <div class="grid-2">
-            <a href="#close-{{ .ActiveCourse.ID }}" role="button" class="outline">Close Course</a>
-            <a href="#edit-{{ .ActiveCourse.ID }}" role="button" class="secondary">Edit</a>
+            <button onclick="if(confirm('Close this course?')) {
+                fetch('/api/courses/{{ .ActiveCourse.ID }}/close', {
+                    method: 'POST',
+                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                }).then(() => window.location.reload());
+            }" class="outline">Close Course</button>
         </div>
     </footer>
 </article>
@@ -40,11 +44,15 @@
         <h4>{{ .Name }}</h4>
         <p>Completed</p>
     </hgroup>
-    <p>{{ .StartDate }} - {{ .EndDate }}</p>
+    <p>{{ .StartDate }} - {{ if .ActualEndDate }}{{ .ActualEndDate }}{{ end }}</p>
     <footer>
         <div class="grid-3">
-            <a href="#reactivate-{{ .ID }}" role="button" class="outline">Reactivate</a>
-            <a href="#edit-{{ .ID }}" role="button" class="outline">Edit</a>
+            <button onclick="
+                fetch('/api/courses/{{ .ID }}/activate', {
+                    method: 'POST',
+                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                }).then(() => window.location.reload());
+            " class="outline">Reactivate</button>
             <button onclick="if(confirm('Delete {{ .Name }}?')) {
                 fetch('/api/courses/{{ .ID }}', {
                     method: 'DELETE',
@@ -58,24 +66,62 @@
 {{ end }}
 
 <!-- No Courses -->
-{{ if not .ActiveCourse and not .PastCourses }}
+{{ if not .ActiveCourse }}
+{{ if not .PastCourses }}
 <article style="text-align: center;">
     <hgroup>
         <h3>No Courses Yet</h3>
         <p>Create your first treatment course to start tracking</p>
     </hgroup>
-    <a href="#new-course" role="button">Create Your First Course</a>
+    <a href="javascript:document.getElementById('new-course').showModal()" role="button">Create Your First Course</a>
 </article>
+{{ end }}
 {{ end }}
 
 <!-- New Course Modal -->
 <dialog id="new-course">
     <article>
         <header>
-            <button aria-label="Close" rel="prev"></button>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('new-course').close()"></button>
             <h3>Create New Course</h3>
         </header>
-        <form method="dialog">
+        <form onsubmit="event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {
+                name: formData.get('name'),
+                start_date: formData.get('start_date'),
+                expected_end_date: formData.get('expected_end_date') || null,
+                notes: formData.get('notes') || null
+            };
+            const btn = event.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/courses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ .CSRFToken }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.text().then(text => {
+                        alert('Error: ' + text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+            });
+        ">
             <label>
                 Course Name
                 <input type="text" name="name" placeholder="e.g., IVF Cycle 1" required>
@@ -96,7 +142,7 @@
             </label>
             <footer>
                 <div class="grid-2">
-                    <button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button>
+                    <button type="button" class="secondary" onclick="document.getElementById('new-course').close()">Cancel</button>
                     <button type="submit">Create Course</button>
                 </div>
             </footer>
