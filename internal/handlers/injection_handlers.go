@@ -589,7 +589,7 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 				-rb.amount, // Opposite of the original change
 				currentQty,
 				newQty,
-				"injection_deleted",
+				"other",
 				id,
 				"injection",
 				userID,
