@@ -13,6 +13,7 @@
     <form x-data="{
         painLevel: 5,
         painLocation: '',
+        customLocation: '',
         painType: '',
         symptoms: [],
         notes: ''
@@ -30,7 +31,7 @@
             body: JSON.stringify({
                 course_id: {{ .ActiveCourse.ID }},
                 pain_level: parseInt(painLevel),
-                pain_location: painLocation,
+                pain_location: painLocation === 'custom' ? customLocation : painLocation,
                 pain_type: painType,
                 symptoms: symptoms,
                 notes: notes
@@ -81,12 +82,19 @@
                     Location
                     <select x-model="painLocation">
                         <option value="">Select</option>
-                        <option value="injection_site">Injection Site</option>
+                        <option value="injection_site_left">Injection Site - Left</option>
+                        <option value="injection_site_right">Injection Site - Right</option>
+                        <option value="injection_site_both">Injection Site - Both</option>
+                        <option value="upper_buttock_left">Upper Buttock - Left</option>
+                        <option value="upper_buttock_right">Upper Buttock - Right</option>
                         <option value="abdomen">Abdomen</option>
-                        <option value="back">Back</option>
-                        <option value="other">Other</option>
+                        <option value="lower_back">Lower Back</option>
+                        <option value="custom">Custom (specify below)</option>
                     </select>
                 </label>
+                <div x-show="painLocation === 'custom'" style="margin-top: 0.5rem;">
+                    <input type="text" x-model="customLocation" placeholder="Describe location...">
+                </div>
             </div>
 
             <div>
@@ -155,10 +163,14 @@ document.addEventListener('click', function(e) {
                     notif.style.display = 'block';
                     setTimeout(() => notif.style.display = 'none', 3000);
                 } else {
-                    response.text().then(text => alert('Error: ' + text));
+                    response.text().then(text => console.error('Error:', text));
+                    htmx.trigger('#recent-symptoms', 'refresh');
                 }
             })
-            .catch(error => alert('Error: ' + error.message));
+            .catch(error => {
+                console.error('Error:', error);
+                htmx.trigger('#recent-symptoms', 'refresh');
+            });
         }
     }
 

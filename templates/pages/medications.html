@@ -119,7 +119,14 @@
                                         'X-CSRF-Token': '{{ $.CSRFToken }}'
                                     },
                                     body: JSON.stringify({is_active: false})
-                                }).then(() => window.location.reload());
+                                }).then(response => {
+                                    if (response.ok) {
+                                        window.location.reload();
+                                    } else {
+                                        console.error('Error deactivating medication');
+                                        window.location.reload();
+                                    }
+                                });
                             }
                         " class="outline">Deactivate</button>
                         <button type="button" onclick="
@@ -131,7 +138,8 @@
                                     if (response.ok) {
                                         window.location.reload();
                                     } else {
-                                        response.text().then(text => alert('Error: ' + text));
+                                        console.error('Error deleting medication');
+                                        window.location.reload();
                                     }
                                 });
                             }
@@ -177,7 +185,14 @@
                     fetch('/api/medications/{{ .ID }}', {
                         method: 'DELETE',
                         headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                    }).then(() => window.location.reload());
+                    }).then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            console.error('Error deleting medication');
+                            window.location.reload();
+                        }
+                    });
                 }
             " class="outline secondary">Delete</button>
         </div>

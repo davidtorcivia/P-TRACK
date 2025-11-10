@@ -46,7 +46,8 @@
                                     if (response.ok) {
                                         window.location.reload();
                                     } else {
-                                        response.text().then(text => alert('Error: ' + text));
+                                        console.error('Error deleting injection');
+                                        window.location.reload();
                                     }
                                 });
                             }" class="outline secondary" style="padding: 0.25rem 0.5rem;">Delete</button>

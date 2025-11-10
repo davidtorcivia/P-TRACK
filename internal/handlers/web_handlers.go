@@ -710,126 +710,119 @@ func formatTimeAgoWeb(t time.Time) string {
 func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		_ = userID // TODO: Use this to fetch user-specific activity
+		_ = userID
 
-		// Get recent activity from different tables
-		activities := []map[string]interface{}{}
-
-		// Recent injections (last 5)
+		// Get recent activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side, pain_level, notes, id
+			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
 			FROM injections
-			ORDER BY timestamp DESC
-			LIMIT 5
-		`)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var activity struct {
-					Type       string
-					Timestamp  time.Time
-					Side       string
-					PainLevel  sql.NullInt64
-					Notes      sql.NullString
-					ID         int64
-				}
-				if err := rows.Scan(&activity.Type, &activity.Timestamp, &activity.Side, &activity.PainLevel, &activity.Notes, &activity.ID); err == nil {
-					activities = append(activities, map[string]interface{}{
-						"Type":      activity.Type,
-						"Side":      activity.Side,
-						"PainLevel": activity.PainLevel.Int64,
-						"Notes":     activity.Notes.String,
-						"TimeAgo":   formatTimeAgoWeb(activity.Timestamp),
-						"UserName":  "You", // TODO: Get actual username
-					})
-				}
-			}
-		}
-
-		// Recent symptoms (last 3)
-		rows, err = db.Query(`
-			SELECT 'symptom' as type, timestamp, pain_level, pain_location, notes, id
+			UNION ALL
+			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
 			FROM symptom_logs
+			UNION ALL
+			SELECT 'medication' as type, timestamp,
+				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
+				notes, medication_logs.id
+			FROM medication_logs
 			ORDER BY timestamp DESC
-			LIMIT 3
+			LIMIT 10
 		`)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var activity struct {
-					Type         string
-					Timestamp    time.Time
-					PainLevel    sql.NullInt64
-					PainLocation sql.NullString
-					Notes        sql.NullString
-					ID           int64
-				}
-				if err := rows.Scan(&activity.Type, &activity.Timestamp, &activity.PainLevel, &activity.PainLocation, &activity.Notes, &activity.ID); err == nil {
-					activities = append(activities, map[string]interface{}{
-						"Type":         activity.Type,
-						"PainLevel":    activity.PainLevel.Int64,
-						"PainLocation": activity.PainLocation.String,
-						"Notes":        activity.Notes.String,
-						"TimeAgo":      formatTimeAgoWeb(activity.Timestamp),
-						"UserName":     "You", // TODO: Get actual username
-					})
-				}
+
+		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<p>Error loading activity</p>`))
+			return
+		}
+		defer rows.Close()
+
+		activities := []map[string]interface{}{}
+		for rows.Next() {
+			var actType, detail1, detail2 string
+			var timestamp time.Time
+			var notes sql.NullString
+			var id int64
+
+			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
+				activities = append(activities, map[string]interface{}{
+					"Type":      actType,
+					"Detail1":   detail1,
+					"Detail2":   detail2,
+					"Notes":     notes.String,
+					"Timestamp": timestamp,
+					"TimeAgo":   formatTimeAgoWeb(timestamp),
+					"ID":        id,
+				})
 			}
 		}
-
-		// Sort by timestamp (combined from different queries)
-		// For now, just return injections first, then symptoms
 
 		if len(activities) == 0 {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(`
 				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
 					<p>No recent activity yet.</p>
-					<small>Start by creating a course and logging your first injection!</small>
+					<small>Start by logging your first injection, symptom, or medication!</small>
 				</div>
 			`))
 			return
 		}
 
-		// Render recent activity template
+		// Render recent activity with better styling
 		w.Header().Set("Content-Type", "text/html")
-		html := `<ul style="list-style: none; padding: 0;">`
+		html := `<div style="display: flex; flex-direction: column; gap: 0.5rem;">`
 
 		for _, activity := range activities {
-			html += `<li style="padding: 0.75rem 0; border-bottom: 1px solid var(--pico-muted-border-color);">
-				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<div>
-						<strong>`
+			html += `<article style="margin: 0; padding: 0.75rem;">`
 
 			switch activity["Type"].(string) {
 			case "injection":
-				html += fmt.Sprintf("Injection (%s)", activity["Side"])
-				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
-					html += fmt.Sprintf(` <small>(Pain: %d/10)</small>`, painLevel)
+				side := activity["Detail1"].(string)
+				painLevel := activity["Detail2"].(string)
+				html += fmt.Sprintf(`<div style="display: flex; justify-content: space-between; align-items: start;">
+					<div>
+						<strong>Injection (%s)</strong>`, strings.Title(side))
+				if painLevel != "" && painLevel != "0" {
+					html += fmt.Sprintf(` <small>Pain: %s/10</small>`, painLevel)
 				}
+				html += fmt.Sprintf(`<br><small style="color: var(--pico-muted-color);">%s</small>`, activity["TimeAgo"])
 			case "symptom":
-				html += "Symptom Log"
-				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
-					html += fmt.Sprintf(" (Pain: %d/10)", painLevel)
+				location := activity["Detail1"].(string)
+				painLevel := activity["Detail2"].(string)
+				html += `<div style="display: flex; justify-content: space-between; align-items: start;">
+					<div>
+						<strong>Symptom Logged</strong>`
+				if location != "" {
+					html += fmt.Sprintf(` <small>%s</small>`, strings.ReplaceAll(location, "_", " "))
 				}
-				if location, ok := activity["PainLocation"].(string); ok && location != "" {
-					html += fmt.Sprintf(" - %s", location)
+				if painLevel != "" && painLevel != "0" {
+					html += fmt.Sprintf(` <small>Pain: %s/10</small>`, painLevel)
 				}
+				html += fmt.Sprintf(`<br><small style="color: var(--pico-muted-color);">%s</small>`, activity["TimeAgo"])
+			case "medication":
+				medName := activity["Detail1"].(string)
+				status := activity["Detail2"].(string)
+				statusColor := "var(--pico-ins-color)"
+				if status == "missed" {
+					statusColor = "var(--pico-del-color)"
+				}
+				html += fmt.Sprintf(`<div style="display: flex; justify-content: space-between; align-items: start;">
+					<div>
+						<strong>%s</strong> <small style="color: %s;">%s</small>
+						<br><small style="color: var(--pico-muted-color);">%s</small>`,
+					medName, statusColor, strings.Title(status), activity["TimeAgo"])
 			}
-
-			html += fmt.Sprintf(`</strong><br><small>%s • %s</small>`, activity["TimeAgo"], activity["UserName"])
 
 			if notes, ok := activity["Notes"].(string); ok && notes != "" {
-				if len(notes) > 50 {
-					notes = notes[:50] + "..."
+				if len(notes) > 60 {
+					notes = notes[:60] + "..."
 				}
-				html += fmt.Sprintf("<br><small>%s</small>", notes)
+				html += fmt.Sprintf(`<br><small>%s</small>`, notes)
 			}
 
-			html += `</div></div></li>`
+			html += `</div></div></article>`
 		}
 
-		html += `</ul>`
+		html += `</div>`
 		w.Write([]byte(html))
 	}
 }

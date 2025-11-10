@@ -36,7 +36,8 @@
                     if (response.ok) {
                         window.location.reload();
                     } else {
-                        response.text().then(text => alert('Error: ' + text));
+                        response.text().then(text => console.error('Error:', text));
+                        window.location.reload();
                     }
                 });
             }" class="outline">Close Course</button>
@@ -138,13 +139,27 @@
                 fetch('/api/courses/{{ .ID }}/activate', {
                     method: 'POST',
                     headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                }).then(() => window.location.reload());
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        console.error('Error activating course');
+                        window.location.reload();
+                    }
+                });
             " class="outline">Reactivate</button>
             <button onclick="if(confirm('Delete {{ .Name }}? This will delete all associated data.')) {
                 fetch('/api/courses/{{ .ID }}', {
                     method: 'DELETE',
                     headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                }).then(() => window.location.reload());
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        console.error('Error deleting course');
+                        window.location.reload();
+                    }
+                });
             }" class="outline secondary">Delete</button>
         </div>
     </footer>
