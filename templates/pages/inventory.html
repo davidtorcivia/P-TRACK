@@ -26,7 +26,7 @@
     <!-- Add New Item -->
     <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock' }">
         <header>
-            <h3>➕ Add Inventory</h3>
+            <h3>Add Inventory</h3>
         </header>
         <form @submit.prevent="
             const btn = $el.querySelector('button[type=submit]');
@@ -73,12 +73,12 @@
                 <label>
                     Item Type
                     <select x-model="itemType" required>
-                        <option value="progesterone">💉 Progesterone (vials)</option>
-                        <option value="draw_needle">🔹 Draw Needles</option>
-                        <option value="injection_needle">🔸 Injection Needles</option>
-                        <option value="syringe">💊 Syringes</option>
-                        <option value="swab">🧼 Alcohol Swabs</option>
-                        <option value="gauze">🩹 Gauze Pads</option>
+                        <option value="progesterone">Progesterone (vials)</option>
+                        <option value="draw_needle">Draw Needles</option>
+                        <option value="injection_needle">Injection Needles</option>
+                        <option value="syringe">Syringes</option>
+                        <option value="swab">Alcohol Swabs</option>
+                        <option value="gauze">Gauze Pads</option>
                     </select>
                 </label>
                 <label x-show="itemType === 'progesterone'">
@@ -97,7 +97,7 @@
     <!-- Current Inventory -->
     <article>
         <header>
-            <h3>📦 Current Stock</h3>
+            <h3>Current Stock</h3>
         </header>
         <div id="inventory-items">
         {{ range .InventoryItems }}
@@ -110,14 +110,14 @@
                     <p style="margin: 0;">
                         <strong style="font-size: 1.5rem;">{{ .Quantity }} {{ .Unit }}</strong>
                         {{ if .LowStock }}
-                        <span style="color: var(--pico-warning);">⚠️ Low Stock</span>
+                        <span style="color: var(--pico-warning);">Low Stock</span>
                         {{ end }}
                     </p>
                     {{ if .ExpirationDate }}
                     <small>
                         Expires: {{ .FormattedExpiration }}
                         {{ if .ExpiringSoon }}
-                        <span style="color: var(--pico-del-color);">⚠️ Expiring soon!</span>
+                        <span style="color: var(--pico-del-color);">Expiring soon!</span>
                         {{ end }}
                     </small>
                     {{ end }}

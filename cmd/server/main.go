@@ -212,6 +212,8 @@ func main() {
 		r.Get("/medications/log", handlers.HandleLogMedicationPage(db))
 		r.Get("/medications/new", handlers.HandleNewMedicationPage(db))
 		r.Get("/inventory", handlers.HandleInventoryPage(db, csrfProtection))
+		r.Get("/inventory/history", handlers.HandleInventoryHistoryPage(db, csrfProtection))
+		r.Get("/inventory/{itemType}/history", handlers.HandleInventoryItemHistoryPage(db, csrfProtection))
 		r.Get("/courses", handlers.HandleCoursesPage(db, csrfProtection))
 		r.Get("/courses/new", handlers.HandleNewCoursePage(db))
 		r.Get("/calendar", handlers.HandleCalendarPage(db, csrfProtection))

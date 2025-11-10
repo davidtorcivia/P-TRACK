@@ -128,7 +128,18 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			activeData := map[string]interface{}{
+				"ID":        activeCourse.ID,
+				"Name":      activeCourse.Name,
+				"StartDate": activeCourse.StartDate.Format("Jan 2, 2006"),
+			}
+			if activeCourse.ExpectedEndDate.Valid {
+				activeData["ExpectedEndDate"] = activeCourse.ExpectedEndDate.Time.Format("Jan 2, 2006")
+			}
+			if activeCourse.Notes.Valid {
+				activeData["Notes"] = activeCourse.Notes.String
+			}
+			data["ActiveCourse"] = activeData
 
 			// Get last injection for this course
 			var lastInjection struct {
@@ -234,7 +245,10 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			data["ActiveCourse"] = map[string]interface{}{
+				"ID":   activeCourse.ID,
+				"Name": activeCourse.Name,
+			}
 
 			// Get injections for this course
 			rows, err := db.Query(`
@@ -271,7 +285,7 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "injections.html", data); err != nil {
-			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -281,18 +295,21 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 func HandleSymptomsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
-		data["Title"] = "Symptoms - Injection Tracker"
+		data["Title"] = "Symptoms"
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			data["ActiveCourse"] = map[string]interface{}{
+				"ID":   activeCourse.ID,
+				"Name": activeCourse.Name,
+			}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "symptoms.html", data); err != nil {
-			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -454,17 +471,17 @@ func getInventoryDisplayName(itemType string) string {
 // getInventoryIcon returns an icon/emoji for inventory items
 func getInventoryIcon(itemType string) string {
 	icons := map[string]string{
-		"progesterone":     "💉",
-		"draw_needle":      "🔹",
-		"injection_needle": "🔸",
-		"syringe":          "💊",
-		"swab":             "🧼",
-		"gauze":            "🩹",
+		"progesterone":     "",
+		"draw_needle":      "",
+		"injection_needle": "",
+		"syringe":          "",
+		"swab":             "",
+		"gauze":            "",
 	}
 	if icon, ok := icons[itemType]; ok {
 		return icon
 	}
-	return "📦"
+	return ""
 }
 
 // HandleCoursesPage renders the courses page
@@ -778,20 +795,12 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 
 			switch activity["Type"].(string) {
 			case "injection":
-				html += fmt.Sprintf("💉 Injection (%s)", activity["Side"])
+				html += fmt.Sprintf("Injection (%s)", activity["Side"])
 				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
-					html += fmt.Sprintf(` <span style="font-size: 1.5rem;" title="Pain Level: %d/10">`, painLevel)
-					if painLevel > 7 {
-						html += "😣"
-					} else if painLevel > 4 {
-						html += "😐"
-					} else {
-						html += "😊"
-					}
-					html += "</span>"
+					html += fmt.Sprintf(` <small>(Pain: %d/10)</small>`, painLevel)
 				}
 			case "symptom":
-				html += "📝 Symptom Log"
+				html += "Symptom Log"
 				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
 					html += fmt.Sprintf(" (Pain: %d/10)", painLevel)
 				}
@@ -814,5 +823,52 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 
 		html += `</ul>`
 		w.Write([]byte(html))
+	}
+}
+// HandleInventoryHistoryPage renders the full inventory history page
+func HandleInventoryHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		data["Title"] = "Inventory History - Injection Tracker"
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "inventory_history.html", data); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// HandleInventoryItemHistoryPage renders the inventory history for a specific item type
+func HandleInventoryItemHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		itemType := chi.URLParam(r, "itemType")
+		
+		// Display names for item types
+		displayNames := map[string]string{
+			"progesterone":      "Progesterone",
+			"draw_needle":       "Draw Needles",
+			"injection_needle":  "Injection Needles",
+			"syringe":          "Syringes",
+			"swab":             "Alcohol Swabs",
+			"gauze":            "Gauze Pads",
+		}
+		
+		displayName, ok := displayNames[itemType]
+		if !ok {
+			http.Error(w, "Invalid item type", http.StatusBadRequest)
+			return
+		}
+		
+		data["ItemType"] = itemType
+		data["DisplayName"] = displayName
+		data["Title"] = displayName + " History - Injection Tracker"
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "inventory_item_history.html", data); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			return
+		}
 	}
 }

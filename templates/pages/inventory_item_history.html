@@ -1,0 +1,60 @@
+{{ define "content" }}
+<hgroup>
+    <h2>{{ .DisplayName }} History</h2>
+    <p>View all inventory changes for this item</p>
+</hgroup>
+
+<div class="grid-2">
+    <a href="/inventory" role="button" class="outline">Back to Inventory</a>
+    <a href="/inventory/history" role="button" class="outline">All History</a>
+</div>
+
+<article>
+    <header><h3>Change History</h3></header>
+    <div hx-get="/api/inventory/{{ .ItemType }}/history"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p aria-busy="true">Loading history...</p>
+    </div>
+</article>
+
+<script>
+// Format the API response into a table
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.closest('[hx-get*="/api/inventory/"]')) {
+        try {
+            const data = JSON.parse(event.detail.xhr.response);
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                event.detail.target.innerHTML = '<p>No history found for this item.</p>';
+                return;
+            }
+
+            let html = '<figure><table><thead><tr>';
+            html += '<th>Date</th><th>Time</th><th>Change</th><th>Reason</th><th>Notes</th><th>By</th>';
+            html += '</tr></thead><tbody>';
+
+            data.forEach(item => {
+                const date = new Date(item.timestamp);
+                const changeColor = item.change_amount >= 0 ? 'var(--pico-primary)' : 'var(--pico-del-color)';
+                const changePrefix = item.change_amount >= 0 ? '+' : '';
+
+                html += '<tr>';
+                html += `<td>${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>`;
+                html += `<td>${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</td>`;
+                html += `<td style="color: ${changeColor}; font-weight: bold;">${changePrefix}${item.change_amount} ${item.unit || ''}</td>`;
+                html += `<td>${item.reason || '-'}</td>`;
+                html += `<td>${item.notes || '-'}</td>`;
+                html += `<td>${item.username || 'System'}</td>`;
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></figure>';
+            event.detail.target.innerHTML = html;
+        } catch (e) {
+            console.error('Error parsing history:', e);
+            event.detail.target.innerHTML = '<p>Error loading history.</p>';
+        }
+    }
+});
+</script>
+{{ end }}
