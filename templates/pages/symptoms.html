@@ -272,27 +272,7 @@
 document.addEventListener('click', function(e) {
     if (e.target.dataset.action === 'delete-symptom') {
         const symptomId = e.target.dataset.symptomId;
-        const csrfToken = document.querySelector('meta[name=csrf-token]').content;
-        fetch('/api/symptoms/' + symptomId, {
-            method: 'DELETE',
-            headers: {'X-CSRF-Token': csrfToken}
-        })
-        .then(response => {
-            if (response.ok) {
-                htmx.trigger('#recent-symptoms', 'refresh');
-                const notif = document.getElementById('notification');
-                notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
-                notif.style.display = 'block';
-                setTimeout(() => notif.style.display = 'none', 3000);
-            } else {
-                response.text().then(text => console.error('Error:', text));
-                htmx.trigger('#recent-symptoms', 'refresh');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            htmx.trigger('#recent-symptoms', 'refresh');
-        });
+        showDeleteSymptomConfirmation(symptomId);
     }
 
     if (e.target.dataset.action === 'edit-symptom') {
@@ -335,7 +315,59 @@ document.addEventListener('click', function(e) {
             });
     }
 });
+
+let currentDeleteSymptomId = null;
+
+function showDeleteSymptomConfirmation(symptomId) {
+    currentDeleteSymptomId = symptomId;
+    document.getElementById('delete-symptom-confirm').showModal();
+}
+
+function confirmDeleteSymptom() {
+    if (!currentDeleteSymptomId) return;
+
+    const csrfToken = document.querySelector('meta[name=csrf-token]').content;
+    fetch('/api/symptoms/' + currentDeleteSymptomId, {
+        method: 'DELETE',
+        headers: {'X-CSRF-Token': csrfToken}
+    })
+    .then(response => {
+        if (response.ok) {
+            htmx.trigger('#recent-symptoms', 'refresh');
+            const notif = document.getElementById('notification');
+            notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
+            notif.style.display = 'block';
+            setTimeout(() => notif.style.display = 'none', 3000);
+        } else {
+            response.text().then(text => console.error('Error:', text));
+            htmx.trigger('#recent-symptoms', 'refresh');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        htmx.trigger('#recent-symptoms', 'refresh');
+    });
+
+    document.getElementById('delete-symptom-confirm').close();
+}
 </script>
+
+<!-- Delete Symptom Confirmation Dialog -->
+<dialog id="delete-symptom-confirm">
+    <article style="max-width: 400px;">
+        <header>
+            <h3>Confirm Deletion</h3>
+        </header>
+        <p>Delete this symptom log?</p>
+        <p><small>This action cannot be undone.</small></p>
+        <footer>
+            <div class="grid-2">
+                <button type="button" class="secondary" onclick="document.getElementById('delete-symptom-confirm').close()">Cancel</button>
+                <button type="button" class="contrast" onclick="confirmDeleteSymptom()">Delete</button>
+            </div>
+        </footer>
+    </article>
+</dialog>
 
 {{ else }}
 <article style="text-align: center;">
