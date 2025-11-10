@@ -67,7 +67,7 @@
                     <h3>Edit Injection</h3>
                 </header>
                 <form x-data="{
-                    side: '{{ .Side }}',
+                    side: '{{ .SideLower }}',
                     painLevel: {{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end }},
                     notes: '{{ .Notes }}'
                 }" @submit.prevent="
@@ -92,16 +92,18 @@
                             window.location.reload();
                         } else {
                             response.text().then(text => {
-                                alert('Error: ' + text);
+                                console.error('Error:', text);
                                 btn.disabled = false;
                                 btn.removeAttribute('aria-busy');
+                                window.location.reload();
                             });
                         }
                     })
                     .catch(error => {
-                        alert('Error: ' + error.message);
+                        console.error('Error:', error.message);
                         btn.disabled = false;
                         btn.removeAttribute('aria-busy');
+                        window.location.reload();
                     });
                 ">
                     <fieldset>
@@ -181,13 +183,17 @@
                 if (response.ok) {
                     window.location.reload();
                 } else {
-                    response.text().then(text => alert('Error: ' + text));
+                    response.text().then(text => {
+                        console.error('Error:', text);
+                        window.location.reload();
+                    });
                 }
             })
             .catch(error => {
                 btn.disabled = false;
                 btn.removeAttribute('aria-busy');
-                alert('Error: ' + error.message);
+                console.error('Error:', error.message);
+                window.location.reload();
             });
         ">
             <fieldset>

@@ -179,11 +179,12 @@ func main() {
 			r.Route("/inventory", func(r chi.Router) {
 				r.Get("/", handlers.HandleGetInventory(db))
 				r.Put("/{itemType}", handlers.HandleUpdateInventory(db))
+				r.Get("/history", handlers.HandleGetAllInventoryHistory(db))
+				r.Get("/history/recent", handlers.HandleGetRecentInventoryChanges(db))
 				r.Get("/{itemType}/history", handlers.HandleGetInventoryHistory(db))
 				r.Post("/{itemType}/adjust", handlers.HandleAdjustInventory(db))
 				r.Get("/alerts", handlers.HandleGetInventoryAlerts(db))
 				r.Post("/settings", handlers.HandleUpdateInventorySettings(db))
-				r.Get("/history/recent", handlers.HandleGetRecentInventoryChanges(db))
 			})
 
 			// Export routes
@@ -203,6 +204,7 @@ func main() {
 
 		// Protected web pages (HTML responses)
 		r.Get("/dashboard", handlers.HandleDashboard(db, csrfProtection))
+		r.Get("/activity", handlers.HandleActivityPage(db, csrfProtection))
 		r.Get("/injections", handlers.HandleInjectionsPage(db, csrfProtection))
 		r.Get("/symptoms", handlers.HandleSymptomsPage(db, csrfProtection))
 		r.Get("/symptoms/log", handlers.HandleLogSymptomPage(db))

@@ -1,0 +1,77 @@
+{{ define "content" }}
+<article>
+    <header>
+        <hgroup>
+            <h1>Activity History</h1>
+            <p>All logged injections, symptoms, and medications</p>
+        </hgroup>
+        <button onclick="window.location.href='/dashboard'" class="outline">
+            Back to Dashboard
+        </button>
+    </header>
+
+    {{ if .Activities }}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {{ range .Activities }}
+        <article style="margin: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    {{ if eq .Type "injection" }}
+                        <h4 style="margin: 0 0 0.25rem 0;">Injection ({{ .Detail1 }})</h4>
+                        <div style="color: var(--pico-muted-color); font-size: 0.9rem;">
+                            {{ if ne .Detail2 "0" }}{{ if ne .Detail2 "" }}Pain: {{ .Detail2 }}/10{{ end }}{{ end }}
+                        </div>
+                    {{ else if eq .Type "symptom" }}
+                        <h4 style="margin: 0 0 0.25rem 0;">Symptom Logged</h4>
+                        <div style="color: var(--pico-muted-color); font-size: 0.9rem;">
+                            {{ if .Detail1 }}Location: {{ .Detail1 }}{{ end }}
+                            {{ if ne .Detail2 "0" }}{{ if ne .Detail2 "" }} | Pain: {{ .Detail2 }}/10{{ end }}{{ end }}
+                        </div>
+                    {{ else if eq .Type "medication" }}
+                        <h4 style="margin: 0 0 0.25rem 0;">{{ .Detail1 }}</h4>
+                        <div style="font-size: 0.9rem;">
+                            {{ if eq .Detail2 "taken" }}
+                                <span style="color: var(--pico-ins-color);">Taken</span>
+                            {{ else }}
+                                <span style="color: var(--pico-del-color);">Missed</span>
+                            {{ end }}
+                        </div>
+                    {{ end }}
+
+                    {{ if .Notes }}
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        <em>{{ .Notes }}</em>
+                    </div>
+                    {{ end }}
+                </div>
+
+                <div style="text-align: right; color: var(--pico-muted-color); font-size: 0.9rem; white-space: nowrap;">
+                    <div>{{ .TimeAgo }}</div>
+                    <div style="font-size: 0.8rem;">{{ .FormattedDate }}</div>
+                </div>
+            </div>
+        </article>
+        {{ end }}
+    </div>
+    {{ else }}
+    <div style="text-align: center; padding: 3rem; color: var(--pico-muted-color);">
+        <p>No activity yet.</p>
+        <small>Start by logging your first injection, symptom, or medication!</small>
+    </div>
+    {{ end }}
+</article>
+
+<style>
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        article > div {
+            flex-direction: column;
+        }
+
+        article > div > div:last-child {
+            text-align: left;
+            margin-top: 0.5rem;
+        }
+    }
+</style>
+{{ end }}

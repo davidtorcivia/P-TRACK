@@ -274,6 +274,7 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 							"Date":      timestamp.Format("Jan 2, 2006"),
 							"Time":      timestamp.Format("3:04 PM"),
 							"Side":      strings.Title(side),
+							"SideLower": side,  // Add lowercase version for radio buttons
 							"PainLevel": painLevel.Int64,
 							"Notes":     notes.String,
 						})
@@ -826,6 +827,66 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 		w.Write([]byte(html))
 	}
 }
+
+// HandleActivityPage renders the full activity history page
+func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		data["Title"] = "Activity History - Injection Tracker"
+
+		// Get all activity using UNION to combine and sort by timestamp
+		rows, err := db.Query(`
+			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			FROM injections
+			UNION ALL
+			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			FROM symptom_logs
+			UNION ALL
+			SELECT 'medication' as type, timestamp,
+				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
+				notes, medication_logs.id
+			FROM medication_logs
+			ORDER BY timestamp DESC
+		`)
+
+		if err != nil {
+			http.Error(w, "Failed to load activity", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		activities := []map[string]interface{}{}
+		for rows.Next() {
+			var actType, detail1, detail2 string
+			var timestamp time.Time
+			var notes sql.NullString
+			var id int64
+
+			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
+				activities = append(activities, map[string]interface{}{
+					"Type":      actType,
+					"Detail1":   detail1,
+					"Detail2":   detail2,
+					"Notes":     notes.String,
+					"Timestamp": timestamp,
+					"TimeAgo":   formatTimeAgoWeb(timestamp),
+					"FormattedDate": timestamp.Format("Jan 2, 2006 3:04 PM"),
+					"ID":        id,
+				})
+			}
+		}
+
+		data["Activities"] = activities
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "activity.html", data); err != nil {
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 // HandleInventoryHistoryPage renders the full inventory history page
 func HandleInventoryHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

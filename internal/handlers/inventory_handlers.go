@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"injection-tracker/internal/database"
@@ -616,12 +617,148 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		// Return empty state HTML
+		// Get recent inventory changes
+		rows, err := db.Query(`
+			SELECT item_type, change_amount, reason, timestamp, notes
+			FROM inventory_history
+			ORDER BY timestamp DESC
+			LIMIT 10
+		`)
+		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<p>Error loading inventory changes</p>`))
+			return
+		}
+		defer rows.Close()
+
+		type Change struct {
+			ItemType     string
+			ChangeAmount float64
+			Reason       string
+			Timestamp    time.Time
+			Notes        sql.NullString
+		}
+
+		changes := []Change{}
+		for rows.Next() {
+			var change Change
+			if err := rows.Scan(&change.ItemType, &change.ChangeAmount, &change.Reason, &change.Timestamp, &change.Notes); err == nil {
+				changes = append(changes, change)
+			}
+		}
+
+		if len(changes) == 0 {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`
+				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
+					<p>No recent changes.</p>
+				</div>
+			`))
+			return
+		}
+
+		// Display names for item types
+		displayNames := map[string]string{
+			"progesterone":     "Progesterone",
+			"draw_needle":      "Draw Needles",
+			"injection_needle": "Injection Needles",
+			"syringe":          "Syringes",
+			"swab":             "Alcohol Swabs",
+			"gauze":            "Gauze Pads",
+		}
+
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`
-			<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
-				<p>No recent changes.</p>
-			</div>
-		`))
+		html := `<div style="display: flex; flex-direction: column; gap: 0.5rem;">`
+
+		for _, change := range changes {
+			itemName := displayNames[change.ItemType]
+			if itemName == "" {
+				itemName = change.ItemType
+			}
+
+			sign := "+"
+			color := "var(--pico-ins-color)"
+			if change.ChangeAmount < 0 {
+				sign = ""
+				color = "var(--pico-del-color)"
+			}
+
+			html += `<article style="margin: 0; padding: 0.75rem;">`
+			html += `<div style="display: flex; justify-content: space-between; align-items: start;">`
+			html += `<div><strong>` + itemName + `</strong> `
+			html += `<span style="color: ` + color + `;">` + sign + fmt.Sprintf("%.1f", change.ChangeAmount) + `</span>`
+			html += `<br><small style="color: var(--pico-muted-color);">` + strings.Title(strings.ReplaceAll(change.Reason, "_", " ")) + `</small>`
+
+			if change.Notes.Valid && change.Notes.String != "" {
+				html += `<br><small>` + change.Notes.String + `</small>`
+			}
+
+			html += `</div>`
+			html += `<small style="color: var(--pico-muted-color); white-space: nowrap;">` + formatTimeAgo(change.Timestamp) + `</small>`
+			html += `</div></article>`
+		}
+
+		html += `</div>`
+		w.Write([]byte(html))
+	}
+}
+
+// HandleGetAllInventoryHistory returns all inventory history (for /api/inventory/history)
+func HandleGetAllInventoryHistory(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.GetUserID(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Get limit from query params (default 100)
+		limit := 100
+		if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+			if parsedLimit, err := fmt.Sscanf(limitStr, "%d", &limit); err == nil && parsedLimit == 1 {
+				if limit > 1000 {
+					limit = 1000 // Cap at 1000
+				}
+			}
+		}
+
+		// Get all inventory changes
+		rows, err := db.Query(`
+			SELECT item_type, change_amount, reason, timestamp, notes
+			FROM inventory_history
+			ORDER BY timestamp DESC
+			LIMIT ?
+		`, limit)
+		if err != nil {
+			http.Error(w, "Failed to retrieve inventory history", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		type HistoryEntry struct {
+			ItemType     string  `json:"item_type"`
+			ChangeAmount float64 `json:"change_amount"`
+			Reason       string  `json:"reason"`
+			Timestamp    string  `json:"timestamp"`
+			Notes        *string `json:"notes,omitempty"`
+		}
+
+		history := []HistoryEntry{}
+		for rows.Next() {
+			var entry HistoryEntry
+			var notes sql.NullString
+			var timestamp time.Time
+
+			if err := rows.Scan(&entry.ItemType, &entry.ChangeAmount, &entry.Reason, &timestamp, &notes); err == nil {
+				entry.Timestamp = timestamp.Format(time.RFC3339)
+				if notes.Valid {
+					entry.Notes = &notes.String
+				}
+				history = append(history, entry)
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(history)
 	}
 }

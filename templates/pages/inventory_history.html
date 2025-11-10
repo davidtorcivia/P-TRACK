@@ -1,0 +1,80 @@
+{{ define "content" }}
+<article>
+    <header>
+        <hgroup>
+            <h1>Inventory History</h1>
+            <p>All inventory changes and adjustments</p>
+        </hgroup>
+        <button onclick="window.location.href='/inventory'" class="outline">
+            Back to Inventory
+        </button>
+    </header>
+
+    <!-- Inventory Changes List -->
+    <div id="inventory-changes-list">
+        <p aria-busy="true">Loading history...</p>
+    </div>
+</article>
+
+<script>
+// Load all inventory changes on page load
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/inventory/history?limit=100')
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('inventory-changes-list');
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:var(--pico-muted-color);">No inventory changes yet.</p>';
+                return;
+            }
+
+            // Display names for item types
+            const displayNames = {
+                'progesterone': 'Progesterone',
+                'draw_needle': 'Draw Needles',
+                'injection_needle': 'Injection Needles',
+                'syringe': 'Syringes',
+                'swab': 'Alcohol Swabs',
+                'gauze': 'Gauze Pads'
+            };
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+            data.forEach(change => {
+                const itemName = displayNames[change.item_type] || change.item_type;
+                const date = new Date(change.timestamp);
+                const formattedDate = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const sign = change.change_amount >= 0 ? '+' : '';
+                const color = change.change_amount >= 0 ? 'var(--pico-ins-color)' : 'var(--pico-del-color)';
+                const reasonFormatted = change.reason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                html += '<article style="margin: 0;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
+                html += '<div>';
+                html += '<strong>' + itemName + '</strong> ';
+                html += '<span style="color: ' + color + ';">' + sign + change.change_amount.toFixed(1) + '</span>';
+                html += '<br><small style="color: var(--pico-muted-color);">' + reasonFormatted + '</small>';
+                if (change.notes) {
+                    html += '<br><small>' + change.notes + '</small>';
+                }
+                html += '</div>';
+                html += '<small style="color: var(--pico-muted-color); white-space: nowrap;">' + formattedDate + '</small>';
+                html += '</div></article>';
+            });
+            html += '</div>';
+
+            container.innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('inventory-changes-list').innerHTML =
+                '<p style="color:red;">Error loading inventory history: ' + err.message + '</p>';
+        });
+});
+</script>
+{{ end }}

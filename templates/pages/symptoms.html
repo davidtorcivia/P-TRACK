@@ -145,38 +145,194 @@
     </footer>
 </article>
 
+<!-- Edit Symptom Modal -->
+<dialog id="edit-symptom-modal">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-symptom-modal').close()"></button>
+            <h3>Edit Symptom Log</h3>
+        </header>
+        <form id="edit-symptom-form" x-data="{
+            symptomId: 0,
+            painLevel: 5,
+            painLocation: '',
+            customLocation: '',
+            painType: '',
+            symptoms: [],
+            notes: ''
+        }" @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/symptoms/' + symptomId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                },
+                body: JSON.stringify({
+                    pain_level: parseInt(painLevel),
+                    pain_location: painLocation === 'custom' ? customLocation : painLocation,
+                    pain_type: painType,
+                    symptoms: symptoms,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('edit-symptom-modal').close();
+                    htmx.trigger('#recent-symptoms', 'refresh');
+                    const notif = document.getElementById('notification');
+                    notif.innerHTML = '<article><mark>Symptom updated successfully!</mark></article>';
+                    notif.style.display = 'block';
+                    setTimeout(() => notif.style.display = 'none', 3000);
+                } else {
+                    response.text().then(text => {
+                        console.error('Error:', text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+            });
+        ">
+            <label>
+                Pain Level: <span x-text="painLevel"></span>/10
+                <input type="range" x-model="painLevel" min="1" max="10">
+            </label>
+
+            <div class="grid-2">
+                <label>
+                    Location
+                    <select x-model="painLocation">
+                        <option value="">Select</option>
+                        <option value="injection_site_left">Injection Site - Left</option>
+                        <option value="injection_site_right">Injection Site - Right</option>
+                        <option value="injection_site_both">Injection Site - Both</option>
+                        <option value="upper_buttock_left">Upper Buttock - Left</option>
+                        <option value="upper_buttock_right">Upper Buttock - Right</option>
+                        <option value="abdomen">Abdomen</option>
+                        <option value="lower_back">Lower Back</option>
+                        <option value="custom">Custom (specify below)</option>
+                    </select>
+                </label>
+
+                <label>
+                    Type
+                    <select x-model="painType">
+                        <option value="">Select</option>
+                        <option value="sharp">Sharp</option>
+                        <option value="dull">Dull</option>
+                        <option value="aching">Aching</option>
+                        <option value="cramping">Cramping</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+            </div>
+
+            <div x-show="painLocation === 'custom'">
+                <input type="text" x-model="customLocation" placeholder="Describe location...">
+            </div>
+
+            <fieldset>
+                <legend>Additional Symptoms</legend>
+                <div class="grid-4">
+                    <label><input type="checkbox" x-model="symptoms" value="nausea"> Nausea</label>
+                    <label><input type="checkbox" x-model="symptoms" value="fatigue"> Fatigue</label>
+                    <label><input type="checkbox" x-model="symptoms" value="headache"> Headache</label>
+                    <label><input type="checkbox" x-model="symptoms" value="mood_changes"> Mood Changes</label>
+                    <label><input type="checkbox" x-model="symptoms" value="bloating"> Bloating</label>
+                    <label><input type="checkbox" x-model="symptoms" value="breast_tenderness"> Tenderness</label>
+                    <label><input type="checkbox" x-model="symptoms" value="spotting"> Spotting</label>
+                    <label><input type="checkbox" x-model="symptoms" value="hot_flashes"> Hot Flashes</label>
+                </div>
+            </fieldset>
+
+            <label>
+                Notes
+                <textarea x-model="notes" rows="3"></textarea>
+            </label>
+
+            <footer>
+                <div class="grid-2">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-symptom-modal').close()">Cancel</button>
+                    <button type="submit">Update Symptom</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
+
 <script>
 document.addEventListener('click', function(e) {
     if (e.target.dataset.action === 'delete-symptom') {
         const symptomId = e.target.dataset.symptomId;
-        if (confirm('Delete this symptom log?')) {
-            const csrfToken = document.querySelector('meta[name=csrf-token]').content;
-            fetch('/api/symptoms/' + symptomId, {
-                method: 'DELETE',
-                headers: {'X-CSRF-Token': csrfToken}
-            })
-            .then(response => {
-                if (response.ok) {
-                    htmx.trigger('#recent-symptoms', 'refresh');
-                    const notif = document.getElementById('notification');
-                    notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
-                    notif.style.display = 'block';
-                    setTimeout(() => notif.style.display = 'none', 3000);
-                } else {
-                    response.text().then(text => console.error('Error:', text));
-                    htmx.trigger('#recent-symptoms', 'refresh');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+        const csrfToken = document.querySelector('meta[name=csrf-token]').content;
+        fetch('/api/symptoms/' + symptomId, {
+            method: 'DELETE',
+            headers: {'X-CSRF-Token': csrfToken}
+        })
+        .then(response => {
+            if (response.ok) {
                 htmx.trigger('#recent-symptoms', 'refresh');
-            });
-        }
+                const notif = document.getElementById('notification');
+                notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
+                notif.style.display = 'block';
+                setTimeout(() => notif.style.display = 'none', 3000);
+            } else {
+                response.text().then(text => console.error('Error:', text));
+                htmx.trigger('#recent-symptoms', 'refresh');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            htmx.trigger('#recent-symptoms', 'refresh');
+        });
     }
 
     if (e.target.dataset.action === 'edit-symptom') {
         const symptomId = e.target.dataset.symptomId;
-        window.location.href = '/symptoms/' + symptomId + '/edit';
+
+        // Fetch symptom data
+        fetch('/api/symptoms/' + symptomId)
+            .then(response => response.json())
+            .then(symptom => {
+                const modal = document.getElementById('edit-symptom-modal');
+                const form = document.getElementById('edit-symptom-form');
+
+                // Get Alpine.js instance
+                const alpineData = Alpine.$data(form);
+
+                // Set form values
+                alpineData.symptomId = symptomId;
+                alpineData.painLevel = symptom.pain_level || 5;
+                alpineData.painLocation = symptom.pain_location || '';
+                alpineData.painType = symptom.pain_type || '';
+                alpineData.notes = symptom.notes || '';
+
+                // Parse symptoms array
+                if (symptom.symptoms) {
+                    try {
+                        const parsed = JSON.parse(symptom.symptoms);
+                        alpineData.symptoms = Array.isArray(parsed) ? parsed : [];
+                    } catch(e) {
+                        alpineData.symptoms = [];
+                    }
+                } else {
+                    alpineData.symptoms = [];
+                }
+
+                // Show modal
+                modal.showModal();
+            })
+            .catch(error => {
+                console.error('Error loading symptom:', error);
+            });
     }
 });
 </script>
