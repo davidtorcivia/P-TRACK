@@ -47,7 +47,7 @@
                 notes = '';
 
                 const notif = document.getElementById('notification');
-                notif.innerHTML = '<article style=\"background-color: var(--pico-ins-color);\">Symptoms logged successfully!</article>';
+                notif.innerHTML = '<article><mark>Symptoms logged successfully!</mark></article>';
                 notif.style.display = 'block';
                 setTimeout(() => notif.style.display = 'none', 3000);
 
@@ -55,7 +55,7 @@
             } else {
                 response.text().then(text => {
                     const notif = document.getElementById('notification');
-                    notif.innerHTML = '<article style=\"background-color: var(--pico-del-color);\">Error: ' + text + '</article>';
+                    notif.innerHTML = '<article><del>Error: ' + text + '</del></article>';
                     notif.style.display = 'block';
                 });
             }
@@ -64,7 +64,7 @@
             btn.disabled = false;
             btn.removeAttribute('aria-busy');
             const notif = document.getElementById('notification');
-            notif.innerHTML = '<article style=\"background-color: var(--pico-del-color);\">Error: ' + error.message + '</article>';
+            notif.innerHTML = '<article><del>Error: ' + error.message + '</del></article>';
             notif.style.display = 'block';
         });
     ">
@@ -151,7 +151,7 @@ document.addEventListener('click', function(e) {
                 if (response.ok) {
                     htmx.trigger('#recent-symptoms', 'refresh');
                     const notif = document.getElementById('notification');
-                    notif.innerHTML = '<article style="background-color: var(--pico-ins-color);">Symptom deleted successfully!</article>';
+                    notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
                     notif.style.display = 'block';
                     setTimeout(() => notif.style.display = 'none', 3000);
                 } else {

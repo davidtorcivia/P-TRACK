@@ -31,7 +31,14 @@
                 fetch('/api/courses/{{ .ActiveCourse.ID }}/close', {
                     method: 'POST',
                     headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                }).then(() => window.location.reload());
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        response.text().then(text => alert('Error: ' + text));
+                    }
+                });
             }" class="outline">Close Course</button>
         </div>
     </footer>

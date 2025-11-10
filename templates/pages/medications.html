@@ -105,8 +105,11 @@
                     <textarea name="notes" rows="2">{{ .Notes }}</textarea>
                 </label>
                 <footer>
-                    <div class="grid-3">
+                    <div class="grid-2">
                         <button type="button" class="secondary" onclick="document.getElementById('edit-medication-{{ .ID }}').close()">Cancel</button>
+                        <button type="submit">Save</button>
+                    </div>
+                    <div class="grid-2" style="margin-top: 0.5rem;">
                         <button type="button" onclick="
                             if (confirm('Mark this medication as inactive?')) {
                                 fetch('/api/medications/{{ .ID }}', {
@@ -119,7 +122,20 @@
                                 }).then(() => window.location.reload());
                             }
                         " class="outline">Deactivate</button>
-                        <button type="submit">Save</button>
+                        <button type="button" onclick="
+                            if (confirm('Permanently delete this medication?')) {
+                                fetch('/api/medications/{{ .ID }}', {
+                                    method: 'DELETE',
+                                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                                }).then(response => {
+                                    if (response.ok) {
+                                        window.location.reload();
+                                    } else {
+                                        response.text().then(text => alert('Error: ' + text));
+                                    }
+                                });
+                            }
+                        " class="outline secondary">Delete</button>
                     </div>
                 </footer>
             </form>

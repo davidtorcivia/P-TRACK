@@ -36,19 +36,99 @@
                         <td>{{ if .PainLevel }}{{ .PainLevel }}/10{{ else }}-{{ end }}</td>
                         <td>{{ if .Notes }}{{ .Notes }}{{ else }}-{{ end }}</td>
                         <td>
-                            <a href="#edit-{{ .ID }}" role="button" class="outline" style="padding: 0.25rem 0.5rem; margin: 0;">Edit</a>
+                            <button onclick="document.getElementById('edit-injection-{{ .ID }}').showModal()" class="outline" style="padding: 0.25rem 0.5rem; margin: 0;">Edit</button>
                             <button onclick="if(confirm('Delete this injection?')) {
                                 fetch('/api/injections/{{ .ID }}', {
                                     method: 'DELETE',
                                     headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                                }).then(() => window.location.reload());
-                            }" class="outline" style="padding: 0.25rem 0.5rem;">Delete</button>
+                                })
+                                .then(response => {
+                                    if (response.ok) {
+                                        window.location.reload();
+                                    } else {
+                                        response.text().then(text => alert('Error: ' + text));
+                                    }
+                                });
+                            }" class="outline secondary" style="padding: 0.25rem 0.5rem;">Delete</button>
                         </td>
                     </tr>
                     {{ end }}
                 </tbody>
             </table>
         </figure>
+
+        <!-- Edit Modals -->
+        {{ range .Injections }}
+        <dialog id="edit-injection-{{ .ID }}">
+            <article>
+                <header>
+                    <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-injection-{{ .ID }}').close()"></button>
+                    <h3>Edit Injection</h3>
+                </header>
+                <form x-data="{
+                    side: '{{ .Side }}',
+                    painLevel: {{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end }},
+                    notes: '{{ .Notes }}'
+                }" @submit.prevent="
+                    const btn = $el.querySelector('button[type=submit]');
+                    btn.disabled = true;
+                    btn.setAttribute('aria-busy', 'true');
+
+                    fetch('/api/injections/{{ .ID }}', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify({
+                            side: side,
+                            pain_level: parseInt(painLevel),
+                            notes: notes
+                        })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            response.text().then(text => {
+                                alert('Error: ' + text);
+                                btn.disabled = false;
+                                btn.removeAttribute('aria-busy');
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error: ' + error.message);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                ">
+                    <fieldset>
+                        <legend>Which side?</legend>
+                        <label><input type="radio" x-model="side" value="left" name="side-{{ .ID }}"> Left</label>
+                        <label><input type="radio" x-model="side" value="right" name="side-{{ .ID }}"> Right</label>
+                    </fieldset>
+
+                    <label>
+                        Pain Level: <span x-text="painLevel"></span>/10
+                        <input type="range" x-model="painLevel" min="1" max="10">
+                    </label>
+
+                    <label>
+                        Notes
+                        <textarea x-model="notes" rows="2"></textarea>
+                    </label>
+
+                    <footer>
+                        <div class="grid-2">
+                            <button type="button" class="secondary" onclick="document.getElementById('edit-injection-{{ .ID }}').close()">Cancel</button>
+                            <button type="submit">Save Changes</button>
+                        </div>
+                    </footer>
+                </form>
+            </article>
+        </dialog>
+        {{ end }}
         {{ else }}
         <p>No injections recorded yet.</p>
         {{ end }}
@@ -75,8 +155,6 @@
         <form x-data="{
             side: 'left',
             painLevel: 5,
-            hasKnots: false,
-            siteReaction: '',
             notes: ''
         }" @submit.prevent="
             const btn = $el.querySelector('button[type=submit]');
@@ -93,8 +171,6 @@
                     course_id: {{ .ActiveCourse.ID }},
                     side: side,
                     pain_level: parseInt(painLevel),
-                    has_knots: hasKnots,
-                    site_reaction: siteReaction,
                     notes: notes
                 })
             })
@@ -125,23 +201,8 @@
             </label>
 
             <label>
-                <input type="checkbox" x-model="hasKnots">
-                Knots/Hardness
-            </label>
-
-            <label>
-                Site Reaction
-                <select x-model="siteReaction">
-                    <option value="">None</option>
-                    <option value="redness">Redness</option>
-                    <option value="swelling">Swelling</option>
-                    <option value="bruising">Bruising</option>
-                </select>
-            </label>
-
-            <label>
                 Notes
-                <textarea x-model="notes" rows="2"></textarea>
+                <textarea x-model="notes" rows="2" placeholder="Optional notes about this injection"></textarea>
             </label>
 
             <footer>
