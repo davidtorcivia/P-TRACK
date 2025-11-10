@@ -24,6 +24,9 @@
     {{ end }}
     <footer>
         <div class="grid-2">
+            <button onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').showModal()" class="outline secondary">
+                Edit
+            </button>
             <button onclick="if(confirm('Close this course?')) {
                 fetch('/api/courses/{{ .ActiveCourse.ID }}/close', {
                     method: 'POST',
@@ -33,6 +36,78 @@
         </div>
     </footer>
 </article>
+
+<!-- Edit Active Course Modal -->
+<dialog id="edit-course-{{ .ActiveCourse.ID }}">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()"></button>
+            <h3>Edit Course</h3>
+        </header>
+        <form onsubmit="event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {
+                name: formData.get('name'),
+                start_date: formData.get('start_date'),
+                expected_end_date: formData.get('expected_end_date') || null,
+                notes: formData.get('notes') || null
+            };
+            const btn = event.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/courses/{{ .ActiveCourse.ID }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ $.CSRFToken }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.text().then(text => {
+                        alert('Error: ' + text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+            });
+        ">
+            <label>
+                Course Name
+                <input type="text" name="name" value="{{ .ActiveCourse.Name }}" required>
+            </label>
+            <div class="grid-2">
+                <label>
+                    Start Date
+                    <input type="date" name="start_date" value="{{ .ActiveCourse.StartDateISO }}" required>
+                </label>
+                <label>
+                    Expected End Date
+                    <input type="date" name="expected_end_date" value="{{ .ActiveCourse.ExpectedEndDateISO }}">
+                </label>
+            </div>
+            <label>
+                Notes
+                <textarea name="notes" rows="2">{{ .ActiveCourse.Notes }}</textarea>
+            </label>
+            <footer>
+                <div class="grid-2">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
 {{ end }}
 
 <!-- Past Courses -->
@@ -48,22 +123,102 @@
     <p><small>{{ .Notes }}</small></p>
     {{ end }}
     <footer>
-        <div class="grid-2">
+        <div class="grid-3">
+            <button onclick="document.getElementById('edit-course-{{ .ID }}').showModal()" class="outline secondary">
+                Edit
+            </button>
             <button onclick="
                 fetch('/api/courses/{{ .ID }}/activate', {
                     method: 'POST',
                     headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
                 }).then(() => window.location.reload());
             " class="outline">Reactivate</button>
-            <button onclick="if(confirm('Delete {{ .Name }}?')) {
+            <button onclick="if(confirm('Delete {{ .Name }}? This will delete all associated data.')) {
                 fetch('/api/courses/{{ .ID }}', {
                     method: 'DELETE',
                     headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
                 }).then(() => window.location.reload());
-            }" class="outline">Delete</button>
+            }" class="outline secondary">Delete</button>
         </div>
     </footer>
 </article>
+
+<!-- Edit Past Course Modal -->
+<dialog id="edit-course-{{ .ID }}">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ID }}').close()"></button>
+            <h3>Edit Course</h3>
+        </header>
+        <form onsubmit="event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {
+                name: formData.get('name'),
+                start_date: formData.get('start_date'),
+                expected_end_date: formData.get('expected_end_date') || null,
+                actual_end_date: formData.get('actual_end_date') || null,
+                notes: formData.get('notes') || null
+            };
+            const btn = event.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/courses/{{ .ID }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ $.CSRFToken }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.text().then(text => {
+                        alert('Error: ' + text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+            });
+        ">
+            <label>
+                Course Name
+                <input type="text" name="name" value="{{ .Name }}" required>
+            </label>
+            <div class="grid-2">
+                <label>
+                    Start Date
+                    <input type="date" name="start_date" value="{{ .StartDateISO }}" required>
+                </label>
+                <label>
+                    Actual End Date
+                    <input type="date" name="actual_end_date" value="{{ .ActualEndDateISO }}">
+                </label>
+            </div>
+            <label>
+                Expected End Date
+                <input type="date" name="expected_end_date" value="{{ .ExpectedEndDateISO }}">
+            </label>
+            <label>
+                Notes
+                <textarea name="notes" rows="2">{{ .Notes }}</textarea>
+            </label>
+            <footer>
+                <div class="grid-2">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-course-{{ .ID }}').close()">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
 {{ end }}
 {{ end }}
 

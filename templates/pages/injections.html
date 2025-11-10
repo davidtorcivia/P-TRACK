@@ -6,7 +6,7 @@
 
 {{ if .ActiveCourse }}
 <div class="grid-2">
-    <a href="#log-injection" role="button">Log New Injection</a>
+    <button onclick="document.getElementById('log-injection').showModal()">Log New Injection</button>
     <a href="/courses" role="button" class="outline">Manage Courses</a>
 </div>
 
@@ -69,7 +69,7 @@
 <dialog id="log-injection">
     <article>
         <header>
-            <button aria-label="Close" rel="prev"></button>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('log-injection').close()"></button>
             <h3>Log Injection</h3>
         </header>
         <form x-data="{

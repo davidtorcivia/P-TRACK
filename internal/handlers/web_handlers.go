@@ -495,13 +495,15 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
 			activeData := map[string]interface{}{
-				"ID":        activeCourse.ID,
-				"Name":      activeCourse.Name,
-				"StartDate": activeCourse.StartDate.Format("Jan 2, 2006"),
-				"Notes":     "",
+				"ID":            activeCourse.ID,
+				"Name":          activeCourse.Name,
+				"StartDate":     activeCourse.StartDate.Format("Jan 2, 2006"),
+				"StartDateISO":  activeCourse.StartDate.Format("2006-01-02"),
+				"Notes":         "",
 			}
 			if activeCourse.ExpectedEndDate.Valid {
 				activeData["ExpectedEndDate"] = activeCourse.ExpectedEndDate.Time.Format("Jan 2, 2006")
+				activeData["ExpectedEndDateISO"] = activeCourse.ExpectedEndDate.Time.Format("2006-01-02")
 			}
 			if activeCourse.Notes.Valid {
 				activeData["Notes"] = activeCourse.Notes.String
@@ -516,12 +518,18 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 			for _, course := range courses {
 				if !course.IsActive {
 					pastData := map[string]interface{}{
-						"ID":        course.ID,
-						"Name":      course.Name,
-						"StartDate": course.StartDate.Format("Jan 2, 2006"),
+						"ID":           course.ID,
+						"Name":         course.Name,
+						"StartDate":    course.StartDate.Format("Jan 2, 2006"),
+						"StartDateISO": course.StartDate.Format("2006-01-02"),
 					}
 					if course.ActualEndDate.Valid {
 						pastData["ActualEndDate"] = course.ActualEndDate.Time.Format("Jan 2, 2006")
+						pastData["ActualEndDateISO"] = course.ActualEndDate.Time.Format("2006-01-02")
+					}
+					if course.ExpectedEndDate.Valid {
+						pastData["ExpectedEndDate"] = course.ExpectedEndDate.Time.Format("Jan 2, 2006")
+						pastData["ExpectedEndDateISO"] = course.ExpectedEndDate.Time.Format("2006-01-02")
 					}
 					if course.Notes.Valid {
 						pastData["Notes"] = course.Notes.String

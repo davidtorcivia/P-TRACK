@@ -4,6 +4,8 @@
     <p>Log and monitor your symptoms</p>
 </hgroup>
 
+<div id="notification" style="display: none; margin-bottom: 1rem;" role="alert"></div>
+
 {{ if .ActiveCourse }}
 <article>
     <header><h3>Log Symptoms</h3></header>
@@ -43,15 +45,27 @@
                 painType = '';
                 symptoms = [];
                 notes = '';
-                alert('Symptoms logged successfully');
+
+                const notif = document.getElementById('notification');
+                notif.innerHTML = '<article style=\"background-color: var(--pico-ins-color);\">Symptoms logged successfully!</article>';
+                notif.style.display = 'block';
+                setTimeout(() => notif.style.display = 'none', 3000);
+
+                htmx.trigger('#recent-symptoms', 'refresh');
             } else {
-                response.text().then(text => alert('Error: ' + text));
+                response.text().then(text => {
+                    const notif = document.getElementById('notification');
+                    notif.innerHTML = '<article style=\"background-color: var(--pico-del-color);\">Error: ' + text + '</article>';
+                    notif.style.display = 'block';
+                });
             }
         })
         .catch(error => {
             btn.disabled = false;
             btn.removeAttribute('aria-busy');
-            alert('Error: ' + error.message);
+            const notif = document.getElementById('notification');
+            notif.innerHTML = '<article style=\"background-color: var(--pico-del-color);\">Error: ' + error.message + '</article>';
+            notif.style.display = 'block';
         });
     ">
         <div class="grid-3">
@@ -115,13 +129,45 @@
 
 <article>
     <header><h3>Recent Symptoms</h3></header>
-    <div hx-get="/api/symptoms/recent" hx-trigger="load">
+    <div id="recent-symptoms" hx-get="/api/symptoms/recent" hx-trigger="load, refresh from:body">
         <p aria-busy="true">Loading...</p>
     </div>
     <footer>
         <a href="/symptoms/history" role="button" class="outline">View History</a>
     </footer>
 </article>
+
+<script>
+document.addEventListener('click', function(e) {
+    if (e.target.dataset.action === 'delete-symptom') {
+        const symptomId = e.target.dataset.symptomId;
+        if (confirm('Delete this symptom log?')) {
+            const csrfToken = document.querySelector('meta[name=csrf-token]').content;
+            fetch('/api/symptoms/' + symptomId, {
+                method: 'DELETE',
+                headers: {'X-CSRF-Token': csrfToken}
+            })
+            .then(response => {
+                if (response.ok) {
+                    htmx.trigger('#recent-symptoms', 'refresh');
+                    const notif = document.getElementById('notification');
+                    notif.innerHTML = '<article style="background-color: var(--pico-ins-color);">Symptom deleted successfully!</article>';
+                    notif.style.display = 'block';
+                    setTimeout(() => notif.style.display = 'none', 3000);
+                } else {
+                    response.text().then(text => alert('Error: ' + text));
+                }
+            })
+            .catch(error => alert('Error: ' + error.message));
+        }
+    }
+
+    if (e.target.dataset.action === 'edit-symptom') {
+        const symptomId = e.target.dataset.symptomId;
+        window.location.href = '/symptoms/' + symptomId + '/edit';
+    }
+});
+</script>
 
 {{ else }}
 <article style="text-align: center;">

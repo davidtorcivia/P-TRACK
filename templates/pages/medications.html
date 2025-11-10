@@ -25,20 +25,106 @@
             {{ end }}
         </p>
         <footer>
-            <button onclick="
-                fetch('/api/medications/{{ .ID }}/log', {
-                    method: 'POST',
+            <div class="grid-2">
+                <button onclick="
+                    const taken = {{ if .TakenToday }}false{{ else }}true{{ end }};
+                    fetch('/api/medications/{{ .ID }}/log', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify({taken: taken})
+                    }).then(() => window.location.reload());
+                " class="outline">
+                    {{ if .TakenToday }}Mark Missed{{ else }}Mark Taken{{ end }}
+                </button>
+                <button onclick="document.getElementById('edit-medication-{{ .ID }}').showModal()" class="outline secondary">
+                    Edit
+                </button>
+            </div>
+        </footer>
+    </article>
+
+    <!-- Edit Modal for {{ .Name }} -->
+    <dialog id="edit-medication-{{ .ID }}">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-medication-{{ .ID }}').close()"></button>
+                <h3>Edit {{ .Name }}</h3>
+            </header>
+            <form onsubmit="event.preventDefault();
+                const formData = new FormData(event.target);
+                const data = {
+                    name: formData.get('name'),
+                    dosage: formData.get('dosage'),
+                    frequency: formData.get('frequency'),
+                    is_active: true,
+                    notes: formData.get('notes') || null
+                };
+                const btn = event.target.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+
+                fetch('/api/medications/{{ .ID }}', {
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': '{{ $.CSRFToken }}'
                     },
-                    body: JSON.stringify({taken: {{ if .TakenToday }}false{{ else }}true{{ end }}})
-                }).then(() => window.location.reload());
-            " class="outline">
-                {{ if .TakenToday }}Mark as Missed{{ else }}Mark as Taken{{ end }}
-            </button>
-        </footer>
-    </article>
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        response.text().then(text => {
+                            alert('Error: ' + text);
+                            btn.disabled = false;
+                            btn.removeAttribute('aria-busy');
+                        });
+                    }
+                });
+            ">
+                <label>
+                    Medication Name
+                    <input type="text" name="name" value="{{ .Name }}" required>
+                </label>
+                <div class="grid-2">
+                    <label>
+                        Dosage
+                        <input type="text" name="dosage" value="{{ .Dosage }}" required>
+                    </label>
+                    <label>
+                        Frequency
+                        <input type="text" name="frequency" value="{{ .Frequency }}" required>
+                    </label>
+                </div>
+                <label>
+                    Notes
+                    <textarea name="notes" rows="2">{{ .Notes }}</textarea>
+                </label>
+                <footer>
+                    <div class="grid-3">
+                        <button type="button" class="secondary" onclick="document.getElementById('edit-medication-{{ .ID }}').close()">Cancel</button>
+                        <button type="button" onclick="
+                            if (confirm('Mark this medication as inactive?')) {
+                                fetch('/api/medications/{{ .ID }}', {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ $.CSRFToken }}'
+                                    },
+                                    body: JSON.stringify({is_active: false})
+                                }).then(() => window.location.reload());
+                            }
+                        " class="outline">Deactivate</button>
+                        <button type="submit">Save</button>
+                    </div>
+                </footer>
+            </form>
+        </article>
+    </dialog>
     {{ end }}
 </div>
 {{ else }}
@@ -59,16 +145,26 @@
     <h4>{{ .Name }}</h4>
     <p><small>{{ .Dosage }} - {{ .Frequency }}</small></p>
     <footer>
-        <button onclick="
-            fetch('/api/medications/{{ .ID }}', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ $.CSRFToken }}'
-                },
-                body: JSON.stringify({is_active: true})
-            }).then(() => window.location.reload());
-        " class="outline">Reactivate</button>
+        <div class="grid-2">
+            <button onclick="
+                fetch('/api/medications/{{ .ID }}', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ $.CSRFToken }}'
+                    },
+                    body: JSON.stringify({is_active: true})
+                }).then(() => window.location.reload());
+            " class="outline">Reactivate</button>
+            <button onclick="
+                if (confirm('Permanently delete this medication?')) {
+                    fetch('/api/medications/{{ .ID }}', {
+                        method: 'DELETE',
+                        headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
+                    }).then(() => window.location.reload());
+                }
+            " class="outline secondary">Delete</button>
+        </div>
     </footer>
 </article>
 {{ end }}

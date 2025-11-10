@@ -138,11 +138,49 @@
 
             <!-- Adjustment Form -->
             <div x-show="showAdjust" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
-                <form hx-post="/api/inventory/{{ .ItemType }}/adjust"
-                      hx-headers='{"X-CSRF-Token": "{{ $.CSRFToken }}"}'
-                      hx-target="closest article"
-                      hx-swap="outerHTML"
-                      @htmx:after-request="showAdjust = false">
+                <form @submit.prevent="
+                    const btn = $el.querySelector('button[type=submit]');
+                    btn.disabled = true;
+                    btn.setAttribute('aria-busy', 'true');
+
+                    const data = {
+                        change_amount: parseFloat(adjustAmount),
+                        reason: adjustReason,
+                        notes: adjustNotes || null
+                    };
+
+                    if (adjustReason === 'restock') {
+                        const lotNum = $el.querySelector('[name=lot_number]')?.value;
+                        const expDate = $el.querySelector('[name=expiration_date]')?.value;
+                        if (lotNum) data.lot_number = lotNum;
+                        if (expDate) data.expiration_date = expDate;
+                    }
+
+                    fetch('/api/inventory/{{ .ItemType }}/adjust', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            return response.text().then(text => {
+                                alert('Error: ' + text);
+                                btn.disabled = false;
+                                btn.removeAttribute('aria-busy');
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error: ' + error.message);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                ">
 
                     <div class="grid">
                         <label for="adjust-amount-{{ .ItemType }}">
@@ -165,10 +203,10 @@
                                     required>
                                 <option value="">Select reason...</option>
                                 <option value="restock">Restock</option>
-                                <option value="manual_correction">Manual Correction</option>
+                                <option value="manual_adjustment">Manual Adjustment</option>
                                 <option value="expired">Expired/Discarded</option>
                                 <option value="damaged">Damaged</option>
-                                <option value="other">Other</option>
+                                <option value="correction">Correction</option>
                             </select>
                         </label>
                     </div>
