@@ -1,11 +1,16 @@
 {{ define "content" }}
-<article>
+<article style="padding: 1rem;">
     <header>
-        <h1>Settings</h1>
+        <hgroup>
+            <h1>Settings</h1>
+            <p>Manage your account and preferences</p>
+        </hgroup>
     </header>
+</article>
 
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1rem; align-items: start;">
     <!-- Profile Settings -->
-    <article>
+    <article style="margin: 0;">
         <header>
             <h3>Profile</h3>
         </header>
@@ -41,7 +46,7 @@
     </article>
 
     <!-- Change Password -->
-    <article>
+    <article style="margin: 0;">
         <header>
             <h3>Change Password</h3>
         </header>
@@ -92,19 +97,21 @@
             </button>
         </form>
     </article>
+</div>
 
-    <!-- App Settings -->
-    <article>
-        <header>
-            <h3>App Settings</h3>
-        </header>
+<!-- App Settings -->
+<article style="padding: 1rem;">
+    <header>
+        <h3>Application Settings</h3>
+    </header>
 
-        <form hx-post="/api/settings/app"
-              hx-target="#app-feedback"
-              hx-swap="innerHTML">
+    <form hx-post="/api/settings/app"
+          hx-target="#app-feedback"
+          hx-swap="innerHTML">
 
-            <div id="app-feedback"></div>
+        <div id="app-feedback"></div>
 
+        <div class="grid">
             <label for="theme">
                 Theme
                 <select id="theme" name="theme">
@@ -114,16 +121,32 @@
                 </select>
             </label>
 
-            <label for="advanced-mode">
-                <input type="checkbox"
-                       id="advanced-mode"
-                       name="advanced_mode"
-                       role="switch"
-                       {{ if .Settings.AdvancedMode }}checked{{ end }}>
-                Enable Advanced Mode
-                <small>Shows anatomical diagram for precise injection site tracking</small>
+            <label for="timezone">
+                Timezone
+                <select id="timezone" name="timezone">
+                    <option value="America/New_York" {{ if eq .Settings.Timezone "America/New_York" }}selected{{ end }}>Eastern Time (ET)</option>
+                    <option value="America/Chicago" {{ if eq .Settings.Timezone "America/Chicago" }}selected{{ end }}>Central Time (CT)</option>
+                    <option value="America/Denver" {{ if eq .Settings.Timezone "America/Denver" }}selected{{ end }}>Mountain Time (MT)</option>
+                    <option value="America/Phoenix" {{ if eq .Settings.Timezone "America/Phoenix" }}selected{{ end }}>Arizona Time (AZ)</option>
+                    <option value="America/Los_Angeles" {{ if eq .Settings.Timezone "America/Los_Angeles" }}selected{{ end }}>Pacific Time (PT)</option>
+                    <option value="America/Anchorage" {{ if eq .Settings.Timezone "America/Anchorage" }}selected{{ end }}>Alaska Time (AK)</option>
+                    <option value="Pacific/Honolulu" {{ if eq .Settings.Timezone "Pacific/Honolulu" }}selected{{ end }}>Hawaii Time (HT)</option>
+                    <option value="UTC" {{ if eq .Settings.Timezone "UTC" }}selected{{ end }}>UTC</option>
+                    <option value="Europe/London" {{ if eq .Settings.Timezone "Europe/London" }}selected{{ end }}>London (GMT/BST)</option>
+                    <option value="Europe/Paris" {{ if eq .Settings.Timezone "Europe/Paris" }}selected{{ end }}>Central Europe (CET)</option>
+                    <option value="Europe/Athens" {{ if eq .Settings.Timezone "Europe/Athens" }}selected{{ end }}>Eastern Europe (EET)</option>
+                    <option value="Asia/Dubai" {{ if eq .Settings.Timezone "Asia/Dubai" }}selected{{ end }}>Dubai (GST)</option>
+                    <option value="Asia/Kolkata" {{ if eq .Settings.Timezone "Asia/Kolkata" }}selected{{ end }}>India (IST)</option>
+                    <option value="Asia/Shanghai" {{ if eq .Settings.Timezone "Asia/Shanghai" }}selected{{ end }}>China (CST)</option>
+                    <option value="Asia/Tokyo" {{ if eq .Settings.Timezone "Asia/Tokyo" }}selected{{ end }}>Japan (JST)</option>
+                    <option value="Australia/Sydney" {{ if eq .Settings.Timezone "Australia/Sydney" }}selected{{ end }}>Sydney (AEDT)</option>
+                    <option value="Pacific/Auckland" {{ if eq .Settings.Timezone "Pacific/Auckland" }}selected{{ end }}>New Zealand (NZDT)</option>
+                </select>
+                <small>All dates and times will be shown in your timezone</small>
             </label>
+        </div>
 
+        <div class="grid">
             <label for="date-format">
                 Date Format
                 <select id="date-format" name="date_format">
@@ -140,117 +163,228 @@
                     <option value="24h" {{ if eq .Settings.TimeFormat "24h" }}selected{{ end }}>24-hour</option>
                 </select>
             </label>
-
-            <button type="submit">Save Settings</button>
-        </form>
-    </article>
-
-    <!-- Notification Settings -->
-    <article>
-        <header>
-            <h3>Notifications</h3>
-        </header>
-
-        <form hx-post="/api/settings/notifications"
-              hx-target="#notification-feedback"
-              hx-swap="innerHTML">
-
-            <div id="notification-feedback"></div>
-
-            <label for="enable-notifications">
-                <input type="checkbox"
-                       id="enable-notifications"
-                       name="enable_notifications"
-                       role="switch"
-                       {{ if .Settings.EnableNotifications }}checked{{ end }}>
-                Enable Push Notifications
-            </label>
-
-            <label for="injection-reminders">
-                <input type="checkbox"
-                       id="injection-reminders"
-                       name="injection_reminders"
-                       role="switch"
-                       {{ if .Settings.InjectionReminders }}checked{{ end }}>
-                Injection Reminders
-            </label>
-
-            <label for="reminder-time">
-                Reminder Time
-                <input type="time"
-                       id="reminder-time"
-                       name="reminder_time"
-                       value="{{ .Settings.ReminderTime }}">
-            </label>
-
-            <label for="low-stock-alerts">
-                <input type="checkbox"
-                       id="low-stock-alerts"
-                       name="low_stock_alerts"
-                       role="switch"
-                       {{ if .Settings.LowStockAlerts }}checked{{ end }}>
-                Low Stock Alerts
-            </label>
-
-            <button type="submit">Save Notification Settings</button>
-        </form>
-    </article>
-
-    <!-- Data Management -->
-    <article>
-        <header>
-            <h3>Data Management</h3>
-        </header>
-
-        <div class="grid">
-            <button onclick="window.location.href='/api/export/all'"
-                    class="outline">
-                📦 Export All Data
-            </button>
-
-            <button onclick="window.location.href='/api/export/pdf?full=true'"
-                    class="outline">
-                📑 Generate Full Report
-            </button>
         </div>
 
-        <details style="margin-top: 1rem;">
-            <summary style="color: var(--pico-del-color);">
-                <strong>Danger Zone</strong>
-            </summary>
+        <label for="advanced-mode">
+            <input type="checkbox"
+                   id="advanced-mode"
+                   name="advanced_mode"
+                   role="switch"
+                   {{ if .Settings.AdvancedMode }}checked{{ end }}>
+            Enable Advanced Mode
+            <small>Shows anatomical diagram for precise injection site tracking</small>
+        </label>
 
-            <div style="padding: 1rem; border: 1px solid var(--pico-del-color); border-radius: var(--pico-border-radius); margin-top: 1rem;">
-                <p><strong>Delete All Data</strong></p>
-                <p>This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
-                <button hx-delete="/api/settings/all-data"
-                        hx-confirm="Are you ABSOLUTELY SURE? Type 'DELETE' to confirm."
-                        class="outline"
-                        style="color: var(--pico-del-color); border-color: var(--pico-del-color);">
-                    Delete All Data
-                </button>
-            </div>
-        </details>
-    </article>
-
-    <!-- About -->
-    <article>
-        <header>
-            <h3>About</h3>
-        </header>
-
-        <dl>
-            <dt>Version</dt>
-            <dd>1.0.0</dd>
-
-            <dt>Database Size</dt>
-            <dd>{{ .DatabaseSize }}</dd>
-
-            <dt>Last Backup</dt>
-            <dd>{{ .LastBackup }}</dd>
-
-            <dt>Documentation</dt>
-            <dd><a href="https://github.com/yourusername/injection-tracker" target="_blank">View on GitHub</a></dd>
-        </dl>
-    </article>
+        <button type="submit">Save Settings</button>
+    </form>
 </article>
+
+<!-- Notification Settings -->
+<article style="padding: 1rem;">
+    <header>
+        <h3>Notifications & Reminders</h3>
+    </header>
+
+    <form hx-post="/api/settings/notifications"
+          hx-target="#notification-feedback"
+          hx-swap="innerHTML">
+
+        <div id="notification-feedback"></div>
+
+        <label for="enable-notifications">
+            <input type="checkbox"
+                   id="enable-notifications"
+                   name="enable_notifications"
+                   role="switch"
+                   {{ if .Settings.EnableNotifications }}checked{{ end }}>
+            Enable Push Notifications
+            <small>Receive browser notifications for reminders</small>
+        </label>
+
+        <label for="injection-reminders">
+            <input type="checkbox"
+                   id="injection-reminders"
+                   name="injection_reminders"
+                   role="switch"
+                   {{ if .Settings.InjectionReminders }}checked{{ end }}>
+            Injection Reminders
+            <small>Get reminded when it's time for your next injection</small>
+        </label>
+
+        <label for="reminder-time">
+            Default Reminder Time
+            <input type="time"
+                   id="reminder-time"
+                   name="reminder_time"
+                   value="{{ .Settings.ReminderTime }}">
+            <small>Default time for medication reminders</small>
+        </label>
+
+        <label for="low-stock-alerts">
+            <input type="checkbox"
+                   id="low-stock-alerts"
+                   name="low_stock_alerts"
+                   role="switch"
+                   {{ if .Settings.LowStockAlerts }}checked{{ end }}>
+            Low Stock Alerts
+            <small>Get notified when inventory is running low</small>
+        </label>
+
+        <button type="submit">Save Notification Settings</button>
+    </form>
+</article>
+
+<!-- Data Management -->
+<article style="padding: 1rem;">
+    <header>
+        <h3>Data Management</h3>
+    </header>
+
+    <div class="grid">
+        <div>
+            <button onclick="window.location.href='/api/export/all'"
+                    class="outline"
+                    style="width: 100%;">
+                Export All Data
+            </button>
+            <small>Download all data as JSON</small>
+        </div>
+
+        <div>
+            <button onclick="window.location.href='/api/export/pdf?full=true'"
+                    class="outline"
+                    style="width: 100%;">
+                Generate Full Report
+            </button>
+            <small>Create PDF report for healthcare provider</small>
+        </div>
+    </div>
+
+    <details style="margin-top: 2rem;">
+        <summary style="color: var(--pico-del-color);">
+            <strong>Danger Zone</strong>
+        </summary>
+
+        <div style="padding: 1rem; border: 1px solid var(--pico-del-color); border-radius: var(--pico-border-radius); margin-top: 1rem; background-color: var(--pico-card-background-color);">
+            <p><strong>Delete All Data</strong></p>
+            <p>This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
+            <button onclick="showDeleteAllConfirmation()"
+                    class="outline"
+                    style="color: var(--pico-del-color); border-color: var(--pico-del-color);">
+                Delete All Data
+            </button>
+        </div>
+    </details>
+</article>
+
+<!-- About -->
+<article style="padding: 1rem;">
+    <header>
+        <h3>About</h3>
+    </header>
+
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div>
+            <strong>Version</strong>
+            <p>1.0.0</p>
+        </div>
+
+        <div>
+            <strong>Database Size</strong>
+            <p>{{ .DatabaseSize }}</p>
+        </div>
+
+        <div>
+            <strong>Last Backup</strong>
+            <p>{{ .LastBackup }}</p>
+        </div>
+
+        <div>
+            <strong>Documentation</strong>
+            <p><a href="https://github.com/yourusername/injection-tracker" target="_blank">View on GitHub</a></p>
+        </div>
+    </div>
+</article>
+
+<!-- Delete All Data Confirmation Dialog -->
+<dialog id="delete-all-data-confirm">
+    <article style="max-width: 500px;">
+        <header>
+            <h3>Confirm Data Deletion</h3>
+        </header>
+        <p><strong>This will permanently delete ALL of your data:</strong></p>
+        <ul>
+            <li>All injection records</li>
+            <li>All symptom logs</li>
+            <li>All medications</li>
+            <li>All courses</li>
+            <li>All inventory history</li>
+        </ul>
+        <p style="color: var(--pico-del-color);"><strong>This action CANNOT be undone!</strong></p>
+        <p>Type <strong>DELETE</strong> to confirm:</p>
+        <input type="text" id="delete-confirmation-input" placeholder="Type DELETE" style="font-family: monospace;">
+        <footer>
+            <div class="grid-2">
+                <button type="button" class="secondary" onclick="document.getElementById('delete-all-data-confirm').close(); document.getElementById('delete-confirmation-input').value = '';">Cancel</button>
+                <button type="button" class="contrast" onclick="confirmDeleteAllData()">Delete Everything</button>
+            </div>
+        </footer>
+    </article>
+</dialog>
+
+<script>
+function showDeleteAllConfirmation() {
+    document.getElementById('delete-all-data-confirm').showModal();
+}
+
+function confirmDeleteAllData() {
+    const input = document.getElementById('delete-confirmation-input');
+    if (input.value !== 'DELETE') {
+        alert('Please type DELETE to confirm');
+        return;
+    }
+
+    fetch('/api/settings/all-data', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-Token': '{{ .CSRFToken }}'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = '/logout';
+        } else {
+            console.error('Error deleting data');
+            alert('Error deleting data. Please try again.');
+        }
+    });
+}
+</script>
+
+<style>
+/* Better spacing for settings page */
+article {
+    margin-bottom: 1rem;
+}
+
+/* Improve form layout */
+label small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--pico-muted-color);
+}
+
+/* Grid improvements */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
 {{ end }}

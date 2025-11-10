@@ -24,7 +24,7 @@
     </div>
 
     <!-- Add New Item -->
-    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock' }">
+    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '' }">
         <header>
             <h3>Add Inventory</h3>
         </header>
@@ -40,17 +40,22 @@
                 changeAmount = parseInt(amount);
             }
 
+            const data = {
+                change_amount: changeAmount,
+                reason: reason,
+                notes: 'Added inventory'
+            };
+
+            if (lotNumber) data.lot_number = lotNumber;
+            if (expirationDate) data.expiration_date = expirationDate;
+
             fetch('/api/inventory/' + itemType + '/adjust', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': '{{ .CSRFToken }}'
                 },
-                body: JSON.stringify({
-                    change_amount: changeAmount,
-                    reason: reason,
-                    notes: 'Added inventory'
-                })
+                body: JSON.stringify(data)
             })
             .then(response => {
                 if (response.ok) {
@@ -59,14 +64,16 @@
                     return response.text().then(text => {
                         btn.disabled = false;
                         btn.textContent = 'Add to Inventory';
-                        alert('Error: ' + text);
+                        console.error('Error:', text);
+                        window.location.reload();
                     });
                 }
             })
             .catch(error => {
                 btn.disabled = false;
                 btn.textContent = 'Add to Inventory';
-                alert('Error: ' + error.message);
+                console.error('Error:', error.message);
+                window.location.reload();
             });
         ">
             <div class="grid">
@@ -88,6 +95,16 @@
                 <label>
                     <span x-text="itemType === 'progesterone' ? 'Number of Vials' : 'Quantity'"></span>
                     <input type="number" x-model="amount" :step="itemType === 'progesterone' ? '1' : '1'" min="1" required>
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Lot Number (optional)
+                    <input type="text" x-model="lotNumber" placeholder="Lot/batch number">
+                </label>
+                <label>
+                    Expiration Date (optional)
+                    <input type="date" x-model="expirationDate">
                 </label>
             </div>
             <button type="submit">Add to Inventory</button>
@@ -169,16 +186,18 @@
                             window.location.reload();
                         } else {
                             return response.text().then(text => {
-                                alert('Error: ' + text);
+                                console.error('Error:', text);
                                 btn.disabled = false;
                                 btn.removeAttribute('aria-busy');
+                                window.location.reload();
                             });
                         }
                     })
                     .catch(error => {
-                        alert('Error: ' + error.message);
+                        console.error('Error:', error.message);
                         btn.disabled = false;
                         btn.removeAttribute('aria-busy');
+                        window.location.reload();
                     });
                 ">
 
