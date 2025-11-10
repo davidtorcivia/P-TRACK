@@ -196,6 +196,8 @@ func main() {
 			r.Put("/settings", handlers.HandleUpdateSettings(db))
 			r.Post("/settings/profile", handlers.HandleUpdateProfile(db))
 			r.Post("/settings/password", handlers.HandleChangePassword(db))
+			r.Post("/settings/app", handlers.HandleUpdateAppSettings(db))
+			r.Post("/settings/notifications", handlers.HandleUpdateNotificationSettings(db))
 
 			// Notification routes
 			r.Get("/notifications", handleGetNotifications(db))

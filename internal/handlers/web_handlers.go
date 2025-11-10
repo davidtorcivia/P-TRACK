@@ -124,6 +124,10 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Dashboard"
 
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
@@ -157,7 +161,9 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 				LIMIT 1
 			`, activeCourse.ID).Scan(&lastInjection.ID, &lastInjection.Timestamp, &lastInjection.Side)
 			if err == nil {
-				lastInjection.TimeAgo = formatTimeAgoWeb(lastInjection.Timestamp)
+				// Convert timestamp to user's timezone
+				convertedTime := ConvertToUserTZ(lastInjection.Timestamp, userTimezone)
+				lastInjection.TimeAgo = formatTimeAgoWeb(convertedTime)
 				lastSide = lastInjection.Side
 				data["LastInjection"] = &lastInjection
 			}
@@ -241,6 +247,10 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Injections"
 
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
@@ -269,10 +279,12 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 					var notes sql.NullString
 
 					if err := rows.Scan(&id, &timestamp, &side, &painLevel, &notes); err == nil {
+						// Convert timestamp to user's timezone
+						convertedTime := ConvertToUserTZ(timestamp, userTimezone)
 						injections = append(injections, map[string]interface{}{
 							"ID":        id,
-							"Date":      timestamp.Format("Jan 2, 2006"),
-							"Time":      timestamp.Format("3:04 PM"),
+							"Date":      convertedTime.Format("Jan 2, 2006"),
+							"Time":      convertedTime.Format("3:04 PM"),
 							"Side":      strings.Title(side),
 							"SideLower": side,  // Add lowercase version for radio buttons
 							"PainLevel": painLevel.Int64,
@@ -585,6 +597,61 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Settings"
 
+		userID := middleware.GetUserID(r.Context())
+
+		// Get user-specific settings
+		settings := map[string]interface{}{
+			"Theme":                "auto",
+			"Timezone":             "America/New_York",
+			"DateFormat":           "MM/DD/YYYY",
+			"TimeFormat":           "12h",
+			"AdvancedMode":         false,
+			"EnableNotifications":  false,
+			"InjectionReminders":   false,
+			"ReminderTime":         "19:00",
+			"LowStockAlerts":       true,
+		}
+
+		// Query user settings
+		rows, err := db.Query(`SELECT key, value FROM settings WHERE key LIKE ? OR key NOT LIKE 'user_%'`,
+			fmt.Sprintf("user_%%_%d", userID))
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var key, value string
+				if err := rows.Scan(&key, &value); err == nil {
+					switch {
+					case strings.HasPrefix(key, fmt.Sprintf("user_theme_%d", userID)):
+						settings["Theme"] = value
+					case strings.HasPrefix(key, fmt.Sprintf("user_timezone_%d", userID)):
+						settings["Timezone"] = value
+					case strings.HasPrefix(key, fmt.Sprintf("user_date_format_%d", userID)):
+						settings["DateFormat"] = value
+					case strings.HasPrefix(key, fmt.Sprintf("user_time_format_%d", userID)):
+						settings["TimeFormat"] = value
+					case key == "advanced_mode_enabled":
+						settings["AdvancedMode"] = (value == "true")
+					case strings.HasPrefix(key, fmt.Sprintf("user_enable_notifications_%d", userID)):
+						settings["EnableNotifications"] = (value == "true")
+					case key == "injection_reminders":
+						settings["InjectionReminders"] = (value == "true")
+					case key == "reminder_time":
+						settings["ReminderTime"] = value
+					case key == "low_stock_alerts":
+						settings["LowStockAlerts"] = (value == "true")
+					}
+				}
+			}
+		}
+
+		data["Settings"] = settings
+		data["User"] = map[string]interface{}{
+			"Username": "User", // TODO: Get actual username
+			"Email":    "",
+		}
+		data["DatabaseSize"] = "N/A"
+		data["LastBackup"] = "N/A"
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "settings.html", data); err != nil {
 			http.Error(w, "Failed to render template", http.StatusInternalServerError)
@@ -711,7 +778,7 @@ func formatTimeAgoWeb(t time.Time) string {
 func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		_ = userID
+		userTimezone := GetUserTimezone(db, userID)
 
 		// Get recent activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
@@ -745,13 +812,15 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 			var id int64
 
 			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
+				// Convert timestamp to user's timezone
+				convertedTime := ConvertToUserTZ(timestamp, userTimezone)
 				activities = append(activities, map[string]interface{}{
 					"Type":      actType,
 					"Detail1":   detail1,
 					"Detail2":   detail2,
 					"Notes":     notes.String,
-					"Timestamp": timestamp,
-					"TimeAgo":   formatTimeAgoWeb(timestamp),
+					"Timestamp": convertedTime,
+					"TimeAgo":   formatTimeAgoWeb(convertedTime),
 					"ID":        id,
 				})
 			}
@@ -834,6 +903,10 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Activity History - Injection Tracker"
 
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
 		// Get all activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
 			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
@@ -864,14 +937,16 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 			var id int64
 
 			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
+				// Convert timestamp to user's timezone
+				convertedTime := ConvertToUserTZ(timestamp, userTimezone)
 				activities = append(activities, map[string]interface{}{
 					"Type":      actType,
 					"Detail1":   detail1,
 					"Detail2":   detail2,
 					"Notes":     notes.String,
-					"Timestamp": timestamp,
-					"TimeAgo":   formatTimeAgoWeb(timestamp),
-					"FormattedDate": timestamp.Format("Jan 2, 2006 3:04 PM"),
+					"Timestamp": convertedTime,
+					"TimeAgo":   formatTimeAgoWeb(convertedTime),
+					"FormattedDate": convertedTime.Format("Jan 2, 2006 3:04 PM"),
 					"ID":        id,
 				})
 			}

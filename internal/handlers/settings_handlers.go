@@ -285,6 +285,33 @@ func stringToBool(s string) bool {
 	return s == "true" || s == "1" || s == "yes" || s == "on"
 }
 
+// GetUserTimezone retrieves the user's timezone preference from the database
+// Returns "America/New_York" (ET with automatic DST) as default
+func GetUserTimezone(db *database.DB, userID int64) string {
+	var timezone string
+	err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`,
+		fmt.Sprintf("user_timezone_%d", userID)).Scan(&timezone)
+	if err != nil || timezone == "" {
+		return "America/New_York" // Default to ET
+	}
+	return timezone
+}
+
+// ConvertToUserTZ converts a time.Time to the user's timezone
+// Automatically handles DST transitions via Go's time.LoadLocation
+func ConvertToUserTZ(t time.Time, timezone string) time.Time {
+	if t.IsZero() {
+		return t
+	}
+
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		// Fallback to default timezone if invalid
+		loc, _ = time.LoadLocation("America/New_York")
+	}
+	return t.In(loc)
+}
+
 // HandleUpdateProfile updates user profile information
 func HandleUpdateProfile(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -316,5 +343,161 @@ func HandleChangePassword(db *database.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message": "Password changed successfully"}`))
+	}
+}
+
+// HandleUpdateAppSettings updates application settings (theme, timezone, etc.)
+func HandleUpdateAppSettings(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.GetUserID(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			Theme        string `json:"theme"`
+			Timezone     string `json:"timezone"`
+			DateFormat   string `json:"date_format"`
+			TimeFormat   string `json:"time_format"`
+			AdvancedMode bool   `json:"advanced_mode"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		// Validate theme
+		validThemes := map[string]bool{"light": true, "dark": true, "auto": true}
+		if req.Theme != "" && !validThemes[req.Theme] {
+			http.Error(w, "Invalid theme", http.StatusBadRequest)
+			return
+		}
+
+		// Validate timezone
+		if req.Timezone != "" {
+			if _, err := time.LoadLocation(req.Timezone); err != nil {
+				http.Error(w, "Invalid timezone", http.StatusBadRequest)
+				return
+			}
+		}
+
+		// Begin transaction
+		tx, err := db.BeginTx()
+		if err != nil {
+			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		now := time.Now()
+
+		// Store settings with user ID prefix
+		if req.Theme != "" {
+			if err := upsertSetting(tx, fmt.Sprintf("user_theme_%d", userID), req.Theme, userID, now); err != nil {
+				http.Error(w, "Failed to update theme", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if req.Timezone != "" {
+			if err := upsertSetting(tx, fmt.Sprintf("user_timezone_%d", userID), req.Timezone, userID, now); err != nil {
+				http.Error(w, "Failed to update timezone", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if req.DateFormat != "" {
+			if err := upsertSetting(tx, fmt.Sprintf("user_date_format_%d", userID), req.DateFormat, userID, now); err != nil {
+				http.Error(w, "Failed to update date format", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if req.TimeFormat != "" {
+			if err := upsertSetting(tx, fmt.Sprintf("user_time_format_%d", userID), req.TimeFormat, userID, now); err != nil {
+				http.Error(w, "Failed to update time format", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if err := upsertSetting(tx, "advanced_mode_enabled", boolToString(req.AdvancedMode), userID, now); err != nil {
+			http.Error(w, "Failed to update advanced mode", http.StatusInternalServerError)
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"message": "Settings updated successfully"}`))
+	}
+}
+
+// HandleUpdateNotificationSettings updates notification settings
+func HandleUpdateNotificationSettings(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.GetUserID(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			EnableNotifications bool   `json:"enable_notifications"`
+			InjectionReminders  bool   `json:"injection_reminders"`
+			ReminderTime        string `json:"reminder_time"`
+			LowStockAlerts      bool   `json:"low_stock_alerts"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		// Begin transaction
+		tx, err := db.BeginTx()
+		if err != nil {
+			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		now := time.Now()
+
+		if err := upsertSetting(tx, fmt.Sprintf("user_enable_notifications_%d", userID), boolToString(req.EnableNotifications), userID, now); err != nil {
+			http.Error(w, "Failed to update enable notifications", http.StatusInternalServerError)
+			return
+		}
+
+		if err := upsertSetting(tx, "injection_reminders", boolToString(req.InjectionReminders), userID, now); err != nil {
+			http.Error(w, "Failed to update injection reminders", http.StatusInternalServerError)
+			return
+		}
+
+		if req.ReminderTime != "" {
+			if err := upsertSetting(tx, "reminder_time", req.ReminderTime, userID, now); err != nil {
+				http.Error(w, "Failed to update reminder time", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if err := upsertSetting(tx, "low_stock_alerts", boolToString(req.LowStockAlerts), userID, now); err != nil {
+			http.Error(w, "Failed to update low stock alerts", http.StatusInternalServerError)
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"message": "Notification settings updated successfully"}`))
 	}
 }

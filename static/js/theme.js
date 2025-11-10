@@ -36,8 +36,24 @@ class ThemeManager {
             metaThemeColor.content = theme === 'dark' ? '#1C1917' : '#FAFAF9';
         }
 
-        // Save preference
+        // Save preference locally
         localStorage.setItem(this.storageKey, theme);
+
+        // Save to backend if user is authenticated
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (csrfToken) {
+            fetch('/api/settings/app', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    theme: theme,
+                    advanced_mode: false // Will be overwritten by actual value from settings page
+                })
+            }).catch(err => console.error('Failed to save theme:', err));
+        }
 
         // Dispatch custom event
         window.dispatchEvent(new CustomEvent('themechange', {

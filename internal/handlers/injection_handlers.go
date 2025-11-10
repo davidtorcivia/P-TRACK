@@ -328,6 +328,10 @@ func HandleGetInjections(db *database.DB) http.HandlerFunc {
 		}
 		defer rows.Close()
 
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
 		injections := []models.Injection{}
 		for rows.Next() {
 			var inj models.Injection
@@ -350,6 +354,12 @@ func HandleGetInjections(db *database.DB) http.HandlerFunc {
 				http.Error(w, "Failed to scan injection", http.StatusInternalServerError)
 				return
 			}
+
+			// Convert timestamps to user's timezone
+			inj.Timestamp = ConvertToUserTZ(inj.Timestamp, userTimezone)
+			inj.CreatedAt = ConvertToUserTZ(inj.CreatedAt, userTimezone)
+			inj.UpdatedAt = ConvertToUserTZ(inj.UpdatedAt, userTimezone)
+
 			injections = append(injections, inj)
 		}
 
