@@ -15,6 +15,7 @@
         painLocation: '',
         customLocation: '',
         painType: '',
+        hasKnots: false,
         symptoms: [],
         notes: ''
     }" @submit.prevent="
@@ -33,6 +34,7 @@
                 pain_level: parseInt(painLevel),
                 pain_location: painLocation === 'custom' ? customLocation : painLocation,
                 pain_type: painType,
+                has_knots: hasKnots,
                 symptoms: symptoms,
                 notes: notes
             })
@@ -44,6 +46,7 @@
                 painLevel = 5;
                 painLocation = '';
                 painType = '';
+                hasKnots = false;
                 symptoms = [];
                 notes = '';
 
@@ -112,6 +115,13 @@
             </div>
         </div>
 
+        <div style="margin-bottom: 1rem;">
+            <label>
+                <input type="checkbox" x-model="hasKnots" role="switch">
+                Has Knots/Hardness at Site
+            </label>
+        </div>
+
         <fieldset>
             <legend>Additional Symptoms</legend>
             <div class="grid-4">
@@ -123,6 +133,7 @@
                 <label><input type="checkbox" x-model="symptoms" value="breast_tenderness"> Tenderness</label>
                 <label><input type="checkbox" x-model="symptoms" value="spotting"> Spotting</label>
                 <label><input type="checkbox" x-model="symptoms" value="hot_flashes"> Hot Flashes</label>
+                <label><input type="checkbox" x-model="symptoms" value="knots"> Knots</label>
             </div>
         </fieldset>
 
