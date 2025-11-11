@@ -107,7 +107,20 @@
 
     <form hx-post="/api/settings/app"
           hx-target="#app-feedback"
-          hx-swap="innerHTML">
+          hx-swap="innerHTML"
+          x-data="{}"
+          @htmx:after-request="
+            if ($event.detail.successful) {
+                const theme = document.getElementById('theme').value;
+                if (theme === 'auto') {
+                    window.themeManager.setAutoTheme();
+                } else {
+                    window.themeManager.setTheme(theme);
+                }
+                $el.querySelector('#app-feedback').innerHTML = '<mark>Settings saved successfully!</mark>';
+                setTimeout(() => $el.querySelector('#app-feedback').innerHTML = '', 3000);
+            }
+          ">
 
         <div id="app-feedback"></div>
 

@@ -41,9 +41,11 @@ type UpdateInventoryRequest struct {
 
 // AdjustInventoryRequest represents a manual inventory adjustment
 type AdjustInventoryRequest struct {
-	ChangeAmount float64 `json:"change_amount"`
-	Reason       string  `json:"reason"`
-	Notes        *string `json:"notes,omitempty"`
+	ChangeAmount   float64    `json:"change_amount"`
+	Reason         string     `json:"reason"`
+	Notes          *string    `json:"notes,omitempty"`
+	ExpirationDate *time.Time `json:"expiration_date,omitempty"`
+	LotNumber      *string    `json:"lot_number,omitempty"`
 }
 
 // InventoryHistoryResponse represents an inventory history entry
@@ -393,12 +395,23 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		// Update inventory
-		_, err = tx.Exec(`
-			UPDATE inventory_items
-			SET quantity = ?, updated_at = ?
-			WHERE item_type = ?
-		`, newQty, time.Now(), itemType)
+		// Update inventory (including optional expiration_date and lot_number)
+		updateQuery := `UPDATE inventory_items SET quantity = ?, updated_at = ?`
+		updateArgs := []interface{}{newQty, time.Now()}
+
+		if req.ExpirationDate != nil {
+			updateQuery += `, expiration_date = ?`
+			updateArgs = append(updateArgs, req.ExpirationDate)
+		}
+		if req.LotNumber != nil {
+			updateQuery += `, lot_number = ?`
+			updateArgs = append(updateArgs, *req.LotNumber)
+		}
+
+		updateQuery += ` WHERE item_type = ?`
+		updateArgs = append(updateArgs, itemType)
+
+		_, err = tx.Exec(updateQuery, updateArgs...)
 		if err != nil {
 			http.Error(w, "Failed to update inventory", http.StatusInternalServerError)
 			return

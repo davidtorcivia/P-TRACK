@@ -32,19 +32,16 @@
             <li><a href="/inventory">Inventory</a></li>
             <li>
                 <details class="dropdown">
-                    <summary>Account</summary>
-                    <ul dir="rtl">
+                    <summary role="button" class="contrast outline">Account</summary>
+                    <ul>
                         <li><a href="/settings">Settings</a></li>
                         <li><a href="/reports">Reports</a></li>
-                        <li><hr></li>
-                        <li>
-                            <a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a>
-                        </li>
+                        <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a></li>
                     </ul>
                 </details>
             </li>
             <li>
-                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" role="button" class="contrast"></a>
+                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" role="button" class="outline" style="padding: 0.5rem 1rem; font-size: 1.25rem;"></a>
             </li>
         </ul>
     </nav>

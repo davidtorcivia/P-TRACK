@@ -118,7 +118,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         get icon() {
-            return this.isDark ? 'Light' : 'Dark';
+            return this.isDark ? '☀️' : '🌙';
         },
 
         get label() {

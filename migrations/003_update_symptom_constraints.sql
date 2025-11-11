@@ -19,17 +19,9 @@ CREATE TABLE symptom_logs_new (
     notes TEXT,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_pain_location CHECK (
-        pain_location IS NULL OR pain_location IN (
-            'injection_site_left', 'injection_site_right', 'injection_site_both',
-            'upper_buttock_left', 'upper_buttock_right',
-            'abdomen', 'lower_back', 'other'
-        )
-    ),
-    CONSTRAINT chk_pain_type CHECK (
-        pain_type IS NULL OR pain_type IN ('sharp', 'dull', 'aching', 'cramping', 'other')
-    )
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- Removed pain_location CHECK constraint to allow custom locations
+    -- Removed pain_type CHECK constraint to allow custom types
 );
 
 -- Step 2: Copy existing data
