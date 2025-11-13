@@ -281,10 +281,11 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 					if err := rows.Scan(&id, &timestamp, &side, &painLevel, &notes); err == nil {
 						// Convert timestamp to user's timezone
 						convertedTime := ConvertToUserTZ(timestamp, userTimezone)
+						timeStr := FormatTimeForUser(db, userID, timestamp)
 						injections = append(injections, map[string]interface{}{
 							"ID":        id,
 							"Date":      convertedTime.Format("Jan 2, 2006"),
-							"Time":      convertedTime.Format("3:04 PM"),
+							"Time":      timeStr,
 							"Side":      strings.Title(side),
 							"SideLower": side,  // Add lowercase version for radio buttons
 							"PainLevel": painLevel.Int64,

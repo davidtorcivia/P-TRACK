@@ -39,13 +39,45 @@ type UpdateInventoryRequest struct {
 	Notes             *string    `json:"notes,omitempty"`
 }
 
+// FlexibleDate is a custom type that can unmarshal various date formats
+type FlexibleDate struct {
+	time.Time
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling to handle multiple date formats
+func (fd *FlexibleDate) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	// Remove quotes
+	if len(s) < 2 {
+		return fmt.Errorf("invalid date string")
+	}
+	s = s[1 : len(s)-1]
+
+	// Try multiple formats
+	formats := []string{
+		"2006-01-02",           // YYYY-MM-DD (from HTML date input)
+		time.RFC3339,           // RFC3339
+		"2006-01-02T15:04:05Z", // ISO 8601
+		"01/02/2006",           // MM/DD/YYYY
+	}
+
+	for _, format := range formats {
+		if t, err := time.Parse(format, s); err == nil {
+			fd.Time = t
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unable to parse date: %s", s)
+}
+
 // AdjustInventoryRequest represents a manual inventory adjustment
 type AdjustInventoryRequest struct {
-	ChangeAmount   float64    `json:"change_amount"`
-	Reason         string     `json:"reason"`
-	Notes          *string    `json:"notes,omitempty"`
-	ExpirationDate *time.Time `json:"expiration_date,omitempty"`
-	LotNumber      *string    `json:"lot_number,omitempty"`
+	ChangeAmount   float64       `json:"change_amount"`
+	Reason         string        `json:"reason"`
+	Notes          *string       `json:"notes,omitempty"`
+	ExpirationDate *FlexibleDate `json:"expiration_date,omitempty"`
+	LotNumber      *string       `json:"lot_number,omitempty"`
 }
 
 // InventoryHistoryResponse represents an inventory history entry
@@ -381,7 +413,7 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 			if req.ExpirationDate != nil {
 				insertQuery += `, expiration_date`
 				valuePlaceholders += `, ?`
-				insertValues = append(insertValues, req.ExpirationDate)
+				insertValues = append(insertValues, req.ExpirationDate.Time)
 			}
 			if req.LotNumber != nil {
 				insertQuery += `, lot_number`
@@ -419,7 +451,7 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 
 		if req.ExpirationDate != nil {
 			updateQuery += `, expiration_date = ?`
-			updateArgs = append(updateArgs, req.ExpirationDate)
+			updateArgs = append(updateArgs, req.ExpirationDate.Time)
 		}
 		if req.LotNumber != nil {
 			updateQuery += `, lot_number = ?`

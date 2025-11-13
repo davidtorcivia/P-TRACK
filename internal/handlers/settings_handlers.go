@@ -350,6 +350,55 @@ func ConvertToUserTZ(t time.Time, timezone string) time.Time {
 	return t.In(loc)
 }
 
+// FormatTimeForUser formats a time according to user's time format preference
+func FormatTimeForUser(db *database.DB, userID int64, t time.Time) string {
+	var timeFormat string
+	err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`,
+		fmt.Sprintf("user_time_format_%d", userID)).Scan(&timeFormat)
+
+	// Convert to user's timezone first
+	timezone := GetUserTimezone(db, userID)
+	t = ConvertToUserTZ(t, timezone)
+
+	// Format based on preference
+	if err == nil && timeFormat == "24h" {
+		return t.Format("15:04") // 24-hour format
+	}
+	return t.Format("3:04 PM") // 12-hour format (default)
+}
+
+// FormatDateTimeForUser formats a date and time according to user preferences
+func FormatDateTimeForUser(db *database.DB, userID int64, t time.Time) string {
+	var dateFormat string
+	err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`,
+		fmt.Sprintf("user_date_format_%d", userID)).Scan(&dateFormat)
+
+	// Convert to user's timezone first
+	timezone := GetUserTimezone(db, userID)
+	t = ConvertToUserTZ(t, timezone)
+
+	// Determine date format
+	var goDateFormat string
+	if err == nil {
+		switch dateFormat {
+		case "DD/MM/YYYY":
+			goDateFormat = "02/01/2006"
+		case "YYYY-MM-DD":
+			goDateFormat = "2006-01-02"
+		default: // MM/DD/YYYY
+			goDateFormat = "01/02/2006"
+		}
+	} else {
+		goDateFormat = "01/02/2006" // Default MM/DD/YYYY
+	}
+
+	// Get time format
+	timeStr := FormatTimeForUser(db, userID, t)
+
+	return fmt.Sprintf("%s %s", t.Format(goDateFormat), timeStr)
+}
+
+
 // HandleUpdateProfile updates user profile information
 func HandleUpdateProfile(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

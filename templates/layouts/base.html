@@ -16,26 +16,68 @@
 
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#FAFAF9">
+    <style>
+        /* Mobile navbar styling */
+        @media (max-width: 768px) {
+            nav.container-fluid ul:last-child {
+                display: none;
+            }
+            nav.container-fluid ul:last-child.mobile-menu-open {
+                display: block;
+                position: absolute;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background: var(--pico-background-color);
+                border-bottom: 1px solid var(--pico-muted-border-color);
+                padding: 1rem;
+                z-index: 1000;
+            }
+            nav.container-fluid ul:last-child.mobile-menu-open li {
+                display: block;
+                margin: 0.5rem 0;
+            }
+            .mobile-menu-toggle {
+                display: block !important;
+                cursor: pointer;
+                padding: 0.5rem;
+            }
+            nav.container-fluid > ul:first-child {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
 <body>
     {{ if .IsAuthenticated }}
-    <nav class="container-fluid">
+    <nav class="container-fluid" x-data="{ mobileMenuOpen: false }">
         <ul>
             <li><strong>Injection Tracker</strong></li>
+            <li class="mobile-menu-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
+                <span x-show="!mobileMenuOpen">☰</span>
+                <span x-show="mobileMenuOpen">✕</span>
+            </li>
         </ul>
-        <ul>
-            <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/courses">Courses</a></li>
-            <li><a href="/injections">Injections</a></li>
-            <li><a href="/symptoms">Symptoms</a></li>
-            <li><a href="/medications">Medications</a></li>
-            <li><a href="/inventory">Inventory</a></li>
+        <ul :class="{ 'mobile-menu-open': mobileMenuOpen }" @click.away="mobileMenuOpen = false">
+            <li><a href="/dashboard" @click="mobileMenuOpen = false">Dashboard</a></li>
+            <li><a href="/courses" @click="mobileMenuOpen = false">Courses</a></li>
+            <li><a href="/injections" @click="mobileMenuOpen = false">Injections</a></li>
+            <li><a href="/symptoms" @click="mobileMenuOpen = false">Symptoms</a></li>
+            <li><a href="/medications" @click="mobileMenuOpen = false">Medications</a></li>
+            <li><a href="/inventory" @click="mobileMenuOpen = false">Inventory</a></li>
             <li>
                 <details class="dropdown">
                     <summary role="button">Account</summary>
                     <ul>
-                        <li><a href="/settings">Settings</a></li>
-                        <li><a href="/reports">Reports</a></li>
+                        <li><a href="/settings" @click="mobileMenuOpen = false">Settings</a></li>
+                        <li><a href="/reports" @click="mobileMenuOpen = false">Reports</a></li>
                         <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a></li>
                     </ul>
                 </details>
