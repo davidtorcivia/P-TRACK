@@ -24,7 +24,7 @@
     </div>
 
     <!-- Add New Item -->
-    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '' }">
+    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '', lowStockThreshold: '' }">
         <header>
             <h3>Add Inventory</h3>
         </header>
@@ -48,6 +48,7 @@
 
             if (lotNumber) data.lot_number = lotNumber;
             if (expirationDate) data.expiration_date = expirationDate;
+            if (lowStockThreshold) data.low_stock_threshold = parseFloat(lowStockThreshold);
 
             fetch('/api/inventory/' + itemType + '/adjust', {
                 method: 'POST',
@@ -106,6 +107,11 @@
                     Expiration Date (optional)
                     <input type="date" x-model="expirationDate">
                 </label>
+                <label>
+                    Low Stock Alert Threshold (optional)
+                    <input type="number" x-model="lowStockThreshold" :step="itemType === 'progesterone' ? '0.1' : '1'" min="0" placeholder="Alert when quantity is below...">
+                    <small>Get alerts when stock falls below this amount</small>
+                </label>
             </div>
             <button type="submit">Add to Inventory</button>
         </form>
@@ -118,7 +124,7 @@
         </header>
         <div id="inventory-items">
         {{ range .InventoryItems }}
-        <article x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '' }">
+        <article x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '', lowStockThreshold: {{ if .LowStockThreshold }}{{ .LowStockThreshold }}{{ else }}0{{ end }} }">
             <div class="grid">
                 <div>
                     <h3 style="margin-bottom: 0.5rem;">
@@ -171,6 +177,10 @@
                         const expDate = $el.querySelector('[name=expiration_date]')?.value;
                         if (lotNum) data.lot_number = lotNum;
                         if (expDate) data.expiration_date = expDate;
+                    }
+
+                    if (lowStockThreshold && lowStockThreshold > 0) {
+                        data.low_stock_threshold = parseFloat(lowStockThreshold);
                     }
 
                     fetch('/api/inventory/{{ .ItemType }}/adjust', {
@@ -237,6 +247,18 @@
                                   x-model="adjustNotes"
                                   rows="2"
                                   placeholder="Additional details..."></textarea>
+                    </label>
+
+                    <label for="low-stock-threshold-{{ .ItemType }}">
+                        Low Stock Alert Threshold (optional)
+                        <input type="number"
+                               id="low-stock-threshold-{{ .ItemType }}"
+                               name="low_stock_threshold"
+                               x-model="lowStockThreshold"
+                               step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
+                               min="0"
+                               placeholder="Alert when quantity is below...">
+                        <small>Get alerts when stock falls below this amount</small>
                     </label>
 
                     <!-- Optional fields for restock -->

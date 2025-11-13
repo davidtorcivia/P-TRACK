@@ -73,11 +73,12 @@ func (fd *FlexibleDate) UnmarshalJSON(b []byte) error {
 
 // AdjustInventoryRequest represents a manual inventory adjustment
 type AdjustInventoryRequest struct {
-	ChangeAmount   float64       `json:"change_amount"`
-	Reason         string        `json:"reason"`
-	Notes          *string       `json:"notes,omitempty"`
-	ExpirationDate *FlexibleDate `json:"expiration_date,omitempty"`
-	LotNumber      *string       `json:"lot_number,omitempty"`
+	ChangeAmount       float64       `json:"change_amount"`
+	Reason             string        `json:"reason"`
+	Notes              *string       `json:"notes,omitempty"`
+	ExpirationDate     *FlexibleDate `json:"expiration_date,omitempty"`
+	LotNumber          *string       `json:"lot_number,omitempty"`
+	LowStockThreshold  *float64      `json:"low_stock_threshold,omitempty"`
 }
 
 // InventoryHistoryResponse represents an inventory history entry
@@ -420,6 +421,11 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 				valuePlaceholders += `, ?`
 				insertValues = append(insertValues, *req.LotNumber)
 			}
+			if req.LowStockThreshold != nil {
+				insertQuery += `, low_stock_threshold`
+				valuePlaceholders += `, ?`
+				insertValues = append(insertValues, *req.LowStockThreshold)
+			}
 
 			insertQuery += `, created_at, updated_at) `
 			valuePlaceholders += `, ?, ?)`
@@ -456,6 +462,10 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 		if req.LotNumber != nil {
 			updateQuery += `, lot_number = ?`
 			updateArgs = append(updateArgs, *req.LotNumber)
+		}
+		if req.LowStockThreshold != nil {
+			updateQuery += `, low_stock_threshold = ?`
+			updateArgs = append(updateArgs, *req.LowStockThreshold)
 		}
 
 		updateQuery += ` WHERE item_type = ?`

@@ -117,12 +117,12 @@
 </head>
 <body>
     {{ if .IsAuthenticated }}
-    <nav class="container-fluid" x-data="{ mobileMenuOpen: false }" x-cloak>
+    <nav class="container-fluid" x-data="{ mobileMenuOpen: false }">
         <ul>
             <li><strong>P-TRACK</strong></li>
             <li class="mobile-menu-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
-                <span x-show="!mobileMenuOpen" x-cloak>☰</span>
-                <span x-show="mobileMenuOpen" x-cloak>✕</span>
+                <span x-show="!mobileMenuOpen">☰</span>
+                <span x-show="mobileMenuOpen">✕</span>
             </li>
         </ul>
         <ul :class="{ 'mobile-menu-open': mobileMenuOpen }" @click.outside="mobileMenuOpen = false">
