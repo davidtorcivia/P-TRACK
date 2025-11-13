@@ -947,6 +947,7 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
 				// Convert timestamp to user's timezone
 				convertedTime := ConvertToUserTZ(timestamp, userTimezone)
+				formattedDateTime := FormatDateTimeForUser(db, userID, timestamp)
 				activities = append(activities, map[string]interface{}{
 					"Type":      actType,
 					"Detail1":   detail1,
@@ -954,7 +955,7 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 					"Notes":     notes.String,
 					"Timestamp": convertedTime,
 					"TimeAgo":   formatTimeAgoWeb(convertedTime),
-					"FormattedDate": convertedTime.Format("Jan 2, 2006 3:04 PM"),
+					"FormattedDate": formattedDateTime,
 					"ID":        id,
 				})
 			}

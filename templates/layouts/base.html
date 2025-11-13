@@ -4,19 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ .CSRFToken }}">
-    <title>{{ if .Title }}{{ .Title }} - {{ end }}Injection Tracker</title>
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}P-TRACK</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/static/css/theme.css">
 
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="/static/js/theme.js"></script>
 
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#FAFAF9">
     <style>
+        /* Header aesthetics */
+        nav.container-fluid {
+            background: var(--pico-background-color);
+            border-bottom: 2px solid var(--pico-primary);
+            padding: 0.5rem 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav.container-fluid strong {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--pico-primary);
+        }
+
         /* Mobile navbar styling */
         @media (max-width: 768px) {
             nav.container-fluid ul:last-child {
@@ -32,6 +46,7 @@
                 border-bottom: 1px solid var(--pico-muted-border-color);
                 padding: 1rem;
                 z-index: 1000;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             }
             nav.container-fluid ul:last-child.mobile-menu-open li {
                 display: block;
@@ -41,10 +56,12 @@
                 display: block !important;
                 cursor: pointer;
                 padding: 0.5rem;
+                font-size: 1.5rem;
             }
             nav.container-fluid > ul:first-child {
                 display: flex;
                 justify-content: space-between;
+                align-items: center;
                 width: 100%;
             }
         }
@@ -59,7 +76,7 @@
     {{ if .IsAuthenticated }}
     <nav class="container-fluid" x-data="{ mobileMenuOpen: false }">
         <ul>
-            <li><strong>Injection Tracker</strong></li>
+            <li><strong>P-TRACK</strong></li>
             <li class="mobile-menu-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
                 <span x-show="!mobileMenuOpen">☰</span>
                 <span x-show="mobileMenuOpen">✕</span>
@@ -102,8 +119,8 @@
     </main>
 
     <footer class="container-fluid">
-        <small style="text-align: center; display: block;">
-            Injection Tracker v1.0 &bull;
+        <small style="text-align: center; display: block; color: var(--pico-muted-color);">
+            P-TRACK v1.0 &bull;
             <a href="/help">Help</a> &bull;
             <a href="/about">About</a>
         </small>
