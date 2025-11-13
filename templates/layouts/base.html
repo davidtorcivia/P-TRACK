@@ -10,54 +10,103 @@
     <link rel="stylesheet" href="/static/css/theme.css">
 
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="/static/js/theme.js"></script>
 
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#FAFAF9">
     <style>
-        /* Header aesthetics */
+        [x-cloak] { display: none !important; }
+
+        /* Professional header design */
         nav.container-fluid {
-            background: var(--pico-background-color);
-            border-bottom: 2px solid var(--pico-primary);
-            padding: 0.5rem 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, var(--pico-primary) 0%, var(--pico-primary-hover) 100%);
+            border: none;
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 0;
         }
+
         nav.container-fluid strong {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            color: var(--pico-primary);
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        nav.container-fluid a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        nav.container-fluid a:hover {
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        nav.container-fluid summary {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        nav.container-fluid summary:hover {
+            color: white;
         }
 
         /* Mobile navbar styling */
         @media (max-width: 768px) {
+            nav.container-fluid {
+                padding: 0.75rem 1rem;
+            }
+
             nav.container-fluid ul:last-child {
                 display: none;
             }
+
             nav.container-fluid ul:last-child.mobile-menu-open {
                 display: block;
                 position: absolute;
-                top: 60px;
+                top: 65px;
                 left: 0;
                 right: 0;
                 background: var(--pico-background-color);
-                border-bottom: 1px solid var(--pico-muted-border-color);
+                border-bottom: 2px solid var(--pico-primary);
                 padding: 1rem;
                 z-index: 1000;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             }
+
             nav.container-fluid ul:last-child.mobile-menu-open li {
                 display: block;
-                margin: 0.5rem 0;
+                margin: 0.75rem 0;
             }
+
+            nav.container-fluid ul:last-child.mobile-menu-open a {
+                color: var(--pico-color);
+                display: block;
+                padding: 0.5rem;
+                border-radius: 4px;
+                transition: background 0.2s ease;
+            }
+
+            nav.container-fluid ul:last-child.mobile-menu-open a:hover {
+                background: var(--pico-muted-background-color);
+                transform: none;
+            }
+
             .mobile-menu-toggle {
                 display: block !important;
                 cursor: pointer;
                 padding: 0.5rem;
-                font-size: 1.5rem;
+                font-size: 1.75rem;
+                color: white;
+                user-select: none;
             }
+
             nav.container-fluid > ul:first-child {
                 display: flex;
                 justify-content: space-between;
@@ -65,6 +114,7 @@
                 width: 100%;
             }
         }
+
         @media (min-width: 769px) {
             .mobile-menu-toggle {
                 display: none !important;
@@ -74,15 +124,15 @@
 </head>
 <body>
     {{ if .IsAuthenticated }}
-    <nav class="container-fluid" x-data="{ mobileMenuOpen: false }">
+    <nav class="container-fluid" x-data="{ mobileMenuOpen: false }" x-cloak>
         <ul>
             <li><strong>P-TRACK</strong></li>
             <li class="mobile-menu-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
-                <span x-show="!mobileMenuOpen">☰</span>
-                <span x-show="mobileMenuOpen">✕</span>
+                <span x-show="!mobileMenuOpen" x-cloak>☰</span>
+                <span x-show="mobileMenuOpen" x-cloak>✕</span>
             </li>
         </ul>
-        <ul :class="{ 'mobile-menu-open': mobileMenuOpen }" @click.away="mobileMenuOpen = false">
+        <ul :class="{ 'mobile-menu-open': mobileMenuOpen }" @click.outside="mobileMenuOpen = false">
             <li><a href="/dashboard" @click="mobileMenuOpen = false">Dashboard</a></li>
             <li><a href="/courses" @click="mobileMenuOpen = false">Courses</a></li>
             <li><a href="/injections" @click="mobileMenuOpen = false">Injections</a></li>
