@@ -19,50 +19,41 @@
     <style>
         [x-cloak] { display: none !important; }
 
-        /* Professional header design */
+        /* Clean, simple header design */
         nav.container-fluid {
-            background: linear-gradient(135deg, var(--pico-primary) 0%, var(--pico-primary-hover) 100%);
-            border: none;
-            padding: 1rem 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: var(--pico-background-color);
+            border-bottom: 1px solid var(--pico-muted-border-color);
+            padding: 0.75rem 1rem;
             margin-bottom: 0;
         }
 
         nav.container-fluid strong {
-            font-size: 1.75rem;
-            font-weight: 800;
-            letter-spacing: 0.1em;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--pico-color);
         }
 
         nav.container-fluid a {
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--pico-color);
             text-decoration: none;
-            transition: all 0.2s ease;
-            font-weight: 500;
+            transition: color 0.2s ease;
         }
 
         nav.container-fluid a:hover {
-            color: white;
-            transform: translateY(-1px);
+            color: var(--pico-primary);
         }
 
         nav.container-fluid summary {
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--pico-color);
         }
 
         nav.container-fluid summary:hover {
-            color: white;
+            color: var(--pico-primary);
         }
 
         /* Mobile navbar styling */
         @media (max-width: 768px) {
-            nav.container-fluid {
-                padding: 0.75rem 1rem;
-            }
-
             nav.container-fluid ul:last-child {
                 display: none;
             }
@@ -70,14 +61,14 @@
             nav.container-fluid ul:last-child.mobile-menu-open {
                 display: block;
                 position: absolute;
-                top: 65px;
+                top: 60px;
                 left: 0;
                 right: 0;
                 background: var(--pico-background-color);
                 border-bottom: 2px solid var(--pico-primary);
                 padding: 1rem;
                 z-index: 1000;
-                box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             }
 
             nav.container-fluid ul:last-child.mobile-menu-open li {
@@ -86,24 +77,20 @@
             }
 
             nav.container-fluid ul:last-child.mobile-menu-open a {
-                color: var(--pico-color);
                 display: block;
                 padding: 0.5rem;
                 border-radius: 4px;
-                transition: background 0.2s ease;
             }
 
             nav.container-fluid ul:last-child.mobile-menu-open a:hover {
                 background: var(--pico-muted-background-color);
-                transform: none;
             }
 
             .mobile-menu-toggle {
                 display: block !important;
                 cursor: pointer;
                 padding: 0.5rem;
-                font-size: 1.75rem;
-                color: white;
+                font-size: 1.5rem;
                 user-select: none;
             }
 
@@ -121,6 +108,12 @@
             }
         }
     </style>
+    <script>
+        // Initialize Alpine.js manually to ensure it's ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Alpine will auto-initialize
+        });
+    </script>
 </head>
 <body>
     {{ if .IsAuthenticated }}
