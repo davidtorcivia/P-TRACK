@@ -105,21 +105,42 @@
         <h3>Application Settings</h3>
     </header>
 
-    <form hx-post="/api/settings/app"
-          hx-target="#app-feedback"
-          hx-swap="innerHTML"
-          x-data="{}"
-          @htmx:after-request="
-            if ($event.detail.successful) {
-                const theme = document.getElementById('theme').value;
-                if (theme === 'auto') {
-                    window.themeManager.setAutoTheme();
+    <form x-data="{}"
+          @submit.prevent="
+            const formData = new FormData($el);
+            const data = {
+                theme: formData.get('theme'),
+                timezone: formData.get('timezone'),
+                date_format: formData.get('date_format'),
+                time_format: formData.get('time_format'),
+                advanced_mode: formData.get('advanced_mode') === 'on'
+            };
+
+            fetch('/api/settings/app', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Apply theme immediately
+                    if (data.theme === 'auto') {
+                        window.themeManager.setAutoTheme();
+                    } else {
+                        window.themeManager.setTheme(data.theme);
+                    }
+                    document.getElementById('app-feedback').innerHTML = '<mark>Settings saved successfully!</mark>';
+                    setTimeout(() => document.getElementById('app-feedback').innerHTML = '', 3000);
                 } else {
-                    window.themeManager.setTheme(theme);
+                    document.getElementById('app-feedback').innerHTML = '<del>Failed to save settings</del>';
                 }
-                $el.querySelector('#app-feedback').innerHTML = '<mark>Settings saved successfully!</mark>';
-                setTimeout(() => $el.querySelector('#app-feedback').innerHTML = '', 3000);
-            }
+            })
+            .catch(error => {
+                document.getElementById('app-feedback').innerHTML = '<del>Error: ' + error.message + '</del>';
+            });
           ">
 
         <div id="app-feedback"></div>
@@ -198,9 +219,36 @@
         <h3>Notifications & Reminders</h3>
     </header>
 
-    <form hx-post="/api/settings/notifications"
-          hx-target="#notification-feedback"
-          hx-swap="innerHTML">
+    <form x-data="{}"
+          @submit.prevent="
+            const formData = new FormData($el);
+            const data = {
+                enable_notifications: formData.get('enable_notifications') === 'on',
+                injection_reminders: formData.get('injection_reminders') === 'on',
+                reminder_time: formData.get('reminder_time'),
+                low_stock_alerts: formData.get('low_stock_alerts') === 'on'
+            };
+
+            fetch('/api/settings/notifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('notification-feedback').innerHTML = '<mark>Notification settings saved!</mark>';
+                    setTimeout(() => document.getElementById('notification-feedback').innerHTML = '', 3000);
+                } else {
+                    document.getElementById('notification-feedback').innerHTML = '<del>Failed to save settings</del>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('notification-feedback').innerHTML = '<del>Error: ' + error.message + '</del>';
+            });
+          ">
 
         <div id="notification-feedback"></div>
 

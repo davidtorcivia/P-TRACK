@@ -32,7 +32,7 @@
             <li><a href="/inventory">Inventory</a></li>
             <li>
                 <details class="dropdown">
-                    <summary role="button" class="contrast outline">Account</summary>
+                    <summary role="button">Account</summary>
                     <ul>
                         <li><a href="/settings">Settings</a></li>
                         <li><a href="/reports">Reports</a></li>
@@ -41,7 +41,7 @@
                 </details>
             </li>
             <li>
-                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" role="button" class="outline" style="padding: 0.5rem 1rem; font-size: 1.25rem;"></a>
+                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" role="button"></a>
             </li>
         </ul>
     </nav>

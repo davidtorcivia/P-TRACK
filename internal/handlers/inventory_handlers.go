@@ -370,12 +370,30 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 		err = tx.QueryRow(`SELECT quantity, unit FROM inventory_items WHERE item_type = ?`, itemType).Scan(&currentQty, &unit)
 
 		if err == sql.ErrNoRows {
-			// Item doesn't exist - create it with default unit
+			// Item doesn't exist - create it with default unit and optional fields
 			unit = getDefaultUnit(itemType)
-			_, err = tx.Exec(`
-				INSERT INTO inventory_items (item_type, quantity, unit, created_at, updated_at)
-				VALUES (?, ?, ?, ?, ?)
-			`, itemType, 0, unit, time.Now(), time.Now())
+			now := time.Now()
+
+			insertQuery := `INSERT INTO inventory_items (item_type, quantity, unit`
+			valuePlaceholders := `VALUES (?, ?, ?`
+			insertValues := []interface{}{itemType, 0, unit}
+
+			if req.ExpirationDate != nil {
+				insertQuery += `, expiration_date`
+				valuePlaceholders += `, ?`
+				insertValues = append(insertValues, req.ExpirationDate)
+			}
+			if req.LotNumber != nil {
+				insertQuery += `, lot_number`
+				valuePlaceholders += `, ?`
+				insertValues = append(insertValues, *req.LotNumber)
+			}
+
+			insertQuery += `, created_at, updated_at) `
+			valuePlaceholders += `, ?, ?)`
+			insertValues = append(insertValues, now, now)
+
+			_, err = tx.Exec(insertQuery+valuePlaceholders, insertValues...)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Failed to create inventory item: %v", err), http.StatusInternalServerError)
 				return

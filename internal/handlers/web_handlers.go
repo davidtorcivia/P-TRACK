@@ -436,6 +436,13 @@ func HandleInventoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.
 					if item.ExpirationDate.Valid {
 						displayItem["ExpirationDate"] = item.ExpirationDate.Time
 						displayItem["FormattedExpiration"] = item.ExpirationDate.Time.Format("Jan 2, 2006")
+
+						// Check if expiring soon (within 30 days)
+						daysUntilExpiration := int(time.Until(item.ExpirationDate.Time).Hours() / 24)
+						if daysUntilExpiration <= 30 && daysUntilExpiration >= 0 {
+							displayItem["ExpiringSoon"] = true
+							expiringSoonCount++
+						}
 					}
 					if item.LotNumber.Valid {
 						displayItem["LotNumber"] = item.LotNumber.String

@@ -18,8 +18,8 @@
         <article style="margin: 0; padding: 1rem;">
             <header style="margin-bottom: 0.5rem;">
                 <h4 style="margin: 0;">{{ .Name }}</h4>
-                <p style="margin: 0.25rem 0;"><small>{{ .Dosage }}</small></p>
-                <p style="margin: 0.25rem 0;"><small>{{ .Frequency }}</small></p>
+                {{ if .Dosage.Valid }}<p style="margin: 0.25rem 0;"><small>{{ .Dosage.String }}</small></p>{{ end }}
+                {{ if .Frequency.Valid }}<p style="margin: 0.25rem 0;"><small>{{ .Frequency.String }}</small></p>{{ end }}
             </header>
             <div style="margin: 0.5rem 0;">
                 {{ if .TakenToday }}
@@ -68,7 +68,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <strong>{{ .Name }}</strong>
-                <br><small>{{ .Dosage }} - {{ .Frequency }}</small>
+                <br><small>{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}{{ if and .Dosage.Valid .Frequency.Valid }} - {{ end }}{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}</small>
             </div>
             <div style="display: flex; gap: 0.5rem;">
                 <button onclick="
@@ -78,7 +78,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-Token': '{{ $.CSRFToken }}'
                         },
-                        body: JSON.stringify({is_active: true, name: '{{ .Name }}', dosage: '{{ .Dosage }}', frequency: '{{ .Frequency }}'})
+                        body: JSON.stringify({is_active: true, name: '{{ .Name }}', dosage: '{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}', frequency: '{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}'})
                     }).then(() => window.location.reload());
                 " class="outline" style="margin: 0; padding: 0.5rem; font-size: 0.9rem;">Reactivate</button>
                 <button onclick="showDeleteConfirmation('{{ .ID }}', '{{ .Name }}', 'inactive')" class="outline secondary" style="margin: 0; padding: 0.5rem; font-size: 0.9rem;">Delete</button>

@@ -1,10 +1,10 @@
 -- Add new columns and update constraints for symptom logs
+-- This migration removes restrictive CHECK constraints to allow custom locations
 
--- Drop the old constraint
 -- SQLite doesn't support DROP CONSTRAINT, so we need to recreate the table
 
--- Step 1: Create new table with updated schema
-CREATE TABLE symptom_logs_new (
+-- Step 1: Create new table with updated schema (no CHECK constraints)
+CREATE TABLE IF NOT EXISTS symptom_logs_new (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     logged_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
