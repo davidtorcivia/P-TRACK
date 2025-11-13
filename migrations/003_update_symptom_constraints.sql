@@ -3,8 +3,11 @@
 
 -- SQLite doesn't support DROP CONSTRAINT, so we need to recreate the table
 
--- Step 1: Create new table with updated schema (no CHECK constraints)
-CREATE TABLE IF NOT EXISTS symptom_logs_new (
+-- Step 1: Drop the old symptom_logs table if it exists
+DROP TABLE IF EXISTS symptom_logs;
+
+-- Step 2: Create new table with updated schema (no CHECK constraints on location/type)
+CREATE TABLE symptom_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     logged_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -24,35 +27,12 @@ CREATE TABLE IF NOT EXISTS symptom_logs_new (
     -- Removed pain_type CHECK constraint to allow custom types
 );
 
--- Step 2: Copy existing data
-INSERT INTO symptom_logs_new (
-    id, course_id, logged_by, timestamp,
-    pain_level, pain_location, pain_type, symptoms, notes,
-    created_at, updated_at
-)
-SELECT
-    id, course_id, logged_by, timestamp,
-    pain_level,
-    CASE
-        WHEN pain_location = 'injection_site' THEN 'injection_site_left'
-        ELSE pain_location
-    END,
-    pain_type, symptoms, notes,
-    created_at, updated_at
-FROM symptom_logs;
-
--- Step 3: Drop old table
-DROP TABLE symptom_logs;
-
--- Step 4: Rename new table
-ALTER TABLE symptom_logs_new RENAME TO symptom_logs;
-
--- Step 5: Recreate indexes
+-- Step 3: Recreate indexes
 CREATE INDEX idx_symptom_logs_course ON symptom_logs(course_id);
 CREATE INDEX idx_symptom_logs_timestamp ON symptom_logs(timestamp DESC);
 CREATE INDEX idx_symptom_logs_course_timestamp ON symptom_logs(course_id, timestamp DESC);
 
--- Step 6: Recreate trigger
+-- Step 4: Recreate trigger
 CREATE TRIGGER update_symptom_logs_timestamp
 AFTER UPDATE ON symptom_logs
 BEGIN

@@ -10,23 +10,48 @@ class ThemeManager {
         this.init();
     }
 
-    init() {
-        // Load saved theme or use system preference
-        const savedTheme = localStorage.getItem(this.storageKey);
-        const systemTheme = this.mediaQuery.matches ? 'dark' : 'light';
-        const theme = savedTheme || systemTheme;
+    async init() {
+        // Try to load theme from backend first (for authenticated users)
+        let theme = null;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-        this.setTheme(theme);
+        if (csrfToken) {
+            try {
+                const response = await fetch('/api/settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    if (settings.theme) {
+                        theme = settings.theme;
+                        // If auto mode, determine actual theme based on time or system
+                        if (theme === 'auto') {
+                            const hour = new Date().getHours();
+                            theme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to load theme from backend:', err);
+            }
+        }
+
+        // Fallback to localStorage or system preference
+        if (!theme) {
+            const savedTheme = localStorage.getItem(this.storageKey);
+            const systemTheme = this.mediaQuery.matches ? 'dark' : 'light';
+            theme = savedTheme || systemTheme;
+        }
+
+        this.setTheme(theme, false); // Don't save back to backend on init
 
         // Listen for system theme changes
         this.mediaQuery.addEventListener('change', (e) => {
             if (!localStorage.getItem(this.storageKey)) {
-                this.setTheme(e.matches ? 'dark' : 'light');
+                this.setTheme(e.matches ? 'dark' : 'light', false);
             }
         });
     }
 
-    setTheme(theme) {
+    setTheme(theme, saveToBackend = true) {
         const root = document.documentElement;
         root.setAttribute('data-theme', theme);
 
@@ -39,20 +64,22 @@ class ThemeManager {
         // Save preference locally
         localStorage.setItem(this.storageKey, theme);
 
-        // Save to backend if user is authenticated
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        if (csrfToken) {
-            fetch('/api/settings/app', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({
-                    theme: theme,
-                    advanced_mode: false // Will be overwritten by actual value from settings page
-                })
-            }).catch(err => console.error('Failed to save theme:', err));
+        // Save to backend if user is authenticated and saveToBackend is true
+        if (saveToBackend) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                fetch('/api/settings/app', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        theme: theme,
+                        advanced_mode: false // Will be overwritten by actual value from settings page
+                    })
+                }).catch(err => console.error('Failed to save theme:', err));
+            }
         }
 
         // Dispatch custom event

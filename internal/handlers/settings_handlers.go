@@ -46,14 +46,52 @@ const (
 // HandleGetSettings returns all application settings
 func HandleGetSettings(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.GetUserID(r.Context())
+
 		settings, err := getSettings(db)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to get settings: %v", err), http.StatusInternalServerError)
 			return
 		}
 
+		// Add user-specific settings
+		response := map[string]interface{}{
+			"advanced_mode_enabled": settings.AdvancedModeEnabled,
+			"heat_map_days":         settings.HeatMapDays,
+			"low_stock_alerts":      settings.LowStockAlerts,
+			"injection_reminders":   settings.InjectionReminders,
+			"reminder_time":         settings.ReminderTime,
+			"reminder_frequency":    settings.ReminderFrequency,
+			"updated_at":            settings.UpdatedAt,
+			"theme":                 "auto", // default
+			"timezone":              "America/New_York",
+			"date_format":           "MM/DD/YYYY",
+			"time_format":           "12h",
+		}
+
+		// Load user-specific settings if authenticated
+		if userID != 0 {
+			var theme, timezone, dateFormat, timeFormat string
+			err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`, fmt.Sprintf("user_theme_%d", userID)).Scan(&theme)
+			if err == nil {
+				response["theme"] = theme
+			}
+			err = db.QueryRow(`SELECT value FROM settings WHERE key = ?`, fmt.Sprintf("user_timezone_%d", userID)).Scan(&timezone)
+			if err == nil {
+				response["timezone"] = timezone
+			}
+			err = db.QueryRow(`SELECT value FROM settings WHERE key = ?`, fmt.Sprintf("user_date_format_%d", userID)).Scan(&dateFormat)
+			if err == nil {
+				response["date_format"] = dateFormat
+			}
+			err = db.QueryRow(`SELECT value FROM settings WHERE key = ?`, fmt.Sprintf("user_time_format_%d", userID)).Scan(&timeFormat)
+			if err == nil {
+				response["time_format"] = timeFormat
+			}
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(settings)
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
