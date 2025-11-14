@@ -124,31 +124,28 @@
                 background: transparent;
             }
 
+            nav.container-fluid .dropdown ul li {
+                list-style: none;
+            }
+
+            nav.container-fluid .dropdown ul a {
+                pointer-events: auto;
+                cursor: pointer;
+            }
+
             nav.container-fluid .dropdown summary {
                 display: block;
                 padding: 0.5rem;
                 border-radius: 4px;
                 cursor: pointer;
+                list-style: none;
             }
 
             nav.container-fluid .dropdown summary:hover {
                 background: var(--pico-muted-background-color);
             }
 
-            nav.container-fluid .dropdown summary::marker,
-            nav.container-fluid .dropdown summary::-webkit-details-marker {
-                display: none;
-            }
-
-            nav.container-fluid .dropdown summary::after {
-                content: ' ▼';
-                font-size: 0.75em;
-                margin-left: 0.5rem;
-            }
-
-            nav.container-fluid .dropdown[open] summary::after {
-                content: ' ▲';
-            }
+            /* Keep only Pico's default arrow, don't add custom ones */
         }
 
         @media (min-width: 769px) {
