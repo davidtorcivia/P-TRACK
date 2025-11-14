@@ -117,26 +117,26 @@
 </head>
 <body>
     {{ if .IsAuthenticated }}
-    <nav class="container-fluid" x-data="{ mobileMenuOpen: false }">
+    <nav class="container-fluid">
         <ul>
             <li><strong>P-TRACK</strong></li>
-            <li class="mobile-menu-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
-                <span x-text="mobileMenuOpen ? '✕' : '☰'"></span>
+            <li class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <span id="menu-icon">☰</span>
             </li>
         </ul>
-        <ul :class="{ 'mobile-menu-open': mobileMenuOpen }" @click.outside="mobileMenuOpen = false">
-            <li><a href="/dashboard" @click="mobileMenuOpen = false">Dashboard</a></li>
-            <li><a href="/courses" @click="mobileMenuOpen = false">Courses</a></li>
-            <li><a href="/injections" @click="mobileMenuOpen = false">Injections</a></li>
-            <li><a href="/symptoms" @click="mobileMenuOpen = false">Symptoms</a></li>
-            <li><a href="/medications" @click="mobileMenuOpen = false">Medications</a></li>
-            <li><a href="/inventory" @click="mobileMenuOpen = false">Inventory</a></li>
+        <ul id="mobile-menu">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/courses">Courses</a></li>
+            <li><a href="/injections">Injections</a></li>
+            <li><a href="/symptoms">Symptoms</a></li>
+            <li><a href="/medications">Medications</a></li>
+            <li><a href="/inventory">Inventory</a></li>
             <li>
                 <details class="dropdown">
                     <summary role="button">Account</summary>
                     <ul>
-                        <li><a href="/settings" @click="mobileMenuOpen = false">Settings</a></li>
-                        <li><a href="/reports" @click="mobileMenuOpen = false">Reports</a></li>
+                        <li><a href="/settings">Settings</a></li>
+                        <li><a href="/reports">Reports</a></li>
                         <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a></li>
                     </ul>
                 </details>
@@ -146,6 +146,54 @@
             </li>
         </ul>
     </nav>
+
+    <script>
+        // Plain JavaScript hamburger menu
+        (function() {
+            const toggle = document.getElementById('mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const icon = document.getElementById('menu-icon');
+
+            if (toggle && menu && icon) {
+                let isOpen = false;
+
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isOpen = !isOpen;
+
+                    if (isOpen) {
+                        menu.classList.add('mobile-menu-open');
+                        icon.textContent = '✕';
+                    } else {
+                        menu.classList.remove('mobile-menu-open');
+                        icon.textContent = '☰';
+                    }
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (isOpen && !menu.contains(e.target) && !toggle.contains(e.target)) {
+                        isOpen = false;
+                        menu.classList.remove('mobile-menu-open');
+                        icon.textContent = '☰';
+                    }
+                });
+
+                // Close menu when clicking on a link
+                const menuLinks = menu.querySelectorAll('a');
+                menuLinks.forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (isOpen) {
+                            isOpen = false;
+                            menu.classList.remove('mobile-menu-open');
+                            icon.textContent = '☰';
+                        }
+                    });
+                });
+            }
+        })();
+    </script>
     {{ end }}
 
     <main class="container">
