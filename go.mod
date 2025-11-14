@@ -10,3 +10,5 @@ require (
 	golang.org/x/crypto v0.18.0
 	golang.org/x/time v0.5.0
 )
+
+require github.com/jung-kurt/gofpdf/v2 v2.17.3 // indirect
