@@ -100,6 +100,31 @@
                 align-items: center;
                 width: 100%;
             }
+
+            /* Make dropdown work on mobile */
+            nav.container-fluid .dropdown {
+                position: relative;
+            }
+
+            nav.container-fluid .dropdown ul {
+                position: static !important;
+                width: 100%;
+                margin-top: 0.5rem;
+                padding-left: 1rem;
+                box-shadow: none;
+                border-left: 2px solid var(--pico-primary);
+            }
+
+            nav.container-fluid .dropdown summary {
+                display: block;
+                padding: 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            nav.container-fluid .dropdown summary:hover {
+                background: var(--pico-muted-background-color);
+            }
         }
 
         @media (min-width: 769px) {
@@ -180,9 +205,21 @@
                     }
                 });
 
-                // Close menu when clicking on a link
-                const menuLinks = menu.querySelectorAll('a');
+                // Close menu when clicking on a link (but not summary elements)
+                const menuLinks = menu.querySelectorAll('a:not(.dropdown a)');
                 menuLinks.forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (isOpen) {
+                            isOpen = false;
+                            menu.classList.remove('mobile-menu-open');
+                            icon.textContent = '☰';
+                        }
+                    });
+                });
+
+                // Close menu when clicking dropdown submenu links
+                const dropdownLinks = menu.querySelectorAll('.dropdown a');
+                dropdownLinks.forEach(function(link) {
                     link.addEventListener('click', function() {
                         if (isOpen) {
                             isOpen = false;
