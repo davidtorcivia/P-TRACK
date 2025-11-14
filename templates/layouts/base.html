@@ -106,6 +106,14 @@
                 position: relative;
             }
 
+            nav.container-fluid .dropdown[open] > ul {
+                display: block !important;
+            }
+
+            nav.container-fluid .dropdown:not([open]) > ul {
+                display: none !important;
+            }
+
             nav.container-fluid .dropdown ul {
                 position: static !important;
                 width: 100%;
@@ -113,6 +121,7 @@
                 padding-left: 1rem;
                 box-shadow: none;
                 border-left: 2px solid var(--pico-primary);
+                background: transparent;
             }
 
             nav.container-fluid .dropdown summary {
@@ -124,6 +133,21 @@
 
             nav.container-fluid .dropdown summary:hover {
                 background: var(--pico-muted-background-color);
+            }
+
+            nav.container-fluid .dropdown summary::marker,
+            nav.container-fluid .dropdown summary::-webkit-details-marker {
+                display: none;
+            }
+
+            nav.container-fluid .dropdown summary::after {
+                content: ' ▼';
+                font-size: 0.75em;
+                margin-left: 0.5rem;
+            }
+
+            nav.container-fluid .dropdown[open] summary::after {
+                content: ' ▲';
             }
         }
 
