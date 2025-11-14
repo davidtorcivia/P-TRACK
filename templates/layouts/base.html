@@ -121,8 +121,7 @@
         <ul>
             <li><strong>P-TRACK</strong></li>
             <li class="mobile-menu-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
-                <span x-show="!mobileMenuOpen">☰</span>
-                <span x-show="mobileMenuOpen">✕</span>
+                <span x-text="mobileMenuOpen ? '✕' : '☰'"></span>
             </li>
         </ul>
         <ul :class="{ 'mobile-menu-open': mobileMenuOpen }" @click.outside="mobileMenuOpen = false">
