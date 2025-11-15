@@ -108,6 +108,7 @@
 
             nav.container-fluid .dropdown[open] > ul {
                 display: block !important;
+                pointer-events: auto !important;
             }
 
             nav.container-fluid .dropdown:not([open]) > ul {
@@ -122,15 +123,21 @@
                 box-shadow: none;
                 border-left: 2px solid var(--pico-primary);
                 background: transparent;
+                pointer-events: auto !important;
+                z-index: 1;
             }
 
             nav.container-fluid .dropdown ul li {
                 list-style: none;
+                pointer-events: auto !important;
             }
 
             nav.container-fluid .dropdown ul a {
-                pointer-events: auto;
-                cursor: pointer;
+                pointer-events: auto !important;
+                cursor: pointer !important;
+                display: block;
+                position: relative;
+                z-index: 2;
             }
 
             nav.container-fluid .dropdown summary {
