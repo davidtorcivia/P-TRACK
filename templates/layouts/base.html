@@ -226,6 +226,10 @@
 
                 // Close menu when clicking outside
                 document.addEventListener('click', function(e) {
+                    // Don't close if clicking on a link - let it navigate first
+                    if (e.target.tagName === 'A') {
+                        return;
+                    }
                     if (isOpen && !menu.contains(e.target) && !toggle.contains(e.target)) {
                         isOpen = false;
                         menu.classList.remove('mobile-menu-open');
@@ -233,29 +237,22 @@
                     }
                 });
 
-                // Close menu when clicking on a link (but not summary elements)
+                // Close menu when clicking on a direct menu link (not dropdown)
                 const menuLinks = menu.querySelectorAll('a:not(.dropdown a)');
                 menuLinks.forEach(function(link) {
-                    link.addEventListener('click', function() {
+                    link.addEventListener('click', function(e) {
+                        // Let the link navigate, just close the menu
                         if (isOpen) {
                             isOpen = false;
                             menu.classList.remove('mobile-menu-open');
                             icon.textContent = '☰';
                         }
+                        // Don't prevent default - let navigation happen
                     });
                 });
 
-                // Close menu when clicking dropdown submenu links
-                const dropdownLinks = menu.querySelectorAll('.dropdown a');
-                dropdownLinks.forEach(function(link) {
-                    link.addEventListener('click', function() {
-                        if (isOpen) {
-                            isOpen = false;
-                            menu.classList.remove('mobile-menu-open');
-                            icon.textContent = '☰';
-                        }
-                    });
-                });
+                // For dropdown links, just let them navigate naturally
+                // The menu will close when the page navigates away
             }
         })();
     </script>
