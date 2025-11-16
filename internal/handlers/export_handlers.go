@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"injection-tracker/internal/database"
+
+	"github.com/jung-kurt/gofpdf/v2"
 )
 
 // ExportData represents the data structure for exports
@@ -473,56 +475,160 @@ func writeAllDataCSV(writer *csv.Writer, data *ExportData) error {
 }
 
 // generatePDF creates a PDF from the export data
-// Note: This implementation requires github.com/jung-kurt/gofpdf
-// For now, we'll create a simple text-based PDF. A production implementation
-// would use a proper PDF library.
 func generatePDF(data *ExportData) ([]byte, error) {
-	// TODO: Implement proper PDF generation using a library like gofpdf
-	// For now, return an error indicating PDF generation needs implementation
-	// This would require adding the dependency to go.mod:
-	// github.com/jung-kurt/gofpdf v1.16.2
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(15, 15, 15)
+	pdf.AddPage()
 
-	var buffer bytes.Buffer
+	// Title
+	pdf.SetFont("Arial", "B", 20)
+	pdf.SetTextColor(63, 81, 181)
+	pdf.CellFormat(0, 15, "Progesterone Injection Tracker", "", 1, "C", false, 0, "")
+	pdf.SetTextColor(0, 0, 0)
 
-	// Write a simple header
-	buffer.WriteString("Progesterone Injection Tracker - Medical Report\n\n")
-	buffer.WriteString(fmt.Sprintf("Report Period: %s to %s\n", data.StartDate.Format("January 2, 2006"), data.EndDate.Format("January 2, 2006")))
+	// Report Info
+	pdf.SetFont("Arial", "", 11)
+	pdf.Ln(5)
+	pdf.CellFormat(0, 7, fmt.Sprintf("Report Period: %s to %s",
+		data.StartDate.Format("January 2, 2006"),
+		data.EndDate.Format("January 2, 2006")), "", 1, "L", false, 0, "")
+
 	if data.CourseName != "" {
-		buffer.WriteString(fmt.Sprintf("Course: %s\n", data.CourseName))
+		pdf.CellFormat(0, 7, fmt.Sprintf("Course: %s", data.CourseName), "", 1, "L", false, 0, "")
 	}
-	buffer.WriteString("\n")
+	pdf.Ln(5)
 
-	// Injections summary
-	buffer.WriteString(fmt.Sprintf("Total Injections: %d\n\n", len(data.Injections)))
-	buffer.WriteString("Injection Log:\n")
-	buffer.WriteString("-------------------------------------------------------------------\n")
-	buffer.WriteString(fmt.Sprintf("%-12s %-8s %-6s %-5s %-15s %-20s\n", "Date", "Time", "Side", "Pain", "Reaction", "Notes"))
-	buffer.WriteString("-------------------------------------------------------------------\n")
+	// Summary Statistics
+	pdf.SetFont("Arial", "B", 14)
+	pdf.SetFillColor(240, 240, 240)
+	pdf.CellFormat(0, 10, "Summary Statistics", "", 1, "L", true, 0, "")
+	pdf.Ln(2)
 
-	for _, inj := range data.Injections {
-		buffer.WriteString(fmt.Sprintf("%-12s %-8s %-6s %-5d %-15s %-20s\n",
-			inj.Timestamp.Format("2006-01-02"),
-			inj.Timestamp.Format("15:04"),
-			inj.Side,
-			inj.PainLevel,
-			inj.SiteReaction,
-			truncateString(inj.Notes, 20),
-		))
+	pdf.SetFont("Arial", "", 11)
+	pdf.CellFormat(90, 7, fmt.Sprintf("Total Injections: %d", len(data.Injections)), "", 0, "L", false, 0, "")
+	pdf.CellFormat(90, 7, fmt.Sprintf("Total Symptom Logs: %d", len(data.Symptoms)), "", 1, "L", false, 0, "")
+	pdf.CellFormat(90, 7, fmt.Sprintf("Total Medication Logs: %d", len(data.Medications)), "", 1, "L", false, 0, "")
+	pdf.Ln(8)
+
+	// Injections Section
+	if len(data.Injections) > 0 {
+		pdf.SetFont("Arial", "B", 14)
+		pdf.SetFillColor(240, 240, 240)
+		pdf.CellFormat(0, 10, "Injection Log", "", 1, "L", true, 0, "")
+		pdf.Ln(2)
+
+		// Table Header
+		pdf.SetFont("Arial", "B", 9)
+		pdf.SetFillColor(200, 200, 200)
+		pdf.CellFormat(25, 7, "Date", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(15, 7, "Time", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(15, 7, "Side", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(15, 7, "Pain", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(20, 7, "Knots", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(30, 7, "Reaction", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(60, 7, "Notes", "1", 1, "C", true, 0, "")
+
+		// Table Data
+		pdf.SetFont("Arial", "", 8)
+		pdf.SetFillColor(255, 255, 255)
+
+		maxRows := 25
+		if len(data.Injections) < maxRows {
+			maxRows = len(data.Injections)
+		}
+
+		for i := 0; i < maxRows; i++ {
+			inj := data.Injections[i]
+			hasKnots := "No"
+			if inj.HasKnots {
+				hasKnots = "Yes"
+			}
+
+			pdf.CellFormat(25, 6, inj.Timestamp.Format("2006-01-02"), "1", 0, "L", false, 0, "")
+			pdf.CellFormat(15, 6, inj.Timestamp.Format("15:04"), "1", 0, "L", false, 0, "")
+			pdf.CellFormat(15, 6, inj.Side, "1", 0, "C", false, 0, "")
+			pdf.CellFormat(15, 6, fmt.Sprintf("%d", inj.PainLevel), "1", 0, "C", false, 0, "")
+			pdf.CellFormat(20, 6, hasKnots, "1", 0, "C", false, 0, "")
+			pdf.CellFormat(30, 6, inj.SiteReaction, "1", 0, "L", false, 0, "")
+			pdf.CellFormat(60, 6, truncateString(inj.Notes, 30), "1", 1, "L", false, 0, "")
+
+			// Add new page if needed
+			if pdf.GetY() > 260 && i < maxRows-1 {
+				pdf.AddPage()
+			}
+		}
+
+		if len(data.Injections) > maxRows {
+			pdf.Ln(3)
+			pdf.SetFont("Arial", "I", 9)
+			pdf.CellFormat(0, 5, fmt.Sprintf("Showing %d of %d injections. Export CSV for complete data.", maxRows, len(data.Injections)), "", 1, "L", false, 0, "")
+		}
+		pdf.Ln(5)
 	}
 
-	buffer.WriteString("\n\nSymptoms Summary:\n")
-	buffer.WriteString("-------------------------------------------------------------------\n")
-	buffer.WriteString(fmt.Sprintf("Total Symptom Logs: %d\n", len(data.Symptoms)))
+	// Symptoms Section
+	if len(data.Symptoms) > 0 {
+		if pdf.GetY() > 220 {
+			pdf.AddPage()
+		}
 
-	buffer.WriteString("\n\nMedications Summary:\n")
-	buffer.WriteString("-------------------------------------------------------------------\n")
-	buffer.WriteString(fmt.Sprintf("Total Medication Logs: %d\n", len(data.Medications)))
+		pdf.SetFont("Arial", "B", 14)
+		pdf.SetFillColor(240, 240, 240)
+		pdf.CellFormat(0, 10, "Symptom Log", "", 1, "L", true, 0, "")
+		pdf.Ln(2)
 
-	buffer.WriteString("\n\n")
-	buffer.WriteString("Note: This is a simplified text-based PDF. For production use,\n")
-	buffer.WriteString("implement proper PDF generation with formatting and charts.\n")
+		// Table Header
+		pdf.SetFont("Arial", "B", 9)
+		pdf.SetFillColor(200, 200, 200)
+		pdf.CellFormat(25, 7, "Date", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(15, 7, "Time", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(15, 7, "Pain", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(35, 7, "Location", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(30, 7, "Type", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(60, 7, "Notes", "1", 1, "C", true, 0, "")
 
-	return buffer.Bytes(), nil
+		// Table Data
+		pdf.SetFont("Arial", "", 8)
+		maxRows := 15
+		if len(data.Symptoms) < maxRows {
+			maxRows = len(data.Symptoms)
+		}
+
+		for i := 0; i < maxRows; i++ {
+			sym := data.Symptoms[i]
+
+			pdf.CellFormat(25, 6, sym.Timestamp.Format("2006-01-02"), "1", 0, "L", false, 0, "")
+			pdf.CellFormat(15, 6, sym.Timestamp.Format("15:04"), "1", 0, "L", false, 0, "")
+			pdf.CellFormat(15, 6, fmt.Sprintf("%d", sym.PainLevel), "1", 0, "C", false, 0, "")
+			pdf.CellFormat(35, 6, truncateString(sym.PainLocation, 15), "1", 0, "L", false, 0, "")
+			pdf.CellFormat(30, 6, truncateString(sym.PainType, 12), "1", 0, "L", false, 0, "")
+			pdf.CellFormat(60, 6, truncateString(sym.Notes, 30), "1", 1, "L", false, 0, "")
+
+			if pdf.GetY() > 260 && i < maxRows-1 {
+				pdf.AddPage()
+			}
+		}
+
+		if len(data.Symptoms) > maxRows {
+			pdf.Ln(3)
+			pdf.SetFont("Arial", "I", 9)
+			pdf.CellFormat(0, 5, fmt.Sprintf("Showing %d of %d symptoms. Export CSV for complete data.", maxRows, len(data.Symptoms)), "", 1, "L", false, 0, "")
+		}
+	}
+
+	// Footer
+	pdf.SetY(-20)
+	pdf.SetFont("Arial", "I", 8)
+	pdf.SetTextColor(128, 128, 128)
+	pdf.CellFormat(0, 10, fmt.Sprintf("Generated on %s - P-TRACK Medical Report", time.Now().Format("January 2, 2006 at 3:04 PM")), "", 0, "C", false, 0, "")
+
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func truncateString(s string, maxLen int) string {

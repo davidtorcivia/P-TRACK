@@ -1,307 +1,298 @@
 <!DOCTYPE html>
-<html lang="en" x-data="theme()">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ .CSRFToken }}">
-    <meta name="description" content="Track progesterone injections, medications, and symptoms">
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}P-TRACK</title>
 
-    <title>{{ if .Title }}{{ .Title }} - {{ end }}Injection Tracker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/theme.css">
 
-    <!-- Modern Redesign CSS -->
-    <link rel="stylesheet" href="/static/css/redesign.css">
-
-    <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-
-    <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
-
-    <!-- Chart.js (for data visualization) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-    <!-- Theme Management -->
     <script src="/static/js/theme.js"></script>
 
-    <!-- PWA Manifest -->
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#0891b2">
+    <meta name="theme-color" content="#FAFAF9">
+    <style>
+        [x-cloak] { display: none !important; }
 
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+        /* Clean, simple header design */
+        nav.container-fluid {
+            background: var(--pico-background-color);
+            border-bottom: 1px solid var(--pico-muted-border-color);
+            padding: 0.75rem 1rem;
+            margin-bottom: 0;
+        }
+
+        nav.container-fluid strong {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--pico-color);
+        }
+
+        nav.container-fluid a {
+            color: var(--pico-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        nav.container-fluid a:hover {
+            color: var(--pico-primary);
+        }
+
+        nav.container-fluid summary {
+            color: var(--pico-color);
+        }
+
+        nav.container-fluid summary:hover {
+            color: var(--pico-primary);
+        }
+
+        /* Mobile navbar styling */
+        @media (max-width: 768px) {
+            nav.container-fluid ul:last-child {
+                display: none;
+            }
+
+            nav.container-fluid ul:last-child.mobile-menu-open {
+                display: block;
+                position: absolute;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background: var(--pico-background-color);
+                border-bottom: 2px solid var(--pico-primary);
+                padding: 1rem;
+                z-index: 1000;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+            nav.container-fluid ul:last-child.mobile-menu-open li {
+                display: block;
+                margin: 0.75rem 0;
+            }
+
+            nav.container-fluid ul:last-child.mobile-menu-open a {
+                display: block;
+                padding: 0.5rem;
+                border-radius: 4px;
+            }
+
+            nav.container-fluid ul:last-child.mobile-menu-open a:hover {
+                background: var(--pico-muted-background-color);
+            }
+
+            .mobile-menu-toggle {
+                display: block !important;
+                cursor: pointer;
+                padding: 0.5rem;
+                font-size: 1.5rem;
+                user-select: none;
+            }
+
+            nav.container-fluid > ul:first-child {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+            }
+
+            /* Make dropdown work on mobile */
+            nav.container-fluid .dropdown {
+                position: relative;
+            }
+
+            nav.container-fluid .dropdown[open] > ul {
+                display: block !important;
+                pointer-events: auto !important;
+            }
+
+            nav.container-fluid .dropdown:not([open]) > ul {
+                display: none !important;
+            }
+
+            nav.container-fluid .dropdown ul {
+                position: static !important;
+                width: 100%;
+                margin-top: 0.5rem;
+                padding-left: 1rem;
+                box-shadow: none;
+                border-left: 2px solid var(--pico-primary);
+                background: transparent;
+                pointer-events: auto !important;
+                z-index: 1;
+            }
+
+            nav.container-fluid .dropdown ul li {
+                list-style: none;
+                pointer-events: auto !important;
+            }
+
+            nav.container-fluid .dropdown ul a {
+                pointer-events: auto !important;
+                cursor: pointer !important;
+                display: block;
+                position: relative;
+                z-index: 2;
+            }
+
+            nav.container-fluid .dropdown summary {
+                display: block;
+                padding: 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                list-style: none;
+            }
+
+            nav.container-fluid .dropdown summary:hover {
+                background: var(--pico-muted-background-color);
+            }
+
+            /* Keep only Pico's default arrow, don't add custom ones */
+        }
+
+        @media (min-width: 769px) {
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+        }
+    </style>
+    <script>
+        // Initialize Alpine.js manually to ensure it's ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Alpine will auto-initialize
+        });
+    </script>
 </head>
 <body>
-    <!-- Beautiful Navigation -->
     {{ if .IsAuthenticated }}
-    <nav class="navbar">
-        <div class="navbar-container">
-            <!-- Mobile Menu Toggle -->
-            <button class="navbar-toggle desktop-hidden"
-                    @click="$refs.mobileMenu.open = !$refs.mobileMenu.open"
-                    aria-label="Toggle menu">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </button>
-
-            <!-- Brand -->
-            <a href="/dashboard" class="navbar-brand">
-                <div class="w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg">
-                    <span class="text-xl">💉</span>
-                </div>
-                <div class="mobile-hidden">
-                    <h1 class="text-xl font-bold">Injection Tracker</h1>
-                    <p class="text-xs text-muted">Health Management System</p>
-                </div>
-            </a>
-
-            <!-- Desktop Navigation -->
-            <div class="navbar-menu">
-                <a href="/dashboard"
-                   class="navbar-link {{ if eq .Page "dashboard" }}active{{ end }}">
-                    <span class="text-lg">🏠</span>
-                    <span>Dashboard</span>
-                </a>
-                <a href="/courses"
-                   class="navbar-link {{ if eq .Page "courses" }}active{{ end }}">
-                    <span class="text-lg">📋</span>
-                    <span>Courses</span>
-                </a>
-                <a href="/injections"
-                   class="navbar-link {{ if eq .Page "injections" }}active{{ end }}">
-                    <span class="text-lg">💉</span>
-                    <span>Injections</span>
-                </a>
-                <a href="/symptoms"
-                   class="navbar-link {{ if eq .Page "symptoms" }}active{{ end }}">
-                    <span class="text-lg">📝</span>
-                    <span>Symptoms</span>
-                </a>
-                <a href="/medications"
-                   class="navbar-link {{ if eq .Page "medications" }}active{{ end }}">
-                    <span class="text-lg">💊</span>
-                    <span>Medications</span>
-                </a>
-                <a href="/inventory"
-                   class="navbar-link {{ if eq .Page "inventory" }}active{{ end }}">
-                    <span class="text-lg">📦</span>
-                    <span>Inventory</span>
-                </a>
-            </div>
-
-            <!-- Right Side Actions -->
-            <div class="flex items-center gap-2">
-                <!-- Theme Toggle -->
-                <button @click="toggle()"
-                        class="btn btn-ghost btn-sm"
-                        :aria-label="label"
-                        x-tooltip="label">
-                    <span class="text-lg" x-text="icon"></span>
-                </button>
-
-                <!-- Notifications -->
-                <a href="/notifications"
-                       class="btn btn-ghost btn-sm relative"
-                       title="Notifications">
-                    <span class="text-lg">🔔</span>
-                    <span x-show="$store.notificationCount > 0"
-                          class="absolute -top-1 -right-1 w-5 h-5 bg-danger text-white text-xs rounded-full flex items-center justify-center font-bold"
-                          x-text="$store.notificationCount">
-                    </span>
-                </a>
-
-                <!-- Desktop User Menu -->
-                <div class="mobile-hidden" x-data="{ open: false }">
-                    <button @click="open = !open"
-                            class="btn btn-ghost btn-sm">
-                        <div class="w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center">
-                            <span class="text-sm">👤</span>
-                        </div>
-                        <span class="text-sm font-medium">Account</span>
-                        <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-
-                    <div x-show="open"
-                         @click.away="open = false"
-                         x-cloak
-                         x-transition:enter="transition ease-out duration-200"
-                         x-transition:enter-start="opacity-0 transform scale-95"
-                         x-transition:enter-end="opacity-100 transform scale-100"
-                         class="absolute top-full right-0 mt-2 w-56 card shadow-xl z-50 overflow-hidden">
-                        <div class="p-4 border-b">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center">
-                                    <span>👤</span>
-                                </div>
-                                <div>
-                                    <p class="font-semibold">Account</p>
-                                    <p class="text-xs text-muted">Manage your settings</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="py-2">
-                            <a href="/settings" class="flex items-center gap-3 px-4 py-3 text-sm text-secondary hover:bg-surface transition-colors">
-                                <span>⚙️</span>
-                                <span>Settings</span>
-                            </a>
-                            <hr class="border">
-                            <a href="#"
-                               hx-post="/api/auth/logout"
-                               hx-swap="none"
-                               hx-on::after-request="window.location.href='/login'"
-                               class="flex items-center gap-3 px-4 py-3 text-sm text-danger hover:bg-danger transition-colors">
-                                <span>🚪</span>
-                                <span>Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mobile User Menu -->
-                <div class="desktop-hidden">
-                    <a href="/settings" class="btn btn-ghost btn-sm" title="Settings">
-                        <span class="text-lg">⚙️</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mobile Navigation Menu -->
-        <div x-ref="mobileMenu"
-             x-data="{ open: false }"
-             x-show="open"
-             x-cloak
-             @click.outside="open = false"
-             class="mobile-hidden border-t">
-            <div class="container py-4">
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="/dashboard" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">🏠</span>
-                        <span class="text-xs font-medium">Home</span>
-                    </a>
-                    <a href="/courses" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">📋</span>
-                        <span class="text-xs font-medium">Courses</span>
-                    </a>
-                    <a href="/injections" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">💉</span>
-                        <span class="text-xs font-medium">Injections</span>
-                    </a>
-                    <a href="/symptoms" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">📝</span>
-                        <span class="text-xs font-medium">Symptoms</span>
-                    </a>
-                    <a href="/medications" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">💊</span>
-                        <span class="text-xs font-medium">Meds</span>
-                    </a>
-                    <a href="/inventory" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">📦</span>
-                        <span class="text-xs font-medium">Inventory</span>
-                    </a>
-                    <a href="/calendar" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">📅</span>
-                        <span class="text-xs font-medium">Calendar</span>
-                    </a>
-                    <a href="/reports" class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span class="text-2xl">📊</span>
-                        <span class="text-xs font-medium">Reports</span>
-                    </a>
-                </div>
-
-                <hr class="my-4">
-
-                <div class="space-y-2">
-                    <a href="/settings" class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface transition-colors" @click="$refs.mobileMenu.open = false">
-                        <span>⚙️</span>
-                        <span class="font-medium">Settings</span>
-                    </a>
-                    <a href="#"
-                       hx-post="/api/auth/logout"
-                       hx-swap="none"
-                       hx-on::after-request="window.location.href='/login'"
-                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-danger text-danger transition-colors"
-                       @click="$refs.mobileMenu.open = false">
-                        <span>🚪</span>
-                        <span class="font-medium">Logout</span>
-                    </a>
-                </div>
-            </div>
-        </div>
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>P-TRACK</strong></li>
+            <li class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <span id="menu-icon">☰</span>
+            </li>
+        </ul>
+        <ul id="mobile-menu">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/courses">Courses</a></li>
+            <li><a href="/injections">Injections</a></li>
+            <li><a href="/symptoms">Symptoms</a></li>
+            <li><a href="/medications">Medications</a></li>
+            <li><a href="/inventory">Inventory</a></li>
+            <li>
+                <details class="dropdown">
+                    <summary role="button">Account</summary>
+                    <ul>
+                        <li><a href="/settings">Settings</a></li>
+                        <li><a href="/reports">Reports</a></li>
+                        <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a></li>
+                    </ul>
+                </details>
+            </li>
+            <li>
+                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label"></a>
+            </li>
+        </ul>
     </nav>
+
+    <script>
+        // Plain JavaScript hamburger menu
+        (function() {
+            const toggle = document.getElementById('mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const icon = document.getElementById('menu-icon');
+
+            if (toggle && menu && icon) {
+                let isOpen = false;
+
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isOpen = !isOpen;
+
+                    if (isOpen) {
+                        menu.classList.add('mobile-menu-open');
+                        icon.textContent = '✕';
+                    } else {
+                        menu.classList.remove('mobile-menu-open');
+                        icon.textContent = '☰';
+                    }
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    // Don't close if clicking on a link - let it navigate first
+                    if (e.target.tagName === 'A') {
+                        return;
+                    }
+                    if (isOpen && !menu.contains(e.target) && !toggle.contains(e.target)) {
+                        isOpen = false;
+                        menu.classList.remove('mobile-menu-open');
+                        icon.textContent = '☰';
+                    }
+                });
+
+                // Close menu when clicking on a direct menu link (not dropdown)
+                const menuLinks = menu.querySelectorAll('a:not(.dropdown a)');
+                menuLinks.forEach(function(link) {
+                    link.addEventListener('click', function(e) {
+                        // Let the link navigate, just close the menu
+                        if (isOpen) {
+                            isOpen = false;
+                            menu.classList.remove('mobile-menu-open');
+                            icon.textContent = '☰';
+                        }
+                        // Don't prevent default - let navigation happen
+                    });
+                });
+
+                // Prevent dropdown details from closing when clicking links inside
+                const dropdown = menu.querySelector('.dropdown');
+                if (dropdown) {
+                    const dropdownLinks = dropdown.querySelectorAll('a');
+                    dropdownLinks.forEach(function(link) {
+                        link.addEventListener('click', function(e) {
+                            // Stop propagation to prevent details from closing
+                            e.stopPropagation();
+                            // The link will still navigate normally
+                        });
+                    });
+                }
+            }
+        })();
+    </script>
     {{ end }}
 
-    <!-- Main Content -->
-    <main class="container py-8">
-        <!-- Flash Messages -->
-        <div class="mb-6">
-            {{ if .SuccessMessage }}
-            <div class="alert alert-success"
-                 x-data="{ show: true }"
-                 x-show="show"
-                 x-init="setTimeout(() => show = false, 5000)"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 transform translate-y-2"
-                 x-transition:enter-end="opacity-100 transform translate-y-0">
-                <div class="flex items-center gap-2">
-                    <span>✅</span>
-                    <span>{{ .SuccessMessage }}</span>
-                </div>
-            </div>
-            {{ end }}
+    <main class="container">
+        {{ if .SuccessMessage }}
+        <div class="alert-success">{{ .SuccessMessage }}</div>
+        {{ end }}
 
-            {{ if .ErrorMessage }}
-            <div class="alert alert-danger"
-                 x-data="{ show: true }"
-                 x-show="show"
-                 x-init="setTimeout(() => show = false, 5000)"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 transform translate-y-2"
-                 x-transition:enter-end="opacity-100 transform translate-y-0">
-                <div class="flex items-center gap-2">
-                    <span>❌</span>
-                    <span>{{ .ErrorMessage }}</span>
-                </div>
-            </div>
-            {{ end }}
-        </div>
+        {{ if .ErrorMessage }}
+        <div class="alert-danger">{{ .ErrorMessage }}</div>
+        {{ end }}
 
-        <!-- Page Content -->
         {{ template "content" . }}
     </main>
 
-    <!-- Footer -->
-    <footer class="border-t bg-surface mt-auto">
-        <div class="container py-6">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="text-sm text-muted">
-                    <span>Injection Tracker v1.0</span>
-                    {{ if .IsAuthenticated }}
-                    <span class="mx-2">•</span>
-                    <span>Last login: {{ .LastLogin }}</span>
-                    {{ end }}
-                </div>
-                <div class="flex items-center gap-4 text-sm text-muted">
-                    <a href="/help" class="hover:text-brand transition-colors">Help</a>
-                    <a href="/privacy" class="hover:text-brand transition-colors">Privacy</a>
-                    <a href="/about" class="hover:text-brand transition-colors">About</a>
-                </div>
-            </div>
-        </div>
+    <footer class="container-fluid">
+        <small style="text-align: center; display: block; color: var(--pico-muted-color);">
+            P-TRACK v1.0 &bull;
+            <a href="/help">Help</a> &bull;
+            <a href="/about">About</a>
+        </small>
     </footer>
 
-    <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js')
-                .then(reg => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker registration failed', err));
+            navigator.serviceWorker.register('/static/sw.js');
         }
 
-        // Add CSRF token to all HTMX requests
         document.body.addEventListener('htmx:configRequest', (event) => {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             if (csrfToken) {
@@ -310,7 +301,6 @@
         });
     </script>
 
-    <!-- Custom JavaScript -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>

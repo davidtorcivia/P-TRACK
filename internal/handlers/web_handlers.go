@@ -124,11 +124,26 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Dashboard"
 
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			activeData := map[string]interface{}{
+				"ID":        activeCourse.ID,
+				"Name":      activeCourse.Name,
+				"StartDate": activeCourse.StartDate.Format("Jan 2, 2006"),
+			}
+			if activeCourse.ExpectedEndDate.Valid {
+				activeData["ExpectedEndDate"] = activeCourse.ExpectedEndDate.Time.Format("Jan 2, 2006")
+			}
+			if activeCourse.Notes.Valid {
+				activeData["Notes"] = activeCourse.Notes.String
+			}
+			data["ActiveCourse"] = activeData
 
 			// Get last injection for this course
 			var lastInjection struct {
@@ -146,7 +161,9 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 				LIMIT 1
 			`, activeCourse.ID).Scan(&lastInjection.ID, &lastInjection.Timestamp, &lastInjection.Side)
 			if err == nil {
-				lastInjection.TimeAgo = formatTimeAgoWeb(lastInjection.Timestamp)
+				// Convert timestamp to user's timezone
+				convertedTime := ConvertToUserTZ(lastInjection.Timestamp, userTimezone)
+				lastInjection.TimeAgo = formatTimeAgoWeb(convertedTime)
 				lastSide = lastInjection.Side
 				data["LastInjection"] = &lastInjection
 			}
@@ -228,11 +245,61 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
-		data["Title"] = "Injections - Injection Tracker"
+		data["Title"] = "Injections"
+
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
+		// Get active course
+		courseRepo := repository.NewCourseRepository(db)
+		activeCourse, err := courseRepo.GetActiveCourse()
+		if err == nil && activeCourse != nil {
+			data["ActiveCourse"] = map[string]interface{}{
+				"ID":   activeCourse.ID,
+				"Name": activeCourse.Name,
+			}
+
+			// Get injections for this course
+			rows, err := db.Query(`
+				SELECT id, timestamp, side, pain_level, notes
+				FROM injections
+				WHERE course_id = ?
+				ORDER BY timestamp DESC
+				LIMIT 50
+			`, activeCourse.ID)
+			if err == nil {
+				defer rows.Close()
+				injections := []map[string]interface{}{}
+				for rows.Next() {
+					var id int64
+					var timestamp time.Time
+					var side string
+					var painLevel sql.NullInt64
+					var notes sql.NullString
+
+					if err := rows.Scan(&id, &timestamp, &side, &painLevel, &notes); err == nil {
+						// Convert timestamp to user's timezone
+						convertedTime := ConvertToUserTZ(timestamp, userTimezone)
+						timeStr := FormatTimeForUser(db, userID, timestamp)
+						injections = append(injections, map[string]interface{}{
+							"ID":        id,
+							"Date":      convertedTime.Format("Jan 2, 2006"),
+							"Time":      timeStr,
+							"Side":      strings.Title(side),
+							"SideLower": side,  // Add lowercase version for radio buttons
+							"PainLevel": painLevel.Int64,
+							"Notes":     notes.String,
+						})
+					}
+				}
+				data["Injections"] = injections
+			}
+		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "injections.html", data); err != nil {
-			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -242,18 +309,21 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 func HandleSymptomsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
-		data["Title"] = "Symptoms - Injection Tracker"
+		data["Title"] = "Symptoms"
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			data["ActiveCourse"] = map[string]interface{}{
+				"ID":   activeCourse.ID,
+				"Name": activeCourse.Name,
+			}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "symptoms.html", data); err != nil {
-			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -367,6 +437,13 @@ func HandleInventoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.
 					if item.ExpirationDate.Valid {
 						displayItem["ExpirationDate"] = item.ExpirationDate.Time
 						displayItem["FormattedExpiration"] = item.ExpirationDate.Time.Format("Jan 2, 2006")
+
+						// Check if expiring soon (within 30 days)
+						daysUntilExpiration := int(time.Until(item.ExpirationDate.Time).Hours() / 24)
+						if daysUntilExpiration <= 30 && daysUntilExpiration >= 0 {
+							displayItem["ExpiringSoon"] = true
+							expiringSoonCount++
+						}
 					}
 					if item.LotNumber.Valid {
 						displayItem["LotNumber"] = item.LotNumber.String
@@ -415,40 +492,70 @@ func getInventoryDisplayName(itemType string) string {
 // getInventoryIcon returns an icon/emoji for inventory items
 func getInventoryIcon(itemType string) string {
 	icons := map[string]string{
-		"progesterone":     "💉",
-		"draw_needle":      "🔹",
-		"injection_needle": "🔸",
-		"syringe":          "💊",
-		"swab":             "🧼",
-		"gauze":            "🩹",
+		"progesterone":     "",
+		"draw_needle":      "",
+		"injection_needle": "",
+		"syringe":          "",
+		"swab":             "",
+		"gauze":            "",
 	}
 	if icon, ok := icons[itemType]; ok {
 		return icon
 	}
-	return "📦"
+	return ""
 }
 
 // HandleCoursesPage renders the courses page
 func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
-		data["Title"] = "Courses - Injection Tracker"
-		data["Action"] = r.URL.Query().Get("action")
+		data["Title"] = "Courses"
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse()
 		if err == nil && activeCourse != nil {
-			data["ActiveCourse"] = activeCourse
+			activeData := map[string]interface{}{
+				"ID":            activeCourse.ID,
+				"Name":          activeCourse.Name,
+				"StartDate":     activeCourse.StartDate.Format("Jan 2, 2006"),
+				"StartDateISO":  activeCourse.StartDate.Format("2006-01-02"),
+				"Notes":         "",
+			}
+			if activeCourse.ExpectedEndDate.Valid {
+				activeData["ExpectedEndDate"] = activeCourse.ExpectedEndDate.Time.Format("Jan 2, 2006")
+				activeData["ExpectedEndDateISO"] = activeCourse.ExpectedEndDate.Time.Format("2006-01-02")
+			}
+			if activeCourse.Notes.Valid {
+				activeData["Notes"] = activeCourse.Notes.String
+			}
+			data["ActiveCourse"] = activeData
 		}
 
 		// Get past courses
 		courses, err := courseRepo.List()
 		if err == nil {
-			pastCourses := []*models.Course{}
+			pastCourses := []map[string]interface{}{}
 			for _, course := range courses {
 				if !course.IsActive {
-					pastCourses = append(pastCourses, course)
+					pastData := map[string]interface{}{
+						"ID":           course.ID,
+						"Name":         course.Name,
+						"StartDate":    course.StartDate.Format("Jan 2, 2006"),
+						"StartDateISO": course.StartDate.Format("2006-01-02"),
+					}
+					if course.ActualEndDate.Valid {
+						pastData["ActualEndDate"] = course.ActualEndDate.Time.Format("Jan 2, 2006")
+						pastData["ActualEndDateISO"] = course.ActualEndDate.Time.Format("2006-01-02")
+					}
+					if course.ExpectedEndDate.Valid {
+						pastData["ExpectedEndDate"] = course.ExpectedEndDate.Time.Format("Jan 2, 2006")
+						pastData["ExpectedEndDateISO"] = course.ExpectedEndDate.Time.Format("2006-01-02")
+					}
+					if course.Notes.Valid {
+						pastData["Notes"] = course.Notes.String
+					}
+					pastCourses = append(pastCourses, pastData)
 				}
 			}
 			if len(pastCourses) > 0 {
@@ -497,6 +604,61 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Settings"
+
+		userID := middleware.GetUserID(r.Context())
+
+		// Get user-specific settings
+		settings := map[string]interface{}{
+			"Theme":                "auto",
+			"Timezone":             "America/New_York",
+			"DateFormat":           "MM/DD/YYYY",
+			"TimeFormat":           "12h",
+			"AdvancedMode":         false,
+			"EnableNotifications":  false,
+			"InjectionReminders":   false,
+			"ReminderTime":         "19:00",
+			"LowStockAlerts":       true,
+		}
+
+		// Query user settings
+		rows, err := db.Query(`SELECT key, value FROM settings WHERE key LIKE ? OR key NOT LIKE 'user_%'`,
+			fmt.Sprintf("user_%%_%d", userID))
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var key, value string
+				if err := rows.Scan(&key, &value); err == nil {
+					switch {
+					case strings.HasPrefix(key, fmt.Sprintf("user_theme_%d", userID)):
+						settings["Theme"] = value
+					case strings.HasPrefix(key, fmt.Sprintf("user_timezone_%d", userID)):
+						settings["Timezone"] = value
+					case strings.HasPrefix(key, fmt.Sprintf("user_date_format_%d", userID)):
+						settings["DateFormat"] = value
+					case strings.HasPrefix(key, fmt.Sprintf("user_time_format_%d", userID)):
+						settings["TimeFormat"] = value
+					case key == "advanced_mode_enabled":
+						settings["AdvancedMode"] = (value == "true")
+					case strings.HasPrefix(key, fmt.Sprintf("user_enable_notifications_%d", userID)):
+						settings["EnableNotifications"] = (value == "true")
+					case key == "injection_reminders":
+						settings["InjectionReminders"] = (value == "true")
+					case key == "reminder_time":
+						settings["ReminderTime"] = value
+					case key == "low_stock_alerts":
+						settings["LowStockAlerts"] = (value == "true")
+					}
+				}
+			}
+		}
+
+		data["Settings"] = settings
+		data["User"] = map[string]interface{}{
+			"Username": "User", // TODO: Get actual username
+			"Email":    "",
+		}
+		data["DatabaseSize"] = "N/A"
+		data["LastBackup"] = "N/A"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := web.Render(w, "settings.html", data); err != nil {
@@ -624,134 +786,235 @@ func formatTimeAgoWeb(t time.Time) string {
 func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		_ = userID // TODO: Use this to fetch user-specific activity
+		userTimezone := GetUserTimezone(db, userID)
 
-		// Get recent activity from different tables
-		activities := []map[string]interface{}{}
-
-		// Recent injections (last 5)
+		// Get recent activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side, pain_level, notes, id
+			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
 			FROM injections
-			ORDER BY timestamp DESC
-			LIMIT 5
-		`)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var activity struct {
-					Type       string
-					Timestamp  time.Time
-					Side       string
-					PainLevel  sql.NullInt64
-					Notes      sql.NullString
-					ID         int64
-				}
-				if err := rows.Scan(&activity.Type, &activity.Timestamp, &activity.Side, &activity.PainLevel, &activity.Notes, &activity.ID); err == nil {
-					activities = append(activities, map[string]interface{}{
-						"Type":      activity.Type,
-						"Side":      activity.Side,
-						"PainLevel": activity.PainLevel.Int64,
-						"Notes":     activity.Notes.String,
-						"TimeAgo":   formatTimeAgoWeb(activity.Timestamp),
-						"UserName":  "You", // TODO: Get actual username
-					})
-				}
-			}
-		}
-
-		// Recent symptoms (last 3)
-		rows, err = db.Query(`
-			SELECT 'symptom' as type, timestamp, pain_level, pain_location, notes, id
+			UNION ALL
+			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
 			FROM symptom_logs
+			UNION ALL
+			SELECT 'medication' as type, timestamp,
+				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
+				notes, medication_logs.id
+			FROM medication_logs
 			ORDER BY timestamp DESC
-			LIMIT 3
+			LIMIT 10
 		`)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var activity struct {
-					Type         string
-					Timestamp    time.Time
-					PainLevel    sql.NullInt64
-					PainLocation sql.NullString
-					Notes        sql.NullString
-					ID           int64
-				}
-				if err := rows.Scan(&activity.Type, &activity.Timestamp, &activity.PainLevel, &activity.PainLocation, &activity.Notes, &activity.ID); err == nil {
-					activities = append(activities, map[string]interface{}{
-						"Type":         activity.Type,
-						"PainLevel":    activity.PainLevel.Int64,
-						"PainLocation": activity.PainLocation.String,
-						"Notes":        activity.Notes.String,
-						"TimeAgo":      formatTimeAgoWeb(activity.Timestamp),
-						"UserName":     "You", // TODO: Get actual username
-					})
-				}
+
+		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<p>Error loading activity</p>`))
+			return
+		}
+		defer rows.Close()
+
+		activities := []map[string]interface{}{}
+		for rows.Next() {
+			var actType, detail1, detail2 string
+			var timestamp time.Time
+			var notes sql.NullString
+			var id int64
+
+			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
+				// Convert timestamp to user's timezone
+				convertedTime := ConvertToUserTZ(timestamp, userTimezone)
+				activities = append(activities, map[string]interface{}{
+					"Type":      actType,
+					"Detail1":   detail1,
+					"Detail2":   detail2,
+					"Notes":     notes.String,
+					"Timestamp": convertedTime,
+					"TimeAgo":   formatTimeAgoWeb(convertedTime),
+					"ID":        id,
+				})
 			}
 		}
-
-		// Sort by timestamp (combined from different queries)
-		// For now, just return injections first, then symptoms
 
 		if len(activities) == 0 {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(`
 				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
 					<p>No recent activity yet.</p>
-					<small>Start by creating a course and logging your first injection!</small>
+					<small>Start by logging your first injection, symptom, or medication!</small>
 				</div>
 			`))
 			return
 		}
 
-		// Render recent activity template
+		// Render recent activity with better styling
 		w.Header().Set("Content-Type", "text/html")
-		html := `<ul style="list-style: none; padding: 0;">`
+		html := `<div style="display: flex; flex-direction: column; gap: 0.5rem;">`
 
 		for _, activity := range activities {
-			html += `<li style="padding: 0.75rem 0; border-bottom: 1px solid var(--pico-muted-border-color);">
-				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<div>
-						<strong>`
+			html += `<article style="margin: 0; padding: 0.75rem;">`
 
 			switch activity["Type"].(string) {
 			case "injection":
-				html += fmt.Sprintf("💉 Injection (%s)", activity["Side"])
-				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
-					html += fmt.Sprintf(` <span style="font-size: 1.5rem;" title="Pain Level: %d/10">`, painLevel)
-					if painLevel > 7 {
-						html += "😣"
-					} else if painLevel > 4 {
-						html += "😐"
-					} else {
-						html += "😊"
-					}
-					html += "</span>"
+				side := activity["Detail1"].(string)
+				painLevel := activity["Detail2"].(string)
+				html += fmt.Sprintf(`<div style="display: flex; justify-content: space-between; align-items: start;">
+					<div>
+						<strong>Injection (%s)</strong>`, strings.Title(side))
+				if painLevel != "" && painLevel != "0" {
+					html += fmt.Sprintf(` <small>Pain: %s/10</small>`, painLevel)
 				}
+				html += fmt.Sprintf(`<br><small style="color: var(--pico-muted-color);">%s</small>`, activity["TimeAgo"])
 			case "symptom":
-				html += "📝 Symptom Log"
-				if painLevel, ok := activity["PainLevel"].(int64); ok && painLevel > 0 {
-					html += fmt.Sprintf(" (Pain: %d/10)", painLevel)
+				location := activity["Detail1"].(string)
+				painLevel := activity["Detail2"].(string)
+				html += `<div style="display: flex; justify-content: space-between; align-items: start;">
+					<div>
+						<strong>Symptom Logged</strong>`
+				if location != "" {
+					html += fmt.Sprintf(` <small>%s</small>`, strings.ReplaceAll(location, "_", " "))
 				}
-				if location, ok := activity["PainLocation"].(string); ok && location != "" {
-					html += fmt.Sprintf(" - %s", location)
+				if painLevel != "" && painLevel != "0" {
+					html += fmt.Sprintf(` <small>Pain: %s/10</small>`, painLevel)
 				}
+				html += fmt.Sprintf(`<br><small style="color: var(--pico-muted-color);">%s</small>`, activity["TimeAgo"])
+			case "medication":
+				medName := activity["Detail1"].(string)
+				status := activity["Detail2"].(string)
+				statusColor := "var(--pico-ins-color)"
+				if status == "missed" {
+					statusColor = "var(--pico-del-color)"
+				}
+				html += fmt.Sprintf(`<div style="display: flex; justify-content: space-between; align-items: start;">
+					<div>
+						<strong>%s</strong> <small style="color: %s;">%s</small>
+						<br><small style="color: var(--pico-muted-color);">%s</small>`,
+					medName, statusColor, strings.Title(status), activity["TimeAgo"])
 			}
-
-			html += fmt.Sprintf(`</strong><br><small>%s • %s</small>`, activity["TimeAgo"], activity["UserName"])
 
 			if notes, ok := activity["Notes"].(string); ok && notes != "" {
-				if len(notes) > 50 {
-					notes = notes[:50] + "..."
+				if len(notes) > 60 {
+					notes = notes[:60] + "..."
 				}
-				html += fmt.Sprintf("<br><small>%s</small>", notes)
+				html += fmt.Sprintf(`<br><small>%s</small>`, notes)
 			}
 
-			html += `</div></div></li>`
+			html += `</div></div></article>`
 		}
 
-		html += `</ul>`
+		html += `</div>`
 		w.Write([]byte(html))
+	}
+}
+
+// HandleActivityPage renders the full activity history page
+func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		data["Title"] = "Activity History - Injection Tracker"
+
+		// Get user's timezone preference
+		userID := middleware.GetUserID(r.Context())
+		userTimezone := GetUserTimezone(db, userID)
+
+		// Get all activity using UNION to combine and sort by timestamp
+		rows, err := db.Query(`
+			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			FROM injections
+			UNION ALL
+			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			FROM symptom_logs
+			UNION ALL
+			SELECT 'medication' as type, timestamp,
+				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
+				notes, medication_logs.id
+			FROM medication_logs
+			ORDER BY timestamp DESC
+		`)
+
+		if err != nil {
+			http.Error(w, "Failed to load activity", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		activities := []map[string]interface{}{}
+		for rows.Next() {
+			var actType, detail1, detail2 string
+			var timestamp time.Time
+			var notes sql.NullString
+			var id int64
+
+			if err := rows.Scan(&actType, &timestamp, &detail1, &detail2, &notes, &id); err == nil {
+				// Convert timestamp to user's timezone
+				convertedTime := ConvertToUserTZ(timestamp, userTimezone)
+				formattedDateTime := FormatDateTimeForUser(db, userID, timestamp)
+				activities = append(activities, map[string]interface{}{
+					"Type":      actType,
+					"Detail1":   detail1,
+					"Detail2":   detail2,
+					"Notes":     notes.String,
+					"Timestamp": convertedTime,
+					"TimeAgo":   formatTimeAgoWeb(convertedTime),
+					"FormattedDate": formattedDateTime,
+					"ID":        id,
+				})
+			}
+		}
+
+		data["Activities"] = activities
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "activity.html", data); err != nil {
+			http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// HandleInventoryHistoryPage renders the full inventory history page
+func HandleInventoryHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		data["Title"] = "Inventory History - Injection Tracker"
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "inventory_history.html", data); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// HandleInventoryItemHistoryPage renders the inventory history for a specific item type
+func HandleInventoryItemHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := getBasePageData(r, csrf)
+		itemType := chi.URLParam(r, "itemType")
+		
+		// Display names for item types
+		displayNames := map[string]string{
+			"progesterone":      "Progesterone",
+			"draw_needle":       "Draw Needles",
+			"injection_needle":  "Injection Needles",
+			"syringe":          "Syringes",
+			"swab":             "Alcohol Swabs",
+			"gauze":            "Gauze Pads",
+		}
+		
+		displayName, ok := displayNames[itemType]
+		if !ok {
+			http.Error(w, "Invalid item type", http.StatusBadRequest)
+			return
+		}
+		
+		data["ItemType"] = itemType
+		data["DisplayName"] = displayName
+		data["Title"] = displayName + " History - Injection Tracker"
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := web.Render(w, "inventory_item_history.html", data); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			return
+		}
 	}
 }

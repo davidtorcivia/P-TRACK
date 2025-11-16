@@ -1,280 +1,392 @@
 {{ define "content" }}
-<div class="container py-8">
-    <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold mb-2">Symptom Tracking</h1>
-        <p class="text-lg text-secondary">Log and monitor your symptoms</p>
-    </div>
+<hgroup>
+    <h2>Symptom Tracking</h2>
+    <p>Log and monitor your symptoms</p>
+</hgroup>
 
-    <!-- Quick Actions -->
-    <div class="flex flex-wrap gap-3 mb-8">
-        <button onclick="window.location.href='/symptoms/log'" class="btn btn-primary">
-            <span class="mr-2">➕</span>
-            Log Symptoms
-        </button>
-        <button onclick="window.location.href='/symptoms/history'" class="btn btn-outline">
-            <span class="mr-2">📊</span>
-            View History
-        </button>
-    </div>
+<div id="notification" style="display: none; margin-bottom: 1rem;" role="alert"></div>
 
-    {{ if .ActiveCourse }}
-    <!-- Quick Log Form -->
-    <div class="card mb-8">
-        <div class="card-header bg-success-bg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="card-title">Quick Symptom Log</h3>
-                    <p class="card-subtitle">Record today's symptoms</p>
-                </div>
-                <div class="w-12 h-12 bg-success-bg rounded-full flex items-center justify-center">
-                    <span class="text-2xl">📝</span>
-                </div>
-            </div>
-        </div>
-        <div class="card-body">
-            <form x-data="{
-                painLevel: 5,
-                painLocation: '',
-                painType: '',
-                selectedSymptoms: [],
-                notes: ''
-            }" @submit.prevent="
-                const btn = $el.querySelector('button[type=submit]');
-                btn.disabled = true;
-                btn.innerHTML = '<span class=\"animate-pulse\">⏳</span> Saving...';
+{{ if .ActiveCourse }}
+<article>
+    <header><h3>Log Symptoms</h3></header>
 
-                fetch('/api/symptoms', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': document.querySelector('meta[name=\"csrf-token\"]').content
-                    },
-                    body: JSON.stringify({
-                        course_id: {{ .ActiveCourse.ID }},
-                        pain_level: parseInt(painLevel),
-                        pain_location: painLocation,
-                        pain_type: painType,
-                        symptoms: selectedSymptoms,
-                        notes: notes
-                    })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        // Reset form
-                        painLevel = 5;
-                        painLocation = '';
-                        painType = '';
-                        selectedSymptoms = [];
-                        notes = '';
-                        btn.disabled = false;
-                        btn.innerHTML = '<span class=\"mr-2\">✅</span>Log Symptoms';
+    <form x-data="{
+        painLevel: 5,
+        painLocation: '',
+        customLocation: '',
+        painType: '',
+        hasKnots: false,
+        symptoms: [],
+        notes: ''
+    }" @submit.prevent="
+        const btn = $el.querySelector('button[type=submit]');
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
 
-                        // Show success message
-                        const successDiv = document.createElement('div');
-                        successDiv.className = 'alert alert-success mb-4';
-                        successDiv.innerHTML = '<span class=\"mr-2\">✅</span>Symptoms logged successfully!';
-                        $el.parentNode.insertBefore(successDiv, $el);
+        fetch('/api/symptoms', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+            },
+            body: JSON.stringify({
+                course_id: {{ .ActiveCourse.ID }},
+                pain_level: parseInt(painLevel),
+                pain_location: painLocation === 'custom' ? customLocation : painLocation,
+                pain_type: painType,
+                has_knots: hasKnots,
+                symptoms: symptoms,
+                notes: notes
+            })
+        })
+        .then(response => {
+            btn.disabled = false;
+            btn.removeAttribute('aria-busy');
+            if (response.ok) {
+                painLevel = 5;
+                painLocation = '';
+                painType = '';
+                hasKnots = false;
+                symptoms = [];
+                notes = '';
 
-                        setTimeout(() => successDiv.remove(), 3000);
-                    } else {
-                        return response.text().then(text => {
-                            alert('Error: ' + text);
-                            btn.disabled = false;
-                            btn.innerHTML = '<span class=\"mr-2\">📝</span>Log Symptoms';
-                        });
-                    }
-                })
-                .catch(error => {
-                    alert('Error: ' + error.message);
-                    btn.disabled = false;
-                    btn.innerHTML = '<span class=\"mr-2\">📝</span>Log Symptoms';
+                const notif = document.getElementById('notification');
+                notif.innerHTML = '<article><mark>Symptoms logged successfully!</mark></article>';
+                notif.style.display = 'block';
+                setTimeout(() => notif.style.display = 'none', 3000);
+
+                htmx.trigger('#recent-symptoms', 'refresh');
+            } else {
+                response.text().then(text => {
+                    const notif = document.getElementById('notification');
+                    notif.innerHTML = '<article><del>Error: ' + text + '</del></article>';
+                    notif.style.display = 'block';
                 });
-            " class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Pain Level -->
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Pain Level</label>
-                        <div class="space-y-3">
-                            <input type="range"
-                                   x-model="painLevel"
-                                   min="1"
-                                   max="10"
-                                   class="w-full">
-                            <div class="flex justify-between items-center">
-                                <div class="text-3xl font-bold text-success-primary" x-text="painLevel"></div>
-                                <div class="text-sm text-muted">Level 1-10</div>
-                            </div>
-                            <div class="flex justify-between text-xs text-muted">
-                                <span>1 (Mild)</span>
-                                <span>10 (Severe)</span>
-                            </div>
-                        </div>
-                    </div>
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.removeAttribute('aria-busy');
+            const notif = document.getElementById('notification');
+            notif.innerHTML = '<article><del>Error: ' + error.message + '</del></article>';
+            notif.style.display = 'block';
+        });
+    ">
+        <div class="grid-3">
+            <div>
+                <label>
+                    Pain Level: <span x-text="painLevel"></span>/10
+                    <input type="range" x-model="painLevel" min="1" max="10">
+                </label>
+            </div>
 
-                    <!-- Pain Location -->
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Pain Location</label>
-                        <select x-model="painLocation" class="form-select">
-                            <option value="">Select location</option>
-                            <option value="injection site">Injection Site</option>
-                            <option value="abdomen">Abdomen</option>
-                            <option value="back">Back</option>
-                            <option value="head">Head</option>
-                            <option value="chest">Chest</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-
-                    <!-- Pain Type -->
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Pain Type</label>
-                        <select x-model="painType" class="form-select">
-                            <option value="">Select type</option>
-                            <option value="sharp">Sharp</option>
-                            <option value="dull">Dull</option>
-                            <option value="aching">Aching</option>
-                            <option value="cramping">Cramping</option>
-                            <option value="burning">Burning</option>
-                            <option value="throbbing">Throbbing</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Symptoms Checklist -->
-                <div class="form-group">
-                    <label class="form-label font-semibold">Additional Symptoms</label>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="nausea"
-                                   class="form-checkbox">
-                            <span class="text-sm">Nausea</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="fatigue"
-                                   class="form-checkbox">
-                            <span class="text-sm">Fatigue</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="headache"
-                                   class="form-checkbox">
-                            <span class="text-sm">Headache</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="mood_changes"
-                                   class="form-checkbox">
-                            <span class="text-sm">Mood Changes</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="bloating"
-                                   class="form-checkbox">
-                            <span class="text-sm">Bloating</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="breast_tenderness"
-                                   class="form-checkbox">
-                            <span class="text-sm">Breast Tenderness</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="spotting"
-                                   class="form-checkbox">
-                            <span class="text-sm">Spotting</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-success-bg transition-colors">
-                            <input type="checkbox"
-                                   x-model="selectedSymptoms"
-                                   value="hot_flashes"
-                                   class="form-checkbox">
-                            <span class="text-sm">Hot Flashes</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Notes -->
-                <div class="form-group">
-                    <label class="form-label font-semibold">Notes</label>
-                    <textarea x-model="notes"
-                              rows="4"
-                              class="form-textarea"
-                              placeholder="Any additional observations or details..."></textarea>
-                </div>
-
-                <!-- Submit Button -->
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="btn btn-primary btn-lg">
-                        <span class="mr-2">📝</span>
-                        Log Symptoms
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Recent Symptoms -->
-    <div class="card">
-        <div class="card-header">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="card-title">Recent Symptoms</h3>
-                    <p class="card-subtitle">Your latest symptom logs</p>
-                </div>
-                <div class="w-10 h-10 bg-success-bg rounded-full flex items-center justify-center">
-                    <span class="text-success-primary">📊</span>
+            <div>
+                <label>
+                    Location
+                    <select x-model="painLocation">
+                        <option value="">Select</option>
+                        <option value="injection_site_left">Injection Site - Left</option>
+                        <option value="injection_site_right">Injection Site - Right</option>
+                        <option value="injection_site_both">Injection Site - Both</option>
+                        <option value="upper_buttock_left">Upper Buttock - Left</option>
+                        <option value="upper_buttock_right">Upper Buttock - Right</option>
+                        <option value="abdomen">Abdomen</option>
+                        <option value="lower_back">Lower Back</option>
+                        <option value="custom">Custom (specify below)</option>
+                    </select>
+                </label>
+                <div x-show="painLocation === 'custom'" style="margin-top: 0.5rem;">
+                    <input type="text" x-model="customLocation" placeholder="Describe location...">
                 </div>
             </div>
-        </div>
-        <div class="card-body">
-            <div id="recent-symptoms"
-                 hx-get="/api/symptoms/recent"
-                 hx-trigger="load"
-                 hx-swap="innerHTML"
-                 class="space-y-4">
-                <div class="text-center py-12 text-muted">
-                    <div class="inline-flex items-center gap-3">
-                        <div class="w-8 h-8 bg-success-bg rounded-full animate-spin"></div>
-                        <span>Loading recent symptoms...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-footer">
-            <a href="/symptoms/history" class="btn btn-outline">
-                <span class="mr-2">📊</span>
-                View Full History
-            </a>
-        </div>
-    </div>
 
-    {{ else }}
-    <!-- No Active Course -->
-    <div class="card">
-        <div class="card-body text-center py-12">
-            <div class="w-20 h-20 bg-warning-bg rounded-full flex items-center justify-center mx-auto mb-6">
-                <span class="text-3xl">⚠️</span>
+            <div>
+                <label>
+                    Type
+                    <select x-model="painType">
+                        <option value="">Select</option>
+                        <option value="sharp">Sharp</option>
+                        <option value="dull">Dull</option>
+                        <option value="aching">Aching</option>
+                        <option value="cramping">Cramping</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
             </div>
-            <h3 class="text-xl font-bold mb-4">No Active Course</h3>
-            <p class="text-muted mb-6">You need an active course to start tracking symptoms.</p>
-            <a href="/courses" class="btn btn-primary">
-                <span class="mr-2">📋</span>
-                Manage Courses
-            </a>
         </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label>
+                <input type="checkbox" x-model="hasKnots" role="switch">
+                Has Knots/Hardness at Site
+            </label>
+        </div>
+
+        <fieldset>
+            <legend>Additional Symptoms</legend>
+            <div class="grid-4">
+                <label><input type="checkbox" x-model="symptoms" value="nausea"> Nausea</label>
+                <label><input type="checkbox" x-model="symptoms" value="fatigue"> Fatigue</label>
+                <label><input type="checkbox" x-model="symptoms" value="headache"> Headache</label>
+                <label><input type="checkbox" x-model="symptoms" value="mood_changes"> Mood Changes</label>
+                <label><input type="checkbox" x-model="symptoms" value="bloating"> Bloating</label>
+                <label><input type="checkbox" x-model="symptoms" value="breast_tenderness"> Tenderness</label>
+                <label><input type="checkbox" x-model="symptoms" value="spotting"> Spotting</label>
+                <label><input type="checkbox" x-model="symptoms" value="hot_flashes"> Hot Flashes</label>
+                <label><input type="checkbox" x-model="symptoms" value="knots"> Knots</label>
+            </div>
+        </fieldset>
+
+        <label>
+            Notes
+            <textarea x-model="notes" rows="3"></textarea>
+        </label>
+
+        <button type="submit">Log Symptoms</button>
+    </form>
+</article>
+
+<article>
+    <header><h3>Recent Symptoms</h3></header>
+    <div id="recent-symptoms" hx-get="/api/symptoms/recent" hx-trigger="load, refresh from:body">
+        <p aria-busy="true">Loading...</p>
     </div>
-    {{ end }}
-</div>
+    <footer>
+        <a href="/symptoms/history" role="button" class="outline">View History</a>
+    </footer>
+</article>
+
+<!-- Edit Symptom Modal -->
+<dialog id="edit-symptom-modal">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-symptom-modal').close()"></button>
+            <h3>Edit Symptom Log</h3>
+        </header>
+        <form id="edit-symptom-form" x-data="{
+            symptomId: 0,
+            painLevel: 5,
+            painLocation: '',
+            customLocation: '',
+            painType: '',
+            symptoms: [],
+            notes: ''
+        }" @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/symptoms/' + symptomId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                },
+                body: JSON.stringify({
+                    pain_level: parseInt(painLevel),
+                    pain_location: painLocation === 'custom' ? customLocation : painLocation,
+                    pain_type: painType,
+                    symptoms: symptoms,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('edit-symptom-modal').close();
+                    htmx.trigger('#recent-symptoms', 'refresh');
+                    const notif = document.getElementById('notification');
+                    notif.innerHTML = '<article><mark>Symptom updated successfully!</mark></article>';
+                    notif.style.display = 'block';
+                    setTimeout(() => notif.style.display = 'none', 3000);
+                } else {
+                    response.text().then(text => {
+                        console.error('Error:', text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+            });
+        ">
+            <label>
+                Pain Level: <span x-text="painLevel"></span>/10
+                <input type="range" x-model="painLevel" min="1" max="10">
+            </label>
+
+            <div class="grid-2">
+                <label>
+                    Location
+                    <select x-model="painLocation">
+                        <option value="">Select</option>
+                        <option value="injection_site_left">Injection Site - Left</option>
+                        <option value="injection_site_right">Injection Site - Right</option>
+                        <option value="injection_site_both">Injection Site - Both</option>
+                        <option value="upper_buttock_left">Upper Buttock - Left</option>
+                        <option value="upper_buttock_right">Upper Buttock - Right</option>
+                        <option value="abdomen">Abdomen</option>
+                        <option value="lower_back">Lower Back</option>
+                        <option value="custom">Custom (specify below)</option>
+                    </select>
+                </label>
+
+                <label>
+                    Type
+                    <select x-model="painType">
+                        <option value="">Select</option>
+                        <option value="sharp">Sharp</option>
+                        <option value="dull">Dull</option>
+                        <option value="aching">Aching</option>
+                        <option value="cramping">Cramping</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+            </div>
+
+            <div x-show="painLocation === 'custom'">
+                <input type="text" x-model="customLocation" placeholder="Describe location...">
+            </div>
+
+            <fieldset>
+                <legend>Additional Symptoms</legend>
+                <div class="grid-4">
+                    <label><input type="checkbox" x-model="symptoms" value="nausea"> Nausea</label>
+                    <label><input type="checkbox" x-model="symptoms" value="fatigue"> Fatigue</label>
+                    <label><input type="checkbox" x-model="symptoms" value="headache"> Headache</label>
+                    <label><input type="checkbox" x-model="symptoms" value="mood_changes"> Mood Changes</label>
+                    <label><input type="checkbox" x-model="symptoms" value="bloating"> Bloating</label>
+                    <label><input type="checkbox" x-model="symptoms" value="breast_tenderness"> Tenderness</label>
+                    <label><input type="checkbox" x-model="symptoms" value="spotting"> Spotting</label>
+                    <label><input type="checkbox" x-model="symptoms" value="hot_flashes"> Hot Flashes</label>
+                </div>
+            </fieldset>
+
+            <label>
+                Notes
+                <textarea x-model="notes" rows="3"></textarea>
+            </label>
+
+            <footer>
+                <div class="grid-2">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-symptom-modal').close()">Cancel</button>
+                    <button type="submit">Update Symptom</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
+
+<script>
+document.addEventListener('click', function(e) {
+    if (e.target.dataset.action === 'delete-symptom') {
+        const symptomId = e.target.dataset.symptomId;
+        showDeleteSymptomConfirmation(symptomId);
+    }
+
+    if (e.target.dataset.action === 'edit-symptom') {
+        const symptomId = e.target.dataset.symptomId;
+
+        // Fetch symptom data
+        fetch('/api/symptoms/' + symptomId)
+            .then(response => response.json())
+            .then(symptom => {
+                const modal = document.getElementById('edit-symptom-modal');
+                const form = document.getElementById('edit-symptom-form');
+
+                // Get Alpine.js instance
+                const alpineData = Alpine.$data(form);
+
+                // Set form values
+                alpineData.symptomId = symptomId;
+                alpineData.painLevel = symptom.pain_level || 5;
+                alpineData.painLocation = symptom.pain_location || '';
+                alpineData.painType = symptom.pain_type || '';
+                alpineData.notes = symptom.notes || '';
+
+                // Parse symptoms array
+                if (symptom.symptoms) {
+                    try {
+                        const parsed = JSON.parse(symptom.symptoms);
+                        alpineData.symptoms = Array.isArray(parsed) ? parsed : [];
+                    } catch(e) {
+                        alpineData.symptoms = [];
+                    }
+                } else {
+                    alpineData.symptoms = [];
+                }
+
+                // Show modal
+                modal.showModal();
+            })
+            .catch(error => {
+                console.error('Error loading symptom:', error);
+            });
+    }
+});
+
+let currentDeleteSymptomId = null;
+
+function showDeleteSymptomConfirmation(symptomId) {
+    currentDeleteSymptomId = symptomId;
+    document.getElementById('delete-symptom-confirm').showModal();
+}
+
+function confirmDeleteSymptom() {
+    if (!currentDeleteSymptomId) return;
+
+    const csrfToken = document.querySelector('meta[name=csrf-token]').content;
+    fetch('/api/symptoms/' + currentDeleteSymptomId, {
+        method: 'DELETE',
+        headers: {'X-CSRF-Token': csrfToken}
+    })
+    .then(response => {
+        if (response.ok) {
+            htmx.trigger('#recent-symptoms', 'refresh');
+            const notif = document.getElementById('notification');
+            notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
+            notif.style.display = 'block';
+            setTimeout(() => notif.style.display = 'none', 3000);
+        } else {
+            response.text().then(text => console.error('Error:', text));
+            htmx.trigger('#recent-symptoms', 'refresh');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        htmx.trigger('#recent-symptoms', 'refresh');
+    });
+
+    document.getElementById('delete-symptom-confirm').close();
+}
+</script>
+
+<!-- Delete Symptom Confirmation Dialog -->
+<dialog id="delete-symptom-confirm">
+    <article style="max-width: 400px;">
+        <header>
+            <h3>Confirm Deletion</h3>
+        </header>
+        <p>Delete this symptom log?</p>
+        <p><small>This action cannot be undone.</small></p>
+        <footer>
+            <div class="grid-2">
+                <button type="button" class="secondary" onclick="document.getElementById('delete-symptom-confirm').close()">Cancel</button>
+                <button type="button" class="contrast" onclick="confirmDeleteSymptom()">Delete</button>
+            </div>
+        </footer>
+    </article>
+</dialog>
+
+{{ else }}
+<article style="text-align: center;">
+    <hgroup>
+        <h3>No Active Course</h3>
+        <p>Create a course to track symptoms</p>
+    </hgroup>
+    <a href="/courses" role="button">Manage Courses</a>
+</article>
+{{ end }}
 {{ end }}

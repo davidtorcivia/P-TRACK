@@ -99,21 +99,29 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Get user's timezone preference
+		userTimezone := GetUserTimezone(db, userID)
+
 		// Convert to JSON-serializable format
 		response := make([]map[string]interface{}, len(symptoms))
 		for i, symptom := range symptoms {
+			// Convert timestamps to user's timezone
+			timestamp := ConvertToUserTZ(symptom.Timestamp, userTimezone)
+			createdAt := ConvertToUserTZ(symptom.CreatedAt, userTimezone)
+			updatedAt := ConvertToUserTZ(symptom.UpdatedAt, userTimezone)
+
 			response[i] = map[string]interface{}{
 				"id":            symptom.ID,
 				"course_id":     symptom.CourseID,
 				"logged_by":     nullInt64ToInt(symptom.LoggedBy),
-				"timestamp":     symptom.Timestamp.Format(time.RFC3339),
+				"timestamp":     timestamp.Format(time.RFC3339),
 				"pain_level":    nullInt64ToInt(symptom.PainLevel),
 				"pain_location": nullStringToString(symptom.PainLocation),
 				"pain_type":     nullStringToString(symptom.PainType),
 				"symptoms":      nullStringToString(symptom.Symptoms),
 				"notes":         nullStringToString(symptom.Notes),
-				"created_at":    symptom.CreatedAt.Format(time.RFC3339),
-				"updated_at":    symptom.UpdatedAt.Format(time.RFC3339),
+				"created_at":    createdAt.Format(time.RFC3339),
+				"updated_at":    updatedAt.Format(time.RFC3339),
 			}
 		}
 

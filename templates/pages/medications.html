@@ -1,162 +1,416 @@
 {{ define "content" }}
-<div class="container py-8">
-    <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl lg:text-4xl font-bold mb-2">Medications</h1>
-        <p class="text-lg text-secondary">Track pills, supplements, and other medications</p>
-    </div>
+<article style="padding: 1rem;">
+    <hgroup>
+        <h2>Medications</h2>
+        <p>Track pills, supplements, and other medications</p>
+    </hgroup>
 
-    <!-- Quick Actions -->
-    <div class="flex flex-wrap gap-3 mb-8">
-        <button onclick="window.location.href='/medications/new'" class="btn btn-primary">
-            <span class="mr-2">➕</span>
-            Add Medication
-        </button>
-        <button onclick="window.location.href='/medications'" class="btn btn-outline">
-            <span class="mr-2">💊</span>
-            Log Medication
-        </button>
-    </div>
+    <button onclick="document.getElementById('new-medication').showModal()" role="button">Add Medication</button>
+</article>
 
-    <!-- Active Medications -->
-    <div class="mb-8">
-        <h2 class="text-2xl font-semibold mb-6">Active Medications</h2>
+<!-- Active Medications -->
+<article style="padding: 1rem;">
+    <h3>Active Medications</h3>
 
-        {{ if .ActiveMedications }}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {{ range .ActiveMedications }}
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">{{ .Name }}</h3>
-                    <p class="card-subtitle">{{ .Dosage }} • {{ .Frequency }}</p>
-                </div>
-                <div class="card-body">
-                    <!-- Today's Status -->
-                    <div class="mb-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium">Today</span>
-                            {{ if .TakenToday }}
-                            <span class="badge badge-success">✓ Taken</span>
-                            {{ else }}
-                            <span class="badge badge-warning">⏰ Pending</span>
-                            {{ end }}
-                        </div>
-
-                        <!-- Quick Log Button -->
-                        <form method="POST" action="/api/medications/{{ .ID }}/log">
-                            <input type="hidden" name="taken" value="{{ if not .TakenToday }}true{{ else }}false{{ end }}">
-                            <button type="submit" class="btn {{ if .TakenToday }}btn-secondary{{ else }}btn-primary{{ end }} w-full">
-                                {{ if .TakenToday }}
-                                Mark as Missed
-                                {{ else }}
-                                Mark as Taken
-                                {{ end }}
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Medication Details -->
-                    <div class="space-y-2 text-sm">
-                        {{ if .Notes }}
-                        <div>
-                            <span class="font-medium">Notes:</span>
-                            <p class="text-muted">{{ .Notes }}</p>
-                        </div>
-                        {{ end }}
-
-                        {{ if .StartDate }}
-                        <div>
-                            <span class="font-medium">Started:</span>
-                            <span class="text-muted">{{ .StartDate }}</span>
-                        </div>
-                        {{ end }}
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button onclick="editMedication({{ .ID }})" class="btn btn-sm btn-ghost">
-                        ✏️ Edit
+    {{ if .ActiveMedications }}
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+        {{ range .ActiveMedications }}
+        <article style="margin: 0; padding: 1rem;">
+            <header style="margin-bottom: 0.5rem;">
+                <h4 style="margin: 0;">{{ .Name }}</h4>
+                {{ if .Dosage.Valid }}<p style="margin: 0.25rem 0;"><small>{{ .Dosage.String }}</small></p>{{ end }}
+                {{ if .Frequency.Valid }}<p style="margin: 0.25rem 0;"><small>{{ .Frequency.String }}</small></p>{{ end }}
+            </header>
+            <div style="margin: 0.5rem 0;">
+                {{ if .TakenToday }}
+                <mark style="padding: 0.25rem 0.5rem;">Taken today</mark>
+                {{ else }}
+                <small style="color: var(--pico-muted-color);">Not taken today</small>
+                {{ end }}
+            </div>
+            <footer style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--pico-muted-border-color);">
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <button onclick="
+                        const taken = {{ if .TakenToday }}false{{ else }}true{{ end }};
+                        fetch('/api/medications/{{ .ID }}/log', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ $.CSRFToken }}'
+                            },
+                            body: JSON.stringify({taken: taken})
+                        }).then(() => window.location.reload());
+                    " class="outline" style="margin: 0; padding: 0.5rem; font-size: 0.9rem;">
+                        {{ if .TakenToday }}Mark Missed{{ else }}Mark Taken{{ end }}
+                    </button>
+                    <button onclick="document.getElementById('edit-medication-{{ .ID }}').showModal()" class="outline secondary" style="margin: 0; padding: 0.5rem; font-size: 0.9rem;">
+                        Edit
                     </button>
                 </div>
-            </div>
-            {{ end }}
-        </div>
-        {{ else }}
-        <div class="card">
-            <div class="card-body text-center py-12">
-                <div class="text-4xl mb-4">💊</div>
-                <h3 class="text-lg font-semibold mb-2">No active medications</h3>
-                <p class="text-muted mb-4">Add your first medication to start tracking.</p>
-                <button onclick="window.location.href='/medications/new'" class="btn btn-primary">
-                    <span class="mr-2">➕</span>
-                    Add First Medication
-                </button>
-            </div>
-        </div>
+            </footer>
+        </article>
         {{ end }}
     </div>
-
-    <!-- Inactive Medications -->
-    {{ if .InactiveMedications }}
-    <div>
-        <h2 class="text-2xl font-semibold mb-6">Past Medications</h2>
-        <div class="card">
-            <div class="card-body">
-                <div class="space-y-4">
-                    {{ range .InactiveMedications }}
-                    <div class="flex items-center justify-between p-4 bg-surface rounded-lg">
-                        <div>
-                            <h4 class="font-medium">{{ .Name }}</h4>
-                            <p class="text-sm text-muted">{{ .Dosage }} • {{ .Frequency }}</p>
-                            {{ if .EndDate }}
-                            <p class="text-xs text-muted">Ended: {{ .EndDate }}</p>
-                            {{ end }}
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="reactivateMedication({{ .ID }})" class="btn btn-sm btn-outline">
-                                Reactivate
-                            </button>
-                            <button onclick="editMedication({{ .ID }})" class="btn btn-sm btn-ghost">
-                                ✏️
-                            </button>
-                        </div>
-                    </div>
-                    {{ end }}
-                </div>
-            </div>
-        </div>
+    {{ else }}
+    <div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
+        <p>No active medications</p>
+        <small>Add your first medication to start tracking</small>
     </div>
     {{ end }}
-</div>
+</article>
+
+<!-- Inactive Medications -->
+{{ if .InactiveMedications }}
+<article style="padding: 1rem;">
+    <h3>Inactive Medications</h3>
+    {{ range .InactiveMedications }}
+    <article style="margin-bottom: 0.5rem; padding: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>{{ .Name }}</strong>
+                <br><small>{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}{{ if and .Dosage.Valid .Frequency.Valid }} - {{ end }}{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}</small>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="
+                    fetch('/api/medications/{{ .ID }}', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify({is_active: true, name: '{{ .Name }}', dosage: '{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}', frequency: '{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}'})
+                    }).then(() => window.location.reload());
+                " class="outline" style="margin: 0; padding: 0.5rem; font-size: 0.9rem;">Reactivate</button>
+                <button onclick="showDeleteConfirmation('{{ .ID }}', '{{ .Name }}', 'inactive')" class="outline secondary" style="margin: 0; padding: 0.5rem; font-size: 0.9rem;">Delete</button>
+            </div>
+        </div>
+    </article>
+    {{ end }}
+</article>
+{{ end }}
+
+<!-- Edit Modals for Active Medications -->
+{{ range .ActiveMedications }}
+<dialog id="edit-medication-{{ .ID }}">
+    <article style="max-width: 600px;">
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-medication-{{ .ID }}').close()"></button>
+            <h3>Edit {{ .Name }}</h3>
+        </header>
+        <form id="edit-form-{{ .ID }}" onsubmit="event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {
+                name: formData.get('name'),
+                dosage: formData.get('dosage'),
+                frequency_type: formData.get('frequency_type'),
+                frequency_value: formData.get('frequency_value'),
+                reminder_time: formData.get('reminder_time'),
+                is_active: true,
+                notes: formData.get('notes') || null
+            };
+
+            // Build frequency string
+            if (data.frequency_type === 'daily') {
+                data.frequency = 'Every day';
+            } else if (data.frequency_type === 'hours') {
+                data.frequency = 'Every ' + data.frequency_value + ' hours';
+            } else if (data.frequency_type === 'days') {
+                data.frequency = 'Every ' + data.frequency_value + ' days';
+            } else {
+                data.frequency = formData.get('frequency_custom');
+            }
+
+            const btn = event.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/medications/{{ .ID }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ $.CSRFToken }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    response.text().then(text => {
+                        console.error('Error:', text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            });
+        ">
+            <label>
+                Medication Name
+                <input type="text" name="name" value="{{ .Name }}" required>
+            </label>
+
+            <label>
+                Dosage
+                <input type="text" name="dosage" value="{{ .Dosage }}" placeholder="e.g., 1 pill, 50mg" required>
+            </label>
+
+            <fieldset>
+                <legend>Frequency</legend>
+                <label>
+                    <input type="radio" name="frequency_type" value="daily" checked> Every day
+                </label>
+                <label>
+                    <input type="radio" name="frequency_type" value="hours"> Every X hours
+                    <input type="number" name="frequency_value" min="1" max="24" placeholder="Hours" style="width: 100px; margin-left: 0.5rem;">
+                </label>
+                <label>
+                    <input type="radio" name="frequency_type" value="days"> Every X days
+                    <input type="number" name="frequency_value" min="1" max="30" placeholder="Days" style="width: 100px; margin-left: 0.5rem;">
+                </label>
+                <label>
+                    <input type="radio" name="frequency_type" value="custom"> Custom
+                    <input type="text" name="frequency_custom" placeholder="e.g., Twice daily" style="margin-left: 0.5rem;">
+                </label>
+            </fieldset>
+
+            <label>
+                Reminder Time (optional)
+                <input type="time" name="reminder_time">
+                <small>Set a daily reminder time</small>
+            </label>
+
+            <label>
+                Notes
+                <textarea name="notes" rows="2">{{ .Notes }}</textarea>
+            </label>
+
+            <footer>
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-medication-{{ .ID }}').close()">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button type="button" onclick="showDeactivateConfirmation('{{ .ID }}', '{{ .Name }}')" class="outline">Deactivate</button>
+                    <button type="button" onclick="showDeleteConfirmation('{{ .ID }}', '{{ .Name }}', 'active')" class="outline secondary">Delete</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
+{{ end }}
+
+<!-- New Medication Modal -->
+<dialog id="new-medication">
+    <article style="max-width: 600px;">
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('new-medication').close()"></button>
+            <h3>Add Medication</h3>
+        </header>
+        <form onsubmit="event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {
+                name: formData.get('name'),
+                dosage: formData.get('dosage'),
+                frequency_type: formData.get('frequency_type'),
+                frequency_value: formData.get('frequency_value'),
+                reminder_time: formData.get('reminder_time'),
+                notes: formData.get('notes') || null
+            };
+
+            // Build frequency string
+            if (data.frequency_type === 'daily') {
+                data.frequency = 'Every day';
+            } else if (data.frequency_type === 'hours') {
+                data.frequency = 'Every ' + data.frequency_value + ' hours';
+            } else if (data.frequency_type === 'days') {
+                data.frequency = 'Every ' + data.frequency_value + ' days';
+            } else {
+                data.frequency = formData.get('frequency_custom');
+            }
+
+            const btn = event.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/medications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ .CSRFToken }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    response.text().then(text => {
+                        console.error('Error:', text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                    });
+                }
+            });
+        ">
+            <label>
+                Medication Name
+                <input type="text" name="name" placeholder="e.g., Prenatal Vitamin" required>
+            </label>
+
+            <label>
+                Dosage
+                <input type="text" name="dosage" placeholder="e.g., 1 pill, 50mg" required>
+            </label>
+
+            <fieldset>
+                <legend>Frequency</legend>
+                <label>
+                    <input type="radio" name="frequency_type" value="daily" checked> Every day
+                </label>
+                <label>
+                    <input type="radio" name="frequency_type" value="hours"> Every X hours
+                    <input type="number" name="frequency_value" min="1" max="24" placeholder="Hours" style="width: 100px; margin-left: 0.5rem;">
+                </label>
+                <label>
+                    <input type="radio" name="frequency_type" value="days"> Every X days
+                    <input type="number" name="frequency_value" min="1" max="30" placeholder="Days" style="width: 100px; margin-left: 0.5rem;">
+                </label>
+                <label>
+                    <input type="radio" name="frequency_type" value="custom"> Custom
+                    <input type="text" name="frequency_custom" placeholder="e.g., Twice daily" style="margin-left: 0.5rem;">
+                </label>
+            </fieldset>
+
+            <label>
+                Reminder Time (optional)
+                <input type="time" name="reminder_time">
+                <small>Set a daily reminder time</small>
+            </label>
+
+            <label>
+                Notes
+                <textarea name="notes" rows="2" placeholder="Optional notes about this medication"></textarea>
+            </label>
+
+            <footer>
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <button type="button" class="secondary" onclick="document.getElementById('new-medication').close()">Cancel</button>
+                    <button type="submit">Add Medication</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
+
+<!-- Delete Confirmation Dialog -->
+<dialog id="delete-medication-confirm">
+    <article style="max-width: 400px;">
+        <header>
+            <h3>Confirm Deletion</h3>
+        </header>
+        <p>Are you sure you want to permanently delete <strong id="delete-med-name"></strong>?</p>
+        <p><small>This action cannot be undone.</small></p>
+        <footer>
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <button type="button" class="secondary" onclick="document.getElementById('delete-medication-confirm').close()">Cancel</button>
+                <button type="button" class="contrast" onclick="confirmDelete()">Delete</button>
+            </div>
+        </footer>
+    </article>
+</dialog>
+
+<!-- Deactivate Confirmation Dialog -->
+<dialog id="deactivate-medication-confirm">
+    <article style="max-width: 400px;">
+        <header>
+            <h3>Confirm Deactivation</h3>
+        </header>
+        <p>Mark <strong id="deactivate-med-name"></strong> as inactive?</p>
+        <p><small>You can reactivate it later if needed.</small></p>
+        <footer>
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <button type="button" class="secondary" onclick="document.getElementById('deactivate-medication-confirm').close()">Cancel</button>
+                <button type="button" onclick="confirmDeactivate()">Deactivate</button>
+            </div>
+        </footer>
+    </article>
+</dialog>
 
 <script>
-function editMedication(id) {
-    // TODO: Implement edit modal
-    console.log('Edit medication:', id);
+let currentMedicationId = null;
+let currentMedicationType = null;
+
+function showDeleteConfirmation(medId, medName, medType) {
+    currentMedicationId = medId;
+    currentMedicationType = medType;
+    document.getElementById('delete-med-name').textContent = medName;
+    document.getElementById('delete-medication-confirm').showModal();
 }
 
-function reactivateMedication(id) {
-    if (confirm('Reactivate this medication?')) {
-        fetch(`/api/medications/${id}}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-                is_active: true
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                alert('Failed to reactivate medication');
-            }
-        })
-        .catch(error => {
-            alert('Error: ' + error.message);
-        });
-    }
+function showDeactivateConfirmation(medId, medName) {
+    currentMedicationId = medId;
+    document.getElementById('deactivate-med-name').textContent = medName;
+    document.getElementById('deactivate-medication-confirm').showModal();
+}
+
+function confirmDelete() {
+    if (!currentMedicationId) return;
+
+    // Close edit modal if open
+    const editModal = document.getElementById('edit-medication-' + currentMedicationId);
+    if (editModal) editModal.close();
+
+    fetch('/api/medications/' + currentMedicationId, {
+        method: 'DELETE',
+        headers: {'X-CSRF-Token': '{{ .CSRFToken }}'}
+    }).then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            console.error('Error deleting medication');
+            window.location.reload();
+        }
+    });
+
+    document.getElementById('delete-medication-confirm').close();
+}
+
+function confirmDeactivate() {
+    if (!currentMedicationId) return;
+
+    document.getElementById('edit-medication-' + currentMedicationId).close();
+
+    fetch('/api/medications/' + currentMedicationId, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': '{{ .CSRFToken }}'
+        },
+        body: JSON.stringify({is_active: false})
+    }).then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            console.error('Error deactivating medication');
+            window.location.reload();
+        }
+    });
+
+    document.getElementById('deactivate-medication-confirm').close();
 }
 </script>
+
+<style>
+/* Fix grid-3 class if it doesn't exist */
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+/* Ensure proper spacing */
+article article {
+    box-shadow: var(--pico-card-box-shadow);
+}
+</style>
 {{ end }}

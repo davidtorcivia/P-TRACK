@@ -350,8 +350,8 @@ func HandleDeleteMedication(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		// Soft delete medication
-		if err := medicationRepo.Delete(id); err != nil {
+		// Hard delete medication (this will cascade delete all logs)
+		if err := medicationRepo.HardDelete(id); err != nil {
 			http.Error(w, "Failed to delete medication", http.StatusInternalServerError)
 			return
 		}

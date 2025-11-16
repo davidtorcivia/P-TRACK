@@ -8,6 +8,7 @@ bin/
 dist/
 build/
 out/
+injection-tracker
 
 # Test binary, built with `go test -c`
 *.test

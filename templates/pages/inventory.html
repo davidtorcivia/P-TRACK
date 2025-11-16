@@ -24,9 +24,9 @@
     </div>
 
     <!-- Add New Item -->
-    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock' }">
+    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '', lowStockThreshold: '' }">
         <header>
-            <h3>➕ Add Inventory</h3>
+            <h3>Add Inventory</h3>
         </header>
         <form @submit.prevent="
             const btn = $el.querySelector('button[type=submit]');
@@ -40,17 +40,23 @@
                 changeAmount = parseInt(amount);
             }
 
+            const data = {
+                change_amount: changeAmount,
+                reason: reason,
+                notes: 'Added inventory'
+            };
+
+            if (lotNumber) data.lot_number = lotNumber;
+            if (expirationDate) data.expiration_date = expirationDate;
+            if (lowStockThreshold) data.low_stock_threshold = parseFloat(lowStockThreshold);
+
             fetch('/api/inventory/' + itemType + '/adjust', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': '{{ .CSRFToken }}'
                 },
-                body: JSON.stringify({
-                    change_amount: changeAmount,
-                    reason: reason,
-                    notes: 'Added inventory'
-                })
+                body: JSON.stringify(data)
             })
             .then(response => {
                 if (response.ok) {
@@ -59,26 +65,28 @@
                     return response.text().then(text => {
                         btn.disabled = false;
                         btn.textContent = 'Add to Inventory';
-                        alert('Error: ' + text);
+                        console.error('Error:', text);
+                        window.location.reload();
                     });
                 }
             })
             .catch(error => {
                 btn.disabled = false;
                 btn.textContent = 'Add to Inventory';
-                alert('Error: ' + error.message);
+                console.error('Error:', error.message);
+                window.location.reload();
             });
         ">
             <div class="grid">
                 <label>
                     Item Type
                     <select x-model="itemType" required>
-                        <option value="progesterone">💉 Progesterone (vials)</option>
-                        <option value="draw_needle">🔹 Draw Needles</option>
-                        <option value="injection_needle">🔸 Injection Needles</option>
-                        <option value="syringe">💊 Syringes</option>
-                        <option value="swab">🧼 Alcohol Swabs</option>
-                        <option value="gauze">🩹 Gauze Pads</option>
+                        <option value="progesterone">Progesterone (vials)</option>
+                        <option value="draw_needle">Draw Needles</option>
+                        <option value="injection_needle">Injection Needles</option>
+                        <option value="syringe">Syringes</option>
+                        <option value="swab">Alcohol Swabs</option>
+                        <option value="gauze">Gauze Pads</option>
                     </select>
                 </label>
                 <label x-show="itemType === 'progesterone'">
@@ -90,6 +98,21 @@
                     <input type="number" x-model="amount" :step="itemType === 'progesterone' ? '1' : '1'" min="1" required>
                 </label>
             </div>
+            <div class="grid">
+                <label>
+                    Lot Number (optional)
+                    <input type="text" x-model="lotNumber" placeholder="Lot/batch number">
+                </label>
+                <label>
+                    Expiration Date (optional)
+                    <input type="date" x-model="expirationDate">
+                </label>
+                <label>
+                    Low Stock Alert Threshold (optional)
+                    <input type="number" x-model="lowStockThreshold" :step="itemType === 'progesterone' ? '0.1' : '1'" min="0" placeholder="Alert when quantity is below...">
+                    <small>Get alerts when stock falls below this amount</small>
+                </label>
+            </div>
             <button type="submit">Add to Inventory</button>
         </form>
     </article>
@@ -97,11 +120,11 @@
     <!-- Current Inventory -->
     <article>
         <header>
-            <h3>📦 Current Stock</h3>
+            <h3>Current Stock</h3>
         </header>
         <div id="inventory-items">
         {{ range .InventoryItems }}
-        <article x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '' }">
+        <article x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '', lowStockThreshold: {{ if .LowStockThreshold }}{{ .LowStockThreshold }}{{ else }}0{{ end }} }">
             <div class="grid">
                 <div>
                     <h3 style="margin-bottom: 0.5rem;">
@@ -110,14 +133,14 @@
                     <p style="margin: 0;">
                         <strong style="font-size: 1.5rem;">{{ .Quantity }} {{ .Unit }}</strong>
                         {{ if .LowStock }}
-                        <span style="color: var(--pico-warning);">⚠️ Low Stock</span>
+                        <span style="color: var(--pico-warning);">Low Stock</span>
                         {{ end }}
                     </p>
                     {{ if .ExpirationDate }}
                     <small>
                         Expires: {{ .FormattedExpiration }}
                         {{ if .ExpiringSoon }}
-                        <span style="color: var(--pico-del-color);">⚠️ Expiring soon!</span>
+                        <span style="color: var(--pico-del-color);">Expiring soon!</span>
                         {{ end }}
                     </small>
                     {{ end }}
@@ -138,11 +161,55 @@
 
             <!-- Adjustment Form -->
             <div x-show="showAdjust" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
-                <form hx-post="/api/inventory/{{ .ItemType }}/adjust"
-                      hx-headers='{"X-CSRF-Token": "{{ $.CSRFToken }}"}'
-                      hx-target="closest article"
-                      hx-swap="outerHTML"
-                      @htmx:after-request="showAdjust = false">
+                <form @submit.prevent="
+                    const btn = $el.querySelector('button[type=submit]');
+                    btn.disabled = true;
+                    btn.setAttribute('aria-busy', 'true');
+
+                    const data = {
+                        change_amount: parseFloat(adjustAmount),
+                        reason: adjustReason,
+                        notes: adjustNotes || null
+                    };
+
+                    if (adjustReason === 'restock') {
+                        const lotNum = $el.querySelector('[name=lot_number]')?.value;
+                        const expDate = $el.querySelector('[name=expiration_date]')?.value;
+                        if (lotNum) data.lot_number = lotNum;
+                        if (expDate) data.expiration_date = expDate;
+                    }
+
+                    if (lowStockThreshold && lowStockThreshold > 0) {
+                        data.low_stock_threshold = parseFloat(lowStockThreshold);
+                    }
+
+                    fetch('/api/inventory/{{ .ItemType }}/adjust', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ $.CSRFToken }}'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            return response.text().then(text => {
+                                console.error('Error:', text);
+                                btn.disabled = false;
+                                btn.removeAttribute('aria-busy');
+                                window.location.reload();
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error.message);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                        window.location.reload();
+                    });
+                ">
 
                     <div class="grid">
                         <label for="adjust-amount-{{ .ItemType }}">
@@ -165,10 +232,10 @@
                                     required>
                                 <option value="">Select reason...</option>
                                 <option value="restock">Restock</option>
-                                <option value="manual_correction">Manual Correction</option>
+                                <option value="manual_adjustment">Manual Adjustment</option>
                                 <option value="expired">Expired/Discarded</option>
                                 <option value="damaged">Damaged</option>
-                                <option value="other">Other</option>
+                                <option value="correction">Correction</option>
                             </select>
                         </label>
                     </div>
@@ -180,6 +247,18 @@
                                   x-model="adjustNotes"
                                   rows="2"
                                   placeholder="Additional details..."></textarea>
+                    </label>
+
+                    <label for="low-stock-threshold-{{ .ItemType }}">
+                        Low Stock Alert Threshold (optional)
+                        <input type="number"
+                               id="low-stock-threshold-{{ .ItemType }}"
+                               name="low_stock_threshold"
+                               x-model="lowStockThreshold"
+                               step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
+                               min="0"
+                               placeholder="Alert when quantity is below...">
+                        <small>Get alerts when stock falls below this amount</small>
                     </label>
 
                     <!-- Optional fields for restock -->
