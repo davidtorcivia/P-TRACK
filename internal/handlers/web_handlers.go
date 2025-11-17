@@ -799,14 +799,14 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 
 		// Get recent activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'injection' as type, timestamp, side as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM injections
 			UNION ALL
-			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'symptom' as type, timestamp, COALESCE(pain_location, '') as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM symptom_logs
 			UNION ALL
 			SELECT 'medication' as type, timestamp,
-				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				COALESCE((SELECT name FROM medications WHERE id = medication_logs.medication_id), '') as detail1,
 				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
 				notes, medication_logs.id
 			FROM medication_logs
@@ -926,14 +926,14 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 
 		// Get all activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'injection' as type, timestamp, side as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM injections
 			UNION ALL
-			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'symptom' as type, timestamp, COALESCE(pain_location, '') as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM symptom_logs
 			UNION ALL
 			SELECT 'medication' as type, timestamp,
-				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				COALESCE((SELECT name FROM medications WHERE id = medication_logs.medication_id), '') as detail1,
 				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
 				notes, medication_logs.id
 			FROM medication_logs
