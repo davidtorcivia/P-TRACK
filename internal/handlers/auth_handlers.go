@@ -202,8 +202,32 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 			fmt.Printf("Error updating last login: %v\n", err)
 		}
 
-		// Generate JWT token
-		token, err := jwtManager.GenerateToken(user.ID, user.Username)
+		// Get user's account
+		accountRepo := repository.NewAccountRepository(db.DB)
+		account, err := accountRepo.GetUserAccount(user.ID)
+		if err != nil {
+			auditRepo.LogWithDetails(
+				sql.NullInt64{Int64: user.ID, Valid: true},
+				"login_failed",
+				"user",
+				sql.NullInt64{Int64: user.ID, Valid: true},
+				map[string]interface{}{"reason": "no_account_found"},
+				ipAddress,
+				userAgent,
+			)
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "User account not properly configured. Please contact support.")
+			return
+		}
+
+		// Get user's role in the account
+		member, err := accountRepo.GetMember(account.ID, user.ID)
+		if err != nil {
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to retrieve account membership")
+			return
+		}
+
+		// Generate JWT token with account info
+		token, err := jwtManager.GenerateToken(user.ID, user.Username, account.ID, member.Role)
 		if err != nil {
 			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to generate authentication token")
 			return
@@ -350,7 +374,37 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Create account for the new user
+		accountRepo := repository.NewAccountRepository(db.DB)
+		accountID, err := accountRepo.Create(nil, user.ID) // nil = no custom account name
+		if err != nil {
+			// Rollback: Delete the user if account creation fails
+			userRepo.Delete(user.ID)
+			auditRepo.LogWithDetails(
+				sql.NullInt64{Int64: user.ID, Valid: true},
+				"registration_failed",
+				"user",
+				sql.NullInt64{Int64: user.ID, Valid: true},
+				map[string]interface{}{"reason": "account_creation_failed"},
+				ipAddress,
+				userAgent,
+			)
+			respondError(w, http.StatusInternalServerError, "Failed to create account")
+			return
+		}
+
 		// Log successful registration
+		auditRepo.LogWithDetails(
+			sql.NullInt64{Int64: user.ID, Valid: true},
+			"registration_success",
+			"user",
+			sql.NullInt64{Int64: user.ID, Valid: true},
+			map[string]interface{}{"account_id": accountID},
+			ipAddress,
+			userAgent,
+		)
+
+		// Continue with original audit log
 		auditRepo.LogWithDetails(
 			sql.NullInt64{Int64: user.ID, Valid: true},
 			"registration_success",

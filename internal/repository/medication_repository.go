@@ -20,8 +20,8 @@ func NewMedicationRepository(db *database.DB) *MedicationRepository {
 // Create creates a new medication
 func (r *MedicationRepository) Create(medication *models.Medication) error {
 	query := `
-		INSERT INTO medications (name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO medications (name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, account_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	result, err := r.db.Exec(query,
 		medication.Name,
@@ -34,6 +34,7 @@ func (r *MedicationRepository) Create(medication *models.Medication) error {
 		medication.ScheduledTime,
 		medication.TimeWindowMinutes,
 		medication.ReminderEnabled,
+		medication.AccountID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create medication: %w", err)
@@ -48,15 +49,15 @@ func (r *MedicationRepository) Create(medication *models.Medication) error {
 	return nil
 }
 
-// GetByID retrieves a medication by ID
-func (r *MedicationRepository) GetByID(id int64) (*models.Medication, error) {
+// GetByID retrieves a medication by ID and account (ensures data isolation)
+func (r *MedicationRepository) GetByID(id int64, accountID int64) (*models.Medication, error) {
 	query := `
-		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at
+		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at, account_id
 		FROM medications
-		WHERE id = ?
+		WHERE id = ? AND account_id = ?
 	`
 	var medication models.Medication
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRow(query, id, accountID).Scan(
 		&medication.ID,
 		&medication.Name,
 		&medication.Dosage,
@@ -70,6 +71,7 @@ func (r *MedicationRepository) GetByID(id int64) (*models.Medication, error) {
 		&medication.ReminderEnabled,
 		&medication.CreatedAt,
 		&medication.UpdatedAt,
+		&medication.AccountID,
 	)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -81,14 +83,14 @@ func (r *MedicationRepository) GetByID(id int64) (*models.Medication, error) {
 	return &medication, nil
 }
 
-// Update updates a medication
-func (r *MedicationRepository) Update(medication *models.Medication) error {
+// Update updates a medication (only if it belongs to the account)
+func (r *MedicationRepository) Update(medication *models.Medication, accountID int64) error {
 	query := `
 		UPDATE medications
 		SET name = ?, dosage = ?, frequency = ?, start_date = ?, end_date = ?, is_active = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?
+		WHERE id = ? AND account_id = ?
 	`
-	_, err := r.db.Exec(query,
+	result, err := r.db.Exec(query,
 		medication.Name,
 		medication.Dosage,
 		medication.Frequency,
@@ -97,41 +99,64 @@ func (r *MedicationRepository) Update(medication *models.Medication) error {
 		medication.IsActive,
 		medication.Notes,
 		medication.ID,
+		accountID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update medication: %w", err)
 	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
 	return nil
 }
 
-// Delete deletes a medication (soft delete by setting is_active to false)
-func (r *MedicationRepository) Delete(id int64) error {
-	query := `UPDATE medications SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := r.db.Exec(query, id)
+// Delete deletes a medication (soft delete by setting is_active to false, only if it belongs to the account)
+func (r *MedicationRepository) Delete(id int64, accountID int64) error {
+	query := `UPDATE medications SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND account_id = ?`
+	result, err := r.db.Exec(query, id, accountID)
 	if err != nil {
 		return fmt.Errorf("failed to delete medication: %w", err)
 	}
-	return nil
-}
-
-// HardDelete permanently deletes a medication and all its logs
-func (r *MedicationRepository) HardDelete(id int64) error {
-	query := `DELETE FROM medications WHERE id = ?`
-	_, err := r.db.Exec(query, id)
+	rows, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("failed to hard delete medication: %w", err)
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrNotFound
 	}
 	return nil
 }
 
-// List retrieves all medications
-func (r *MedicationRepository) List() ([]*models.Medication, error) {
+// HardDelete permanently deletes a medication and all its logs (only if it belongs to the account)
+func (r *MedicationRepository) HardDelete(id int64, accountID int64) error {
+	query := `DELETE FROM medications WHERE id = ? AND account_id = ?`
+	result, err := r.db.Exec(query, id, accountID)
+	if err != nil {
+		return fmt.Errorf("failed to hard delete medication: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// List retrieves all medications for an account
+func (r *MedicationRepository) List(accountID int64) ([]*models.Medication, error) {
 	query := `
-		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at
+		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at, account_id
 		FROM medications
+		WHERE account_id = ?
 		ORDER BY name
 	`
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list medications: %w", err)
 	}
@@ -140,15 +165,15 @@ func (r *MedicationRepository) List() ([]*models.Medication, error) {
 	return r.scanMedications(rows)
 }
 
-// ListActive retrieves all active medications
-func (r *MedicationRepository) ListActive() ([]*models.Medication, error) {
+// ListActive retrieves all active medications for an account
+func (r *MedicationRepository) ListActive(accountID int64) ([]*models.Medication, error) {
 	query := `
-		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at
+		SELECT id, name, dosage, frequency, start_date, end_date, is_active, notes, scheduled_time, time_window_minutes, reminder_enabled, created_at, updated_at, account_id
 		FROM medications
-		WHERE is_active = 1
+		WHERE is_active = 1 AND account_id = ?
 		ORDER BY name
 	`
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list active medications: %w", err)
 	}
@@ -344,6 +369,7 @@ func (r *MedicationRepository) scanMedications(rows *sql.Rows) ([]*models.Medica
 			&medication.ReminderEnabled,
 			&medication.CreatedAt,
 			&medication.UpdatedAt,
+			&medication.AccountID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan medication: %w", err)

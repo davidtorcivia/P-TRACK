@@ -16,8 +16,10 @@ const (
 
 // UserContext holds user information in the request context
 type UserContext struct {
-	UserID   int64
-	Username string
+	UserID    int64
+	Username  string
+	AccountID int64  // Account the user belongs to
+	Role      string // 'owner' or 'member'
 }
 
 // AuthMiddleware validates JWT tokens and adds user context
@@ -50,8 +52,10 @@ func (am *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 
 		// Add user context
 		userCtx := &UserContext{
-			UserID:   claims.UserID,
-			Username: claims.Username,
+			UserID:    claims.UserID,
+			Username:  claims.Username,
+			AccountID: claims.AccountID,
+			Role:      claims.Role,
 		}
 		ctx := context.WithValue(r.Context(), UserContextKey, userCtx)
 
@@ -92,4 +96,20 @@ func GetUserID(ctx context.Context) int64 {
 		return userCtx.UserID
 	}
 	return 0
+}
+
+// GetAccountID retrieves account ID from request context
+func GetAccountID(ctx context.Context) int64 {
+	if userCtx, ok := ctx.Value(UserContextKey).(*UserContext); ok {
+		return userCtx.AccountID
+	}
+	return 0
+}
+
+// GetRole retrieves user role from request context
+func GetRole(ctx context.Context) string {
+	if userCtx, ok := ctx.Value(UserContextKey).(*UserContext); ok {
+		return userCtx.Role
+	}
+	return ""
 }

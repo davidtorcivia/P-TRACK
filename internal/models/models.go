@@ -30,6 +30,7 @@ type Course struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	CreatedBy       sql.NullInt64
+	AccountID       sql.NullInt64 // Account this course belongs to
 
 	// Computed fields (set by repository)
 	InjectionCount int
@@ -114,6 +115,7 @@ type Medication struct {
 	ReminderEnabled    bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	AccountID          sql.NullInt64 // Account this medication belongs to
 
 	// Computed fields (set by repository)
 	TakenToday bool
@@ -150,6 +152,7 @@ type InventoryItem struct {
 	Notes              sql.NullString
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	AccountID          sql.NullInt64 // Account this inventory belongs to
 }
 
 // InventoryHistory represents an inventory change record
@@ -198,4 +201,47 @@ type Setting struct {
 	Value     string
 	UpdatedAt time.Time
 	UpdatedBy sql.NullInt64
+}
+
+// Account represents a family/couple account (multi-user support)
+type Account struct {
+	ID        int64
+	Name      sql.NullString
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// AccountMember represents a user's membership in an account
+type AccountMember struct {
+	AccountID int64
+	UserID    int64
+	Role      string // 'owner' or 'member'
+	JoinedAt  time.Time
+	InvitedBy sql.NullInt64
+
+	// Computed fields (set by repository)
+	Username string // Username of this member
+}
+
+// AccountInvitation represents an invitation to join an account
+type AccountInvitation struct {
+	ID         int64
+	AccountID  int64
+	Email      string
+	TokenHash  string
+	InvitedBy  int64
+	Role       string
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	AcceptedAt sql.NullTime
+	AcceptedBy sql.NullInt64
+
+	// Computed fields (set by repository)
+	InviterUsername string
+	IsExpired       bool
+}
+
+// IsExpiredCheck checks if the invitation has expired
+func (i *AccountInvitation) IsExpiredCheck() bool {
+	return time.Now().After(i.ExpiresAt)
 }
