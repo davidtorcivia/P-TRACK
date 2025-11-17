@@ -20,9 +20,11 @@ import (
 // getBasePageData returns common data for all authenticated pages
 func getBasePageData(r *http.Request, csrf *middleware.CSRFProtection) map[string]interface{} {
 	userID := middleware.GetUserID(r.Context())
+	accountID := middleware.GetAccountID(r.Context())
 
 	data := map[string]interface{}{
 		"IsAuthenticated": true,
+		"AccountID":        accountID,
 		"UserID":          userID,
 	}
 
@@ -126,11 +128,12 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 
 		// Get user's timezone preference
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
 		userTimezone := GetUserTimezone(db, userID)
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			activeData := map[string]interface{}{
 				"ID":        activeCourse.ID,
@@ -249,11 +252,12 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 
 		// Get user's timezone preference
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
 		userTimezone := GetUserTimezone(db, userID)
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = map[string]interface{}{
 				"ID":   activeCourse.ID,
@@ -310,10 +314,11 @@ func HandleSymptomsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Symptoms"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = map[string]interface{}{
 				"ID":   activeCourse.ID,
@@ -336,9 +341,10 @@ func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 		data["Title"] = "Medications - Injection Tracker"
 		data["Action"] = r.URL.Query().Get("action")
 
+		accountID := middleware.GetAccountID(r.Context())
 		// Fetch active medications
 		medicationRepo := repository.NewMedicationRepository(db)
-		activeMeds, err := medicationRepo.ListActive()
+		activeMeds, err := medicationRepo.ListActive(accountID)
 		if err == nil && len(activeMeds) > 0 {
 			// Check if each medication was taken today
 			for _, med := range activeMeds {
@@ -356,7 +362,7 @@ func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 		}
 
 		// Fetch inactive medications
-		allMeds, err := medicationRepo.List()
+		allMeds, err := medicationRepo.List(accountID)
 		if err == nil {
 			inactiveMeds := []*models.Medication{}
 			for _, med := range allMeds {
@@ -510,10 +516,11 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Courses"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			activeData := map[string]interface{}{
 				"ID":            activeCourse.ID,
@@ -533,7 +540,7 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 		}
 
 		// Get past courses
-		courses, err := courseRepo.List()
+		courses, err := courseRepo.List(accountID)
 		if err == nil {
 			pastCourses := []map[string]interface{}{}
 			for _, course := range courses {
@@ -688,6 +695,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Edit Symptom - Injection Tracker"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get symptom ID from URL
 		idStr := chi.URLParam(r, "id")
@@ -707,7 +715,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 
 		// Get active course for the template
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = activeCourse
 		}
@@ -727,10 +735,11 @@ func HandleSymptomsHistoryPage(db *database.DB, csrf *middleware.CSRFProtection)
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Symptom History - Injection Tracker"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get active course for consistency with other pages
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = activeCourse
 		}
