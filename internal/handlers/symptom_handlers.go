@@ -43,7 +43,8 @@ type UpdateSymptomRequest struct {
 func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -81,7 +82,7 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 				http.Error(w, "Invalid course_id", http.StatusBadRequest)
 				return
 			}
-			symptoms, err = symptomRepo.ListByCourse(cid, limit, offset)
+			symptoms, err = symptomRepo.ListByCourse(cid, accountID, limit, offset)
 		} else if startDate != "" && endDate != "" {
 			start, err1 := time.Parse("2006-01-02", startDate)
 			end, err2 := time.Parse("2006-01-02", endDate)
@@ -89,9 +90,9 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 				http.Error(w, "Invalid date format, use YYYY-MM-DD", http.StatusBadRequest)
 				return
 			}
-			symptoms, err = symptomRepo.ListByDateRange(start, end, limit, offset)
+			symptoms, err = symptomRepo.ListByDateRange(accountID, start, end, limit, offset)
 		} else {
-			symptoms, err = symptomRepo.List(limit, offset)
+			symptoms, err = symptomRepo.List(accountID, limit, offset)
 		}
 
 		if err != nil {
@@ -134,7 +135,8 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 func HandleCreateSymptom(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -224,7 +226,8 @@ func HandleCreateSymptom(db *database.DB) http.HandlerFunc {
 func HandleGetSymptom(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -237,7 +240,7 @@ func HandleGetSymptom(db *database.DB) http.HandlerFunc {
 		}
 
 		symptomRepo := repository.NewSymptomRepository(db)
-		symptom, err := symptomRepo.GetByID(id)
+		symptom, err := symptomRepo.GetByID(id, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Symptom log not found", http.StatusNotFound)
@@ -271,7 +274,8 @@ func HandleGetSymptom(db *database.DB) http.HandlerFunc {
 func HandleUpdateSymptom(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -297,7 +301,7 @@ func HandleUpdateSymptom(db *database.DB) http.HandlerFunc {
 
 		// Get existing symptom log
 		symptomRepo := repository.NewSymptomRepository(db)
-		symptom, err := symptomRepo.GetByID(id)
+		symptom, err := symptomRepo.GetByID(id, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Symptom log not found", http.StatusNotFound)
@@ -357,7 +361,7 @@ func HandleUpdateSymptom(db *database.DB) http.HandlerFunc {
 		}
 
 		// Update symptom log
-		if err := symptomRepo.Update(symptom); err != nil {
+		if err := symptomRepo.Update(symptom, accountID); err != nil {
 			http.Error(w, "Failed to update symptom log", http.StatusInternalServerError)
 			return
 		}
@@ -385,7 +389,8 @@ func HandleUpdateSymptom(db *database.DB) http.HandlerFunc {
 func HandleDeleteSymptom(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -399,7 +404,7 @@ func HandleDeleteSymptom(db *database.DB) http.HandlerFunc {
 
 		// Verify symptom log exists
 		symptomRepo := repository.NewSymptomRepository(db)
-		symptom, err := symptomRepo.GetByID(id)
+		symptom, err := symptomRepo.GetByID(id, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Symptom log not found", http.StatusNotFound)
@@ -410,7 +415,7 @@ func HandleDeleteSymptom(db *database.DB) http.HandlerFunc {
 		}
 
 		// Delete symptom log
-		if err := symptomRepo.Delete(id); err != nil {
+		if err := symptomRepo.Delete(id, accountID); err != nil {
 			http.Error(w, "Failed to delete symptom log", http.StatusInternalServerError)
 			return
 		}
@@ -437,13 +442,14 @@ func HandleDeleteSymptom(db *database.DB) http.HandlerFunc {
 func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		symptomRepo := repository.NewSymptomRepository(db)
-		symptoms, err := symptomRepo.List(10, 0) // Get last 10 symptoms
+		symptoms, err := symptomRepo.List(accountID, 10, 0)
 		if err != nil {
 			http.Error(w, "Failed to retrieve symptoms", http.StatusInternalServerError)
 			return
@@ -598,7 +604,8 @@ func formatTimeAgo(t time.Time) string {
 func HandleGetSymptomTrends(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -614,7 +621,7 @@ func HandleGetSymptomTrends(db *database.DB) http.HandlerFunc {
 		endDate := time.Now()
 		startDate := endDate.AddDate(0, 0, -days)
 
-		symptoms, err := symptomRepo.ListByDateRange(startDate, endDate, 1000, 0)
+		symptoms, err := symptomRepo.ListByDateRange(accountID, startDate, endDate, 1000, 0)
 		if err != nil {
 			http.Error(w, "Failed to retrieve symptom trends", http.StatusInternalServerError)
 			return

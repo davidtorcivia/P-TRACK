@@ -707,7 +707,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 
 		// Get symptom log
 		symptomRepo := repository.NewSymptomRepository(db)
-		symptom, err := symptomRepo.GetByID(id)
+		symptom, err := symptomRepo.GetByID(id, accountID)
 		if err != nil {
 			http.Error(w, "Symptom log not found", http.StatusNotFound)
 			return

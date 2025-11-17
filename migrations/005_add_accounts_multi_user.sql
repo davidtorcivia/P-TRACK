@@ -92,6 +92,9 @@ CREATE INDEX idx_medications_account_active ON medications(account_id, is_active
 
 CREATE INDEX idx_inventory_items_account ON inventory_items(account_id);
 
+-- Create composite UNIQUE index for inventory items (each account has their own progesterone, needles, etc.)
+CREATE UNIQUE INDEX idx_inventory_items_type_account ON inventory_items(item_type, account_id);
+
 -- ============================================
 -- STEP 4: MIGRATE EXISTING DATA
 -- ============================================
