@@ -209,8 +209,14 @@ func TestRefreshToken(t *testing.T) {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
 
-	// Wait a bit to ensure new token has different timestamp
-	time.Sleep(100 * time.Millisecond)
+	// Get original claims
+	originalClaims, err := manager.ValidateToken(originalToken)
+	if err != nil {
+		t.Fatalf("Failed to validate original token: %v", err)
+	}
+
+	// Wait to ensure new token has different timestamp (JWT uses second precision)
+	time.Sleep(1100 * time.Millisecond)
 
 	// Refresh token
 	newToken, err := manager.RefreshToken(originalToken)
@@ -222,22 +228,28 @@ func TestRefreshToken(t *testing.T) {
 		t.Error("Expected non-empty refreshed token")
 	}
 
+	// Tokens should be different if enough time has passed (>1 second for JWT precision)
 	if newToken == originalToken {
-		t.Error("Refreshed token should be different from original")
+		t.Error("Refreshed token should be different from original after waiting >1 second")
 	}
 
 	// Validate new token
-	claims, err := manager.ValidateToken(newToken)
+	newClaims, err := manager.ValidateToken(newToken)
 	if err != nil {
 		t.Fatalf("Failed to validate refreshed token: %v", err)
 	}
 
-	if claims.UserID != userID {
-		t.Errorf("Expected UserID %d, got %d", userID, claims.UserID)
+	if newClaims.UserID != userID {
+		t.Errorf("Expected UserID %d, got %d", userID, newClaims.UserID)
 	}
 
-	if claims.Username != username {
-		t.Errorf("Expected Username %s, got %s", username, claims.Username)
+	if newClaims.Username != username {
+		t.Errorf("Expected Username %s, got %s", username, newClaims.Username)
+	}
+
+	// Verify the new token has a later expiration time (purpose of refresh)
+	if !newClaims.ExpiresAt.Time.After(originalClaims.ExpiresAt.Time) {
+		t.Error("Refreshed token should have later expiration time than original")
 	}
 }
 

@@ -21,6 +21,13 @@ func setupInjectionTestDB(t *testing.T) *database.DB {
 
 	// Create schema
 	schema := `
+		CREATE TABLE accounts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+
 		CREATE TABLE courses (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
@@ -29,6 +36,7 @@ func setupInjectionTestDB(t *testing.T) *database.DB {
 			actual_end_date DATE,
 			is_active BOOLEAN DEFAULT 1,
 			notes TEXT,
+			account_id INTEGER NOT NULL DEFAULT 1 REFERENCES accounts(id) ON DELETE CASCADE,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			created_by INTEGER
@@ -46,12 +54,16 @@ func setupInjectionTestDB(t *testing.T) *database.DB {
 			has_knots BOOLEAN DEFAULT 0,
 			site_reaction TEXT CHECK(site_reaction IN ('none', 'redness', 'swelling', 'bruising', 'other')),
 			notes TEXT,
+			account_id INTEGER NOT NULL DEFAULT 1 REFERENCES accounts(id) ON DELETE CASCADE,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 
 		CREATE INDEX idx_injections_course ON injections(course_id);
 		CREATE INDEX idx_injections_timestamp ON injections(timestamp);
+
+		-- Insert default test account
+		INSERT INTO accounts (id, name) VALUES (1, 'Test Account');
 	`
 	if _, err := db.Exec(schema); err != nil {
 		t.Fatalf("Failed to create schema: %v", err)
@@ -98,6 +110,7 @@ func TestInjectionRepository_Create(t *testing.T) {
 				AdministeredBy: sql.NullInt64{Int64: 1, Valid: true},
 				Timestamp:      time.Now(),
 				Side:           "left",
+				AccountID:      1,
 			},
 			expectError: false,
 		},
@@ -107,6 +120,7 @@ func TestInjectionRepository_Create(t *testing.T) {
 				CourseID:  courseID,
 				Timestamp: time.Now(),
 				Side:      "right",
+				AccountID: 1,
 			},
 			expectError: false,
 		},
@@ -122,6 +136,7 @@ func TestInjectionRepository_Create(t *testing.T) {
 				HasKnots:     true,
 				SiteReaction: sql.NullString{String: "redness", Valid: true},
 				Notes:        sql.NullString{String: "Test notes", Valid: true},
+				AccountID:    1,
 			},
 			expectError: false,
 		},
