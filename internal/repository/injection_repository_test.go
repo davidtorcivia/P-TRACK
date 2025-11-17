@@ -148,7 +148,7 @@ func TestInjectionRepository_Create(t *testing.T) {
 			}
 
 			// Verify injection was created
-			retrieved, err := repo.GetByID(tt.injection.ID)
+			retrieved, err := repo.GetByID(tt.injection.ID, 1)
 			if err != nil {
 				t.Errorf("Failed to retrieve created injection: %v", err)
 				return
@@ -197,7 +197,7 @@ func TestInjectionRepository_GetByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			retrieved, err := repo.GetByID(tt.id)
+			retrieved, err := repo.GetByID(tt.id, 1)
 
 			if tt.expectError {
 				if err != ErrNotFound {
@@ -242,12 +242,12 @@ func TestInjectionRepository_Update(t *testing.T) {
 	injection.HasKnots = true
 	injection.Notes = sql.NullString{String: "Updated notes", Valid: true}
 
-	if err := repo.Update(injection); err != nil {
+	if err := repo.Update(injection, 1); err != nil {
 		t.Fatalf("Failed to update injection: %v", err)
 	}
 
 	// Verify update
-	retrieved, err := repo.GetByID(injection.ID)
+	retrieved, err := repo.GetByID(injection.ID, 1)
 	if err != nil {
 		t.Fatalf("Failed to retrieve injection: %v", err)
 	}
@@ -283,12 +283,12 @@ func TestInjectionRepository_Delete(t *testing.T) {
 	}
 
 	// Delete injection
-	if err := repo.Delete(injection.ID); err != nil {
+	if err := repo.Delete(injection.ID, 1); err != nil {
 		t.Fatalf("Failed to delete injection: %v", err)
 	}
 
 	// Verify deletion
-	_, err := repo.GetByID(injection.ID)
+	_, err := repo.GetByID(injection.ID, 1)
 	if err != ErrNotFound {
 		t.Error("Expected injection to be deleted")
 	}
@@ -314,7 +314,7 @@ func TestInjectionRepository_List(t *testing.T) {
 	}
 
 	// Test pagination
-	list, err := repo.List(10, 0)
+	list, err := repo.List(1, 10, 0)
 	if err != nil {
 		t.Fatalf("Failed to list injections: %v", err)
 	}
@@ -324,7 +324,7 @@ func TestInjectionRepository_List(t *testing.T) {
 	}
 
 	// Test offset
-	list2, err := repo.List(10, 10)
+	list2, err := repo.List(1, 10, 10)
 	if err != nil {
 		t.Fatalf("Failed to list injections with offset: %v", err)
 	}
@@ -367,7 +367,7 @@ func TestInjectionRepository_ListByCourse(t *testing.T) {
 	}
 
 	// List injections for course 1
-	list, err := repo.ListByCourse(course1ID, 100, 0)
+	list, err := repo.ListByCourse(course1ID, 1, 100, 0)
 	if err != nil {
 		t.Fatalf("Failed to list injections by course: %v", err)
 	}
@@ -404,7 +404,7 @@ func TestInjectionRepository_GetLastBySide(t *testing.T) {
 	}
 
 	// Get last left injection
-	last, err := repo.GetLastBySide("left")
+	last, err := repo.GetLastBySide(1, "left")
 	if err != nil {
 		t.Fatalf("Failed to get last injection: %v", err)
 	}
@@ -415,7 +415,7 @@ func TestInjectionRepository_GetLastBySide(t *testing.T) {
 	}
 
 	// Test non-existent side
-	_, err = repo.GetLastBySide("right")
+	_, err = repo.GetLastBySide(1, "right")
 	if err != ErrNotFound {
 		t.Error("Expected ErrNotFound for non-existent side")
 	}
@@ -440,7 +440,7 @@ func TestInjectionRepository_CountByCourse(t *testing.T) {
 		}
 	}
 
-	count, err := repo.CountByCourse(courseID)
+	count, err := repo.CountByCourse(courseID, 1)
 	if err != nil {
 		t.Fatalf("Failed to count injections: %v", err)
 	}
@@ -484,7 +484,7 @@ func TestInjectionRepository_GetSiteHistory(t *testing.T) {
 	}
 
 	// Get site history for last 14 days
-	history, err := repo.GetSiteHistory("left", 14)
+	history, err := repo.GetSiteHistory(1, "left", 14)
 	if err != nil {
 		t.Fatalf("Failed to get site history: %v", err)
 	}

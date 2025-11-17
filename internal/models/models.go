@@ -11,6 +11,8 @@ type User struct {
 	Username             string
 	PasswordHash         string
 	Email                sql.NullString
+	AccountID            int64
+	Role                 string  // "owner" or "member"
 	IsActive             bool
 	FailedLoginAttempts  int
 	LockedUntil          sql.NullTime
@@ -30,7 +32,7 @@ type Course struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	CreatedBy       sql.NullInt64
-	AccountID       sql.NullInt64 // Account this course belongs to
+	AccountID       int64 // Account this course belongs to
 
 	// Computed fields (set by repository)
 	InjectionCount int
@@ -81,6 +83,7 @@ type Injection struct {
 	HasKnots        bool
 	SiteReaction    sql.NullString
 	Notes           sql.NullString
+	AccountID       int64 // Account this injection belongs to
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -96,6 +99,7 @@ type SymptomLog struct {
 	PainType     sql.NullString
 	Symptoms     sql.NullString // JSON array
 	Notes        sql.NullString
+	AccountID    int64          // Account this symptom log belongs to
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -115,7 +119,7 @@ type Medication struct {
 	ReminderEnabled    bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
-	AccountID          sql.NullInt64 // Account this medication belongs to
+	AccountID          int64 // Account this medication belongs to
 
 	// Computed fields (set by repository)
 	TakenToday bool
@@ -152,7 +156,7 @@ type InventoryItem struct {
 	Notes              sql.NullString
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
-	AccountID          sql.NullInt64 // Account this inventory belongs to
+	AccountID          int64 // Account this inventory belongs to
 }
 
 // InventoryHistory represents an inventory change record

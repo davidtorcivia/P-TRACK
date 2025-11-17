@@ -151,7 +151,7 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 			ScheduledTime:     nullString(req.ScheduledTime),
 			TimeWindowMinutes: nullInt64(req.TimeWindowMinutes),
 			ReminderEnabled:   reminderEnabled,
-		AccountID:         sql.NullInt64{Int64: accountID, Valid: true},
+		AccountID:         accountID,
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)

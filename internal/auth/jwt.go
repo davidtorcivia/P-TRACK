@@ -83,6 +83,19 @@ func (m *JWTManager) RefreshToken(tokenString string) (string, error) {
 		return "", err
 	}
 
+	// If claims is nil (which can happen with expired tokens), we need to parse without validation
+	if claims == nil {
+		token, _, err := jwt.NewParser().ParseUnverified(tokenString, &Claims{})
+		if err != nil {
+			return "", ErrInvalidToken
+		}
+		var ok bool
+		claims, ok = token.Claims.(*Claims)
+		if !ok {
+			return "", ErrInvalidToken
+		}
+	}
+
 	// Generate new token with same claims but new expiration
 	return m.GenerateToken(claims.UserID, claims.Username, claims.AccountID, claims.Role)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -63,7 +62,6 @@ func TestSecurity_SQLInjectionPrevention(t *testing.T) {
 	db := setupSecurityTestDB(t)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour)
 
 	// Test SQL injection attempts in login
@@ -100,11 +98,11 @@ func TestSecurity_SQLInjectionPrevention(t *testing.T) {
 			}
 
 			// Response should not contain SQL error messages
-			body := w.Body.String()
+			respBody := w.Body.String()
 			sqlKeywords := []string{"SQL", "syntax", "database", "sqlite", "query"}
 			for _, keyword := range sqlKeywords {
-				if strings.Contains(strings.ToLower(body), strings.ToLower(keyword)) {
-					t.Errorf("Response contains SQL keyword '%s': %s", keyword, body)
+				if strings.Contains(strings.ToLower(respBody), strings.ToLower(keyword)) {
+					t.Errorf("Response contains SQL keyword '%s': %s", keyword, respBody)
 				}
 			}
 		})
@@ -355,7 +353,7 @@ func TestSecurity_JWTValidation(t *testing.T) {
 
 	t.Run("Expired token rejected", func(t *testing.T) {
 		shortManager := auth.NewJWTManager("secret-key", 1*time.Millisecond)
-		token, _ := shortManager.GenerateToken(1, "testuser")
+		token, _ := shortManager.GenerateToken(1, "testuser", 1, "owner")
 
 		time.Sleep(10 * time.Millisecond)
 
@@ -366,7 +364,7 @@ func TestSecurity_JWTValidation(t *testing.T) {
 	})
 
 	t.Run("Tampered token rejected", func(t *testing.T) {
-		token, _ := jwtManager.GenerateToken(1, "testuser")
+		token, _ := jwtManager.GenerateToken(1, "testuser", 1, "owner")
 
 		// Tamper with token
 		tamperedToken := token[:len(token)-5] + "XXXXX"
@@ -381,7 +379,7 @@ func TestSecurity_JWTValidation(t *testing.T) {
 		manager1 := auth.NewJWTManager("secret1", 1*time.Hour)
 		manager2 := auth.NewJWTManager("secret2", 1*time.Hour)
 
-		token, _ := manager1.GenerateToken(1, "testuser")
+		token, _ := manager1.GenerateToken(1, "testuser", 1, "owner")
 
 		_, err := manager2.ValidateToken(token)
 		if err != auth.ErrInvalidToken {

@@ -132,7 +132,7 @@ func HandleCreateCourse(db *database.DB) http.HandlerFunc {
 			IsActive:        isActive,
 			Notes:           nullString(req.Notes),
 			CreatedBy:       sql.NullInt64{Int64: userID, Valid: true},
-			AccountID:       sql.NullInt64{Int64: accountID, Valid: true},
+			AccountID:       accountID,
 		}
 
 		courseRepo := repository.NewCourseRepository(db)

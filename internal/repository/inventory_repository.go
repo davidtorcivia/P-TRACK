@@ -81,7 +81,7 @@ func (r *InventoryRepository) Upsert(item *models.InventoryItem, accountID int64
 	}
 
 	item.ID = id
-	item.AccountID = sql.NullInt64{Int64: accountID, Valid: true}
+	item.AccountID = accountID
 	return nil
 }
 
