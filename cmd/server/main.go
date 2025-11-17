@@ -128,6 +128,23 @@ func main() {
 			r.Post("/auth/logout", handlers.HandleLogout(db))
 			r.Post("/auth/refresh", handlers.HandleRefreshToken(db, jwtManager))
 
+			// Account management routes
+			r.Route("/account", func(r chi.Router) {
+				r.Get("/", handlers.HandleGetAccount(db))
+				r.Put("/", handlers.HandleUpdateAccount(db))
+				r.Get("/members", handlers.HandleGetAccountMembers(db))
+				r.Delete("/members/{userID}", handlers.HandleRemoveAccountMember(db))
+				r.Put("/members/{userID}/role", handlers.HandleUpdateMemberRole(db))
+			})
+
+			// Invitation routes
+			r.Route("/invitations", func(r chi.Router) {
+				r.Post("/", handlers.HandleCreateInvitation(db))
+				r.Get("/", handlers.HandleGetInvitations(db))
+				r.Delete("/{id}", handlers.HandleRevokeInvitation(db))
+				r.Post("/accept", handlers.HandleAcceptInvitation(db))
+			})
+
 			// Course routes
 			r.Route("/courses", func(r chi.Router) {
 				r.Get("/", handlers.HandleGetCourses(db))
