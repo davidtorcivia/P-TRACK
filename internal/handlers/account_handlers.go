@@ -9,6 +9,7 @@ import (
 
 	"injection-tracker/internal/database"
 	"injection-tracker/internal/middleware"
+	"injection-tracker/internal/models"
 	"injection-tracker/internal/repository"
 
 	"github.com/go-chi/chi/v5"
