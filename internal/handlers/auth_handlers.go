@@ -289,13 +289,13 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		contentType := r.Header.Get("Content-Type")
 		if contentType == "application/json" {
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				respondError(w, http.StatusBadRequest, "Invalid request body")
+				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invalid request body")
 				return
 			}
 		} else {
 			// Parse as form data (for HTMX)
 			if err := r.ParseForm(); err != nil {
-				respondError(w, http.StatusBadRequest, "Invalid form data")
+				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invalid form data")
 				return
 			}
 			req.Username = r.FormValue("username")
@@ -309,25 +309,25 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 
 		// Validate input
 		if req.Username == "" || req.Password == "" {
-			respondError(w, http.StatusBadRequest, "Username and password are required")
+			respondErrorWithRequest(w, r, http.StatusBadRequest, "Username and password are required")
 			return
 		}
 
 		// Validate username length (matches DB constraint)
 		if len(req.Username) < 3 || len(req.Username) > 50 {
-			respondError(w, http.StatusBadRequest, "Username must be between 3 and 50 characters")
+			respondErrorWithRequest(w, r, http.StatusBadRequest, "Username must be between 3 and 50 characters")
 			return
 		}
 
 		// Validate password strength
 		if len(req.Password) < 8 {
-			respondError(w, http.StatusBadRequest, "Password must be at least 8 characters long")
+			respondErrorWithRequest(w, r, http.StatusBadRequest, "Password must be at least 8 characters long")
 			return
 		}
 
 		// Validate email format if provided
 		if req.Email != "" && !strings.Contains(req.Email, "@") {
-			respondError(w, http.StatusBadRequest, "Invalid email format")
+			respondErrorWithRequest(w, r, http.StatusBadRequest, "Invalid email format")
 			return
 		}
 
@@ -343,18 +343,18 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 				ipAddress,
 				userAgent,
 			)
-			respondError(w, http.StatusConflict, "Username already exists")
+			respondErrorWithRequest(w, r, http.StatusConflict, "Username already exists")
 			return
 		}
 		if err != nil && err != repository.ErrNotFound {
-			respondError(w, http.StatusInternalServerError, "An error occurred")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "An error occurred")
 			return
 		}
 
 		// Hash password
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), BcryptCost)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to process password")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to process password")
 			return
 		}
 
@@ -381,10 +381,10 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 					ipAddress,
 					userAgent,
 				)
-				respondError(w, http.StatusConflict, "Username already exists")
+				respondErrorWithRequest(w, r, http.StatusConflict, "Username already exists")
 				return
 			}
-			respondError(w, http.StatusInternalServerError, "Failed to create user")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to create user")
 			return
 		}
 
@@ -408,21 +408,21 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 					ipAddress,
 					userAgent,
 				)
-				respondError(w, http.StatusBadRequest, "Invalid or expired invitation")
+				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invalid or expired invitation")
 				return
 			}
 
 			// Check if invitation is expired
 			if time.Now().After(invitation.ExpiresAt) {
 				userRepo.Delete(user.ID)
-				respondError(w, http.StatusBadRequest, "Invitation has expired")
+				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invitation has expired")
 				return
 			}
 
 			// Check if already accepted
 			if invitation.AcceptedAt.Valid {
 				userRepo.Delete(user.ID)
-				respondError(w, http.StatusBadRequest, "Invitation has already been used")
+				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invitation has already been used")
 				return
 			}
 
@@ -438,7 +438,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 					ipAddress,
 					userAgent,
 				)
-				respondError(w, http.StatusInternalServerError, "Failed to accept invitation")
+				respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to accept invitation")
 				return
 			}
 
@@ -469,7 +469,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 					ipAddress,
 					userAgent,
 				)
-				respondError(w, http.StatusInternalServerError, "Failed to create account")
+				respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to create account")
 				return
 			}
 
@@ -576,24 +576,24 @@ func HandleGetCurrentUser(db *database.DB) http.HandlerFunc {
 		// Get user context (set by auth middleware)
 		userCtx := middleware.GetUserContext(r)
 		if userCtx == nil {
-			respondError(w, http.StatusUnauthorized, "Not authenticated")
+			respondErrorWithRequest(w, r, http.StatusUnauthorized, "Not authenticated")
 			return
 		}
 
 		// Get full user details
 		user, err := userRepo.GetByID(userCtx.UserID)
 		if err == repository.ErrNotFound {
-			respondError(w, http.StatusNotFound, "User not found")
+			respondErrorWithRequest(w, r, http.StatusNotFound, "User not found")
 			return
 		}
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to retrieve user information")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to retrieve user information")
 			return
 		}
 
 		// Check if account is still active
 		if !user.IsActive {
-			respondError(w, http.StatusForbidden, "Account is inactive")
+			respondErrorWithRequest(w, r, http.StatusForbidden, "Account is inactive")
 			return
 		}
 
@@ -619,7 +619,7 @@ func HandleRefreshToken(db *database.DB, jwtManager *auth.JWTManager) http.Handl
 		// Get token from cookie or Authorization header
 		token := getTokenFromRequest(r)
 		if token == "" {
-			respondError(w, http.StatusUnauthorized, "No token provided")
+			respondErrorWithRequest(w, r, http.StatusUnauthorized, "No token provided")
 			return
 		}
 
@@ -635,41 +635,41 @@ func HandleRefreshToken(db *database.DB, jwtManager *auth.JWTManager) http.Handl
 				ipAddress,
 				userAgent,
 			)
-			respondError(w, http.StatusUnauthorized, "Invalid or expired token")
+			respondErrorWithRequest(w, r, http.StatusUnauthorized, "Invalid or expired token")
 			return
 		}
 
 		// Validate the new token to get user info
 		claims, err := jwtManager.ValidateToken(newToken)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to validate new token")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to validate new token")
 			return
 		}
 
 		// Verify user still exists and is active
 		user, err := userRepo.GetByID(claims.UserID)
 		if err == repository.ErrNotFound {
-			respondError(w, http.StatusUnauthorized, "User not found")
+			respondErrorWithRequest(w, r, http.StatusUnauthorized, "User not found")
 			return
 		}
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to verify user")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "Failed to verify user")
 			return
 		}
 
 		if !user.IsActive {
-			respondError(w, http.StatusForbidden, "Account is inactive")
+			respondErrorWithRequest(w, r, http.StatusForbidden, "Account is inactive")
 			return
 		}
 
 		// Check if account is locked
 		isLocked, err := userRepo.IsAccountLocked(user.ID)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, "An error occurred")
+			respondErrorWithRequest(w, r, http.StatusInternalServerError, "An error occurred")
 			return
 		}
 		if isLocked {
-			respondError(w, http.StatusForbidden, "Account is locked")
+			respondErrorWithRequest(w, r, http.StatusForbidden, "Account is locked")
 			return
 		}
 
@@ -774,7 +774,7 @@ func respondErrorWithRequest(w http.ResponseWriter, r *http.Request, statusCode 
 		// HTMX request - return HTML error message
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(statusCode)
-		fmt.Fprintf(w, `<div role="alert" style="color: var(--pico-del-color); margin-bottom: 1rem;">⚠️ %s</div>`, message)
+		fmt.Fprintf(w, `<div role="alert" style="color: var(--pico-del-color); margin-bottom: 1rem;">%s</div>`, message)
 	} else {
 		// Standard JSON response
 		respondError(w, statusCode, message)
