@@ -508,9 +508,34 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 
 		// Respond with success
 		if r.Header.Get("HX-Request") == "true" {
-			// HTMX request - redirect to login page
-			w.Header().Set("HX-Redirect", "/login?registered=true")
-			w.WriteHeader(http.StatusOK)
+		// HTMX request - show success message then redirect
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		successHTML := `
+<div role="alert" style="
+	background-color: #d4edda;
+	border: 2px solid #28a745;
+	border-radius: 8px;
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.5rem;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+">
+	<div style="display: flex; align-items: start; gap: 0.75rem;">
+		<span style="font-size: 1.5rem; line-height: 1;">✓</span>
+		<div style="flex: 1;">
+			<strong style="color: #28a745; font-size: 1rem; display: block; margin-bottom: 0.25rem;">Success!</strong>
+			<p style="color: #155724; margin: 0; font-size: 0.95rem; line-height: 1.5;">
+				Account created successfully. Redirecting to login...
+			</p>
+		</div>
+	</div>
+</div>
+<script>
+	setTimeout(function() {
+		window.location.href = "/login?registered=true";
+	}, 1500);
+</script>`
+		fmt.Fprint(w, successHTML)
 		} else {
 			// Standard JSON API response
 			respondJSON(w, http.StatusCreated, AuthResponse{

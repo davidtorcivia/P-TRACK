@@ -54,6 +54,12 @@ func HandleHome(db *database.DB) http.HandlerFunc {
 
 // HandleLoginPage renders the login page
 func HandleLoginPage(w http.ResponseWriter, r *http.Request) {
+	// Redirect to dashboard if already logged in
+	if userCtx := middleware.GetUserContext(r); userCtx != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
 	data := map[string]interface{}{
 		"Title":           "Login",
 		"IsAuthenticated": false,
@@ -64,6 +70,12 @@ func HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	// Render login.html - the Render function will execute base.html with the login content block
 	if err := web.Render(w, "login.html", data); err != nil {
 		http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
+	// Redirect to dashboard if already logged in
+	if userCtx := middleware.GetUserContext(r); userCtx != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
 		return
 	}
 }
