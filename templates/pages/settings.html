@@ -100,7 +100,9 @@
 </div>
 
 <!-- Account & Sharing Section -->
-<article style="padding: 1rem;" x-data="accountSharing()">
+<article style="padding: 1rem;"
+         x-data="accountSharing()"
+         x-init="currentUserID = {{ .UserID }}; init()">
     <header>
         <h3>👥 Account & Sharing</h3>
         <p>Share your injection tracking data with your partner</p>
@@ -121,24 +123,23 @@
             <div id="invite-feedback" x-html="inviteFeedback"></div>
 
             <label for="invite-email">
-                Email Address
+                Email Address (Optional)
                 <input type="email"
                        id="invite-email"
                        x-model="inviteEmail"
-                       placeholder="partner@example.com"
-                       required>
-                <small>Your partner will receive an invitation link to join your account</small>
+                       placeholder="partner@example.com (for reference only)">
+                <small>📧 <strong>No email will be sent</strong> - you'll get a link to share manually</small>
             </label>
 
             <button type="submit" :disabled="inviting">
-                <span x-show="!inviting">Send Invitation</span>
-                <span x-show="inviting">Sending...</span>
+                <span x-show="!inviting">🔗 Generate Invitation Link</span>
+                <span x-show="inviting">Creating...</span>
             </button>
         </form>
 
         <!-- Show invitation link after creation -->
-        <div x-show="invitationToken" style="margin-top: 1rem; padding: 1rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);">
-            <p><strong>✅ Invitation Created!</strong></p>
+        <div x-show="invitationToken" style="margin-top: 1rem; padding: 1rem; background: var(--pico-primary-background); border: 1px solid var(--pico-primary); border-radius: var(--pico-border-radius);">
+            <p><strong>✅ Invitation Link Created!</strong></p>
             <p style="margin-top: 0.5rem;">Share this link with your partner:</p>
             <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
                 <input type="text"
@@ -154,8 +155,8 @@
                     <span x-show="copied">✅ Copied!</span>
                 </button>
             </div>
-            <small style="color: var(--pico-muted-color); display: block; margin-top: 0.5rem;">
-                This link expires in 7 days
+            <small style="display: block; margin-top: 0.5rem;">
+                ⏰ Expires in 7 days · 🔒 One-time use
             </small>
         </div>
     </div>
@@ -180,6 +181,8 @@ function accountSharing() {
         invitationToken: '',
         invitationLink: '',
         copied: false,
+        currentUserID: 0,
+        currentUserRole: '',
 
         init() {
             this.loadMembers();
@@ -195,6 +198,13 @@ function accountSharing() {
                 if (!response.ok) throw new Error('Failed to load members');
 
                 this.members = await response.json();
+
+                // Find current user's role
+                const currentMember = this.members.find(m => m.UserID === this.currentUserID);
+                if (currentMember) {
+                    this.currentUserRole = currentMember.Role;
+                }
+
                 this.renderMembers();
             } catch (error) {
                 document.getElementById('members-list').innerHTML =
@@ -206,15 +216,15 @@ function accountSharing() {
             const html = this.members.map(member => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
                     <div>
-                        <strong>${member.username}</strong>
-                        ${member.role === 'owner' ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-primary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">Owner</span>' : ''}
-                        ${member.email ? `<br><small style="color: var(--pico-muted-color);">${member.email}</small>` : ''}
+                        <strong>${member.Username || 'Unknown User'}</strong>
+                        ${member.Role === 'owner' ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-primary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">Owner</span>' : ''}
+                        ${member.UserID === this.currentUserID ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-secondary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">You</span>' : ''}
                     </div>
-                    ${member.role !== 'owner' && this.currentUserIsOwner() ? `
+                    ${member.UserID !== this.currentUserID && this.currentUserRole === 'owner' ? `
                         <button type="button"
                                 class="outline contrast"
                                 style="margin: 0;"
-                                onclick="removeMember(${member.user_id})">
+                                onclick="removeMember(${member.UserID}, '${member.Username}')">
                             Remove
                         </button>
                     ` : ''}
@@ -231,13 +241,20 @@ function accountSharing() {
                     headers: { 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content }
                 });
 
-                if (!response.ok) throw new Error('Failed to load invitations');
+                if (!response.ok) {
+                    // Don't show error for empty list
+                    this.invitations = [];
+                    this.renderInvitations();
+                    return;
+                }
 
-                this.invitations = await response.json();
+                const data = await response.json();
+                this.invitations = data || [];
                 this.renderInvitations();
             } catch (error) {
-                document.getElementById('invitations-list').innerHTML =
-                    '<p style="color: var(--pico-del-color);">Error loading invitations</p>';
+                // Show empty list instead of error
+                this.invitations = [];
+                this.renderInvitations();
             }
         },
 
@@ -251,16 +268,16 @@ function accountSharing() {
             const html = this.invitations.map(inv => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
                     <div>
-                        <strong>${inv.email}</strong>
+                        <strong>${inv.Email || 'Invitation'}</strong>
                         <br><small style="color: var(--pico-muted-color);">
-                            Sent ${new Date(inv.created_at).toLocaleDateString()} ·
-                            Expires ${new Date(inv.expires_at).toLocaleDateString()}
+                            Created ${new Date(inv.CreatedAt).toLocaleDateString()} ·
+                            Expires ${new Date(inv.ExpiresAt).toLocaleDateString()}
                         </small>
                     </div>
                     <button type="button"
                             class="outline contrast"
                             style="margin: 0;"
-                            onclick="revokeInvitation(${inv.id})">
+                            onclick="revokeInvitation(${inv.ID})">
                         Revoke
                     </button>
                 </div>
@@ -270,8 +287,6 @@ function accountSharing() {
         },
 
         async sendInvitation() {
-            if (!this.inviteEmail) return;
-
             this.inviting = true;
             this.inviteFeedback = '';
             this.invitationToken = '';
@@ -285,21 +300,21 @@ function accountSharing() {
                         'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
                     },
                     body: JSON.stringify({
-                        email: this.inviteEmail,
+                        email: this.inviteEmail || 'invitation@localhost',
                         role: 'member'
                     })
                 });
 
                 if (!response.ok) {
                     const error = await response.text();
-                    throw new Error(error || 'Failed to send invitation');
+                    throw new Error(error || 'Failed to create invitation');
                 }
 
                 const data = await response.json();
-                this.invitationToken = data.token;
-                this.invitationLink = `${window.location.origin}/register?invite=${data.token}`;
+                this.invitationToken = data.Token;
+                this.invitationLink = `${window.location.origin}/register?invite=${data.Token}`;
 
-                this.inviteFeedback = '<mark>✅ Invitation sent successfully!</mark>';
+                this.inviteFeedback = '<mark>✅ Invitation link created!</mark>';
                 this.inviteEmail = '';
 
                 // Reload invitations list
@@ -323,17 +338,12 @@ function accountSharing() {
             setTimeout(() => {
                 this.copied = false;
             }, 2000);
-        },
-
-        currentUserIsOwner() {
-            // This would need to be passed from the server
-            return true; // Placeholder
         }
     }
 }
 
-async function removeMember(userId) {
-    if (!confirm('Are you sure you want to remove this member from your account?')) {
+async function removeMember(userId, username) {
+    if (!confirm(`Are you sure you want to remove ${username} from your account?\n\nThey will immediately lose access to all shared data.`)) {
         return;
     }
 
@@ -355,7 +365,7 @@ async function removeMember(userId) {
 }
 
 async function revokeInvitation(invitationId) {
-    if (!confirm('Are you sure you want to revoke this invitation?')) {
+    if (!confirm('Are you sure you want to revoke this invitation link?')) {
         return;
     }
 

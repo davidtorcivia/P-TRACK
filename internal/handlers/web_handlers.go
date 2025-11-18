@@ -660,6 +660,7 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 		}
 
 		data["Settings"] = settings
+		data["UserID"] = userID
 		data["User"] = map[string]interface{}{
 			"Username": "User", // TODO: Get actual username
 			"Email":    "",
