@@ -855,6 +855,16 @@ func HandleSetup(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Create account for the first user
+		accountRepo := repository.NewAccountRepository(db.DB)
+		accountID, err := accountRepo.Create(nil, user.ID) // nil = no custom account name
+		if err != nil {
+			// Rollback: Delete the user if account creation fails
+			userRepo.Delete(user.ID)
+			http.Error(w, "Failed to create account: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// Log the setup
 		ipAddress := r.RemoteAddr
 		userAgent := r.UserAgent()
@@ -863,7 +873,7 @@ func HandleSetup(db *database.DB) http.HandlerFunc {
 			"first_run_setup",
 			"user",
 			sql.NullInt64{Int64: user.ID, Valid: true},
-			map[string]interface{}{"username": username},
+			map[string]interface{}{"username": username, "account_id": accountID},
 			ipAddress,
 			userAgent,
 		)

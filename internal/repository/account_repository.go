@@ -521,16 +521,6 @@ func (r *AccountRepository) AcceptInvitation(invitationID, userID int64) error {
 		return fmt.Errorf("failed to add user to account members: %w", err)
 	}
 
-	// Update user's account_id
-	_, err = tx.Exec(`
-		UPDATE users
-		SET account_id = ?, role = ?
-		WHERE id = ?
-	`, accountID, role, userID)
-	if err != nil {
-		return fmt.Errorf("failed to update user account: %w", err)
-	}
-
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
