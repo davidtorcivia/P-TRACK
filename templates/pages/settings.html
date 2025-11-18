@@ -104,7 +104,7 @@
          x-data="accountSharing()"
          x-init="currentUserID = {{ .UserID }}; init()">
     <header>
-        <h3>👥 Account & Sharing</h3>
+        <h3>Account & Sharing</h3>
         <p>Share your injection tracking data with your partner</p>
     </header>
 
@@ -119,27 +119,20 @@
     <!-- Invite New Member -->
     <div style="margin-bottom: 2rem;">
         <h4>Invite Partner</h4>
+        <p style="margin-bottom: 1rem;">Generate a one-time invitation link to share with your partner. The link expires in 7 days.</p>
+
         <form @submit.prevent="sendInvitation()" style="margin-top: 1rem;">
             <div id="invite-feedback" x-html="inviteFeedback"></div>
 
-            <label for="invite-email">
-                Email Address (Optional)
-                <input type="email"
-                       id="invite-email"
-                       x-model="inviteEmail"
-                       placeholder="partner@example.com (for reference only)">
-                <small>📧 <strong>No email will be sent</strong> - you'll get a link to share manually</small>
-            </label>
-
             <button type="submit" :disabled="inviting">
-                <span x-show="!inviting">🔗 Generate Invitation Link</span>
+                <span x-show="!inviting">Generate Invitation Link</span>
                 <span x-show="inviting">Creating...</span>
             </button>
         </form>
 
         <!-- Show invitation link after creation -->
         <div x-show="invitationToken" style="margin-top: 1rem; padding: 1rem; background: var(--pico-primary-background); border: 1px solid var(--pico-primary); border-radius: var(--pico-border-radius);">
-            <p><strong>✅ Invitation Link Created!</strong></p>
+            <p><strong>Invitation Link Created!</strong></p>
             <p style="margin-top: 0.5rem;">Share this link with your partner:</p>
             <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
                 <input type="text"
@@ -151,12 +144,12 @@
                         class="outline"
                         @click="copyInvitationLink()"
                         style="white-space: nowrap;">
-                    <span x-show="!copied">📋 Copy</span>
-                    <span x-show="copied">✅ Copied!</span>
+                    <span x-show="!copied">Copy Link</span>
+                    <span x-show="copied">Copied!</span>
                 </button>
             </div>
             <small style="display: block; margin-top: 0.5rem;">
-                ⏰ Expires in 7 days · 🔒 One-time use
+                Expires in 7 days - One-time use only
             </small>
         </div>
     </div>
@@ -175,7 +168,6 @@ function accountSharing() {
     return {
         members: [],
         invitations: [],
-        inviteEmail: '',
         inviting: false,
         inviteFeedback: '',
         invitationToken: '',
@@ -237,7 +229,7 @@ function accountSharing() {
 
         async loadInvitations() {
             try {
-                const response = await fetch('/api/account/invitations', {
+                const response = await fetch('/api/invitations', {
                     headers: { 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content }
                 });
 
@@ -268,9 +260,9 @@ function accountSharing() {
             const html = this.invitations.map(inv => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
                     <div>
-                        <strong>${inv.Email || 'Invitation'}</strong>
+                        <strong>Invitation</strong>
                         <br><small style="color: var(--pico-muted-color);">
-                            Created ${new Date(inv.CreatedAt).toLocaleDateString()} ·
+                            Created ${new Date(inv.CreatedAt).toLocaleDateString()} -
                             Expires ${new Date(inv.ExpiresAt).toLocaleDateString()}
                         </small>
                     </div>
@@ -293,14 +285,14 @@ function accountSharing() {
             this.invitationLink = '';
 
             try {
-                const response = await fetch('/api/account/invitations', {
+                const response = await fetch('/api/invitations', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
                     },
                     body: JSON.stringify({
-                        email: this.inviteEmail || 'invitation@localhost',
+                        email: 'invitation@localhost',
                         role: 'member'
                     })
                 });
@@ -314,8 +306,7 @@ function accountSharing() {
                 this.invitationToken = data.Token;
                 this.invitationLink = `${window.location.origin}/register?invite=${data.Token}`;
 
-                this.inviteFeedback = '<mark>✅ Invitation link created!</mark>';
-                this.inviteEmail = '';
+                this.inviteFeedback = '<mark>Invitation link created successfully!</mark>';
 
                 // Reload invitations list
                 await this.loadInvitations();
@@ -326,7 +317,7 @@ function accountSharing() {
                 }, 5000);
 
             } catch (error) {
-                this.inviteFeedback = `<del>❌ ${error.message}</del>`;
+                this.inviteFeedback = `<del>Error: ${error.message}</del>`;
             } finally {
                 this.inviting = false;
             }
@@ -370,7 +361,7 @@ async function revokeInvitation(invitationId) {
     }
 
     try {
-        const response = await fetch(`/api/account/invitations/${invitationId}`, {
+        const response = await fetch(`/api/invitations/${invitationId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
