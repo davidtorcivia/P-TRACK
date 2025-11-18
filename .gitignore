@@ -89,3 +89,8 @@ air_tmp/
 
 # Vendor directory
 vendor/
+
+# Test and debug scripts
+check_db.sh
+fix_broken_users.go
+test_*.sh
