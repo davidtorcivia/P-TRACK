@@ -259,22 +259,47 @@ function accountSharing() {
 
             const html = this.invitations.map(inv => {
                 const accepted = inv.accepted_at ? `<span style="color: var(--pico-ins-color);">(Accepted ${new Date(inv.accepted_at).toLocaleDateString()})</span>` : '';
+
+                // Get stored token from localStorage for pending invitations
+                const storedToken = !inv.accepted_at ? localStorage.getItem(`invite_token_${inv.id}`) : null;
+                const inviteLink = storedToken ? `${window.location.origin}/register?invite=${storedToken}` : null;
+
                 return `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
-                    <div>
-                        <strong>Invitation ${accepted}</strong>
-                        <br><small style="color: var(--pico-muted-color);">
-                            Created ${new Date(inv.created_at).toLocaleDateString()} -
-                            Expires ${new Date(inv.expires_at).toLocaleDateString()}
-                        </small>
+                <div style="padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>Invitation ${accepted}</strong>
+                            <br><small style="color: var(--pico-muted-color);">
+                                Created ${new Date(inv.created_at).toLocaleDateString()} -
+                                Expires ${new Date(inv.expires_at).toLocaleDateString()}
+                            </small>
+                        </div>
+                        ${!inv.accepted_at ? `
+                        <button type="button"
+                                class="outline contrast"
+                                style="margin: 0;"
+                                onclick="confirmRevokeInvitation(${inv.id})">
+                            Revoke
+                        </button>
+                        ` : ''}
                     </div>
-                    ${!inv.accepted_at ? `
-                    <button type="button"
-                            class="outline contrast"
-                            style="margin: 0;"
-                            onclick="revokeInvitation(${inv.id})">
-                        Revoke
-                    </button>
+                    ${inviteLink ? `
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--pico-muted-border-color);">
+                        <small style="color: var(--pico-muted-color); display: block; margin-bottom: 0.5rem;">Invitation Link:</small>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text"
+                                   value="${inviteLink}"
+                                   readonly
+                                   onclick="this.select()"
+                                   style="flex: 1; font-family: monospace; font-size: 0.85rem; margin: 0;">
+                            <button type="button"
+                                    class="outline"
+                                    onclick="copyToClipboard('${inviteLink}', this)"
+                                    style="margin: 0; white-space: nowrap;">
+                                Copy Link
+                            </button>
+                        </div>
+                    </div>
                     ` : ''}
                 </div>
                 `;
@@ -311,6 +336,9 @@ function accountSharing() {
                 this.invitationToken = data.token;
                 this.invitationLink = `${window.location.origin}/register?invite=${data.token}`;
 
+                // Store token in localStorage so we can display it later
+                localStorage.setItem(`invite_token_${data.id}`, data.token);
+
                 this.inviteFeedback = '<mark>Invitation link created successfully!</mark>';
 
                 // Reload invitations list
@@ -339,9 +367,17 @@ function accountSharing() {
 }
 
 async function removeMember(userId, username) {
-    if (!confirm(`Are you sure you want to remove ${username} from your account?\n\nThey will immediately lose access to all shared data.`)) {
-        return;
-    }
+    const modal = document.getElementById('remove-member-modal');
+    document.getElementById('remove-member-name').textContent = username;
+    modal.showModal();
+
+    // Store for confirmation
+    window.pendingRemoveUserId = userId;
+}
+
+async function confirmRemoveMember() {
+    const modal = document.getElementById('remove-member-modal');
+    const userId = window.pendingRemoveUserId;
 
     try {
         const response = await fetch(`/api/account/members/${userId}`, {
@@ -353,17 +389,25 @@ async function removeMember(userId, username) {
 
         if (!response.ok) throw new Error('Failed to remove member');
 
-        // Reload the page to refresh member list
+        modal.close();
         window.location.reload();
     } catch (error) {
+        modal.close();
         alert('Error removing member: ' + error.message);
     }
 }
 
-async function revokeInvitation(invitationId) {
-    if (!confirm('Are you sure you want to revoke this invitation link?')) {
-        return;
-    }
+function confirmRevokeInvitation(invitationId) {
+    const modal = document.getElementById('revoke-invitation-modal');
+    modal.showModal();
+
+    // Store for confirmation
+    window.pendingRevokeInvitationId = invitationId;
+}
+
+async function revokeInvitation() {
+    const modal = document.getElementById('revoke-invitation-modal');
+    const invitationId = window.pendingRevokeInvitationId;
 
     try {
         const response = await fetch(`/api/invitations/${invitationId}`, {
@@ -373,15 +417,76 @@ async function revokeInvitation(invitationId) {
             }
         });
 
-        if (!response.ok) throw new Error('Failed to revoke invitation');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to revoke invitation');
+        }
 
-        // Reload the page to refresh invitations list
+        // Remove token from localStorage
+        localStorage.removeItem(`invite_token_${invitationId}`);
+
+        modal.close();
         window.location.reload();
     } catch (error) {
+        modal.close();
         alert('Error revoking invitation: ' + error.message);
     }
 }
+
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 2000);
+    });
+}
 </script>
+
+<!-- Revoke Invitation Modal -->
+<dialog id="revoke-invitation-modal">
+    <article style="max-width: 500px; margin: 0;">
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('revoke-invitation-modal').close()"></button>
+            <h3>Revoke Invitation</h3>
+        </header>
+        <p>Are you sure you want to revoke this invitation link?</p>
+        <p style="color: var(--pico-muted-color);">The link will no longer work and cannot be used to register.</p>
+        <footer>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="secondary" onclick="document.getElementById('revoke-invitation-modal').close()">
+                    Cancel
+                </button>
+                <button class="contrast" onclick="revokeInvitation()">
+                    Revoke Invitation
+                </button>
+            </div>
+        </footer>
+    </article>
+</dialog>
+
+<!-- Remove Member Modal -->
+<dialog id="remove-member-modal">
+    <article style="max-width: 500px; margin: 0;">
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('remove-member-modal').close()"></button>
+            <h3>Remove Member</h3>
+        </header>
+        <p>Are you sure you want to remove <strong id="remove-member-name"></strong> from your account?</p>
+        <p style="color: var(--pico-del-color);">They will immediately lose access to all shared data.</p>
+        <footer>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="secondary" onclick="document.getElementById('remove-member-modal').close()">
+                    Cancel
+                </button>
+                <button class="contrast" onclick="confirmRemoveMember()">
+                    Remove Member
+                </button>
+            </div>
+        </footer>
+    </article>
+</dialog>
 
 <!-- App Settings -->
 <article style="padding: 1rem;">

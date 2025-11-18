@@ -480,24 +480,60 @@ func (r *AccountRepository) GetPendingInvitations(accountID int64) ([]*models.Ac
 	return invitations, nil
 }
 
-// AcceptInvitation marks an invitation as accepted
+// AcceptInvitation marks an invitation as accepted and adds user to account
 func (r *AccountRepository) AcceptInvitation(invitationID, userID int64) error {
-	result, err := r.db.Exec(`
+	// Get the invitation details first
+	var accountID int64
+	var role string
+	err := r.db.QueryRow(`
+		SELECT account_id, role
+		FROM account_invitations
+		WHERE id = ?
+	`, invitationID).Scan(&accountID, &role)
+
+	if err != nil {
+		return fmt.Errorf("failed to get invitation details: %w", err)
+	}
+
+	// Begin transaction
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Update the invitation to mark it as accepted
+	_, err = tx.Exec(`
 		UPDATE account_invitations
 		SET accepted_at = CURRENT_TIMESTAMP, accepted_by = ?
 		WHERE id = ?
 	`, userID, invitationID)
-
 	if err != nil {
-		return fmt.Errorf("failed to accept invitation: %w", err)
+		return fmt.Errorf("failed to update invitation: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
+	// Add user to account_members
+	_, err = tx.Exec(`
+		INSERT INTO account_members (account_id, user_id, role, joined_at)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+	`, accountID, userID, role)
 	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
+		return fmt.Errorf("failed to add user to account members: %w", err)
 	}
-	if rows == 0 {
-		return ErrInvitationNotFound
+
+	// Update user's account_id
+	_, err = tx.Exec(`
+		UPDATE users
+		SET account_id = ?, role = ?
+		WHERE id = ?
+	`, accountID, role, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update user account: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
