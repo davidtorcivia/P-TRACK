@@ -99,6 +99,284 @@
     </article>
 </div>
 
+<!-- Account & Sharing Section -->
+<article style="padding: 1rem;" x-data="accountSharing()">
+    <header>
+        <h3>👥 Account & Sharing</h3>
+        <p>Share your injection tracking data with your partner</p>
+    </header>
+
+    <!-- Account Members -->
+    <div style="margin-bottom: 2rem;">
+        <h4>Account Members</h4>
+        <div id="members-list" style="margin-top: 1rem;">
+            <p style="color: var(--pico-muted-color);">Loading members...</p>
+        </div>
+    </div>
+
+    <!-- Invite New Member -->
+    <div style="margin-bottom: 2rem;">
+        <h4>Invite Partner</h4>
+        <form @submit.prevent="sendInvitation()" style="margin-top: 1rem;">
+            <div id="invite-feedback" x-html="inviteFeedback"></div>
+
+            <label for="invite-email">
+                Email Address
+                <input type="email"
+                       id="invite-email"
+                       x-model="inviteEmail"
+                       placeholder="partner@example.com"
+                       required>
+                <small>Your partner will receive an invitation link to join your account</small>
+            </label>
+
+            <button type="submit" :disabled="inviting">
+                <span x-show="!inviting">Send Invitation</span>
+                <span x-show="inviting">Sending...</span>
+            </button>
+        </form>
+
+        <!-- Show invitation link after creation -->
+        <div x-show="invitationToken" style="margin-top: 1rem; padding: 1rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);">
+            <p><strong>✅ Invitation Created!</strong></p>
+            <p style="margin-top: 0.5rem;">Share this link with your partner:</p>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+                <input type="text"
+                       x-model="invitationLink"
+                       readonly
+                       style="flex: 1; font-family: monospace; font-size: 0.85rem;"
+                       @click="$el.select()">
+                <button type="button"
+                        class="outline"
+                        @click="copyInvitationLink()"
+                        style="white-space: nowrap;">
+                    <span x-show="!copied">📋 Copy</span>
+                    <span x-show="copied">✅ Copied!</span>
+                </button>
+            </div>
+            <small style="color: var(--pico-muted-color); display: block; margin-top: 0.5rem;">
+                This link expires in 7 days
+            </small>
+        </div>
+    </div>
+
+    <!-- Pending Invitations -->
+    <div>
+        <h4>Pending Invitations</h4>
+        <div id="invitations-list" style="margin-top: 1rem;">
+            <p style="color: var(--pico-muted-color);">Loading invitations...</p>
+        </div>
+    </div>
+</article>
+
+<script>
+function accountSharing() {
+    return {
+        members: [],
+        invitations: [],
+        inviteEmail: '',
+        inviting: false,
+        inviteFeedback: '',
+        invitationToken: '',
+        invitationLink: '',
+        copied: false,
+
+        init() {
+            this.loadMembers();
+            this.loadInvitations();
+        },
+
+        async loadMembers() {
+            try {
+                const response = await fetch('/api/account/members', {
+                    headers: { 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content }
+                });
+
+                if (!response.ok) throw new Error('Failed to load members');
+
+                this.members = await response.json();
+                this.renderMembers();
+            } catch (error) {
+                document.getElementById('members-list').innerHTML =
+                    '<p style="color: var(--pico-del-color);">Error loading members</p>';
+            }
+        },
+
+        renderMembers() {
+            const html = this.members.map(member => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                    <div>
+                        <strong>${member.username}</strong>
+                        ${member.role === 'owner' ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-primary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">Owner</span>' : ''}
+                        ${member.email ? `<br><small style="color: var(--pico-muted-color);">${member.email}</small>` : ''}
+                    </div>
+                    ${member.role !== 'owner' && this.currentUserIsOwner() ? `
+                        <button type="button"
+                                class="outline contrast"
+                                style="margin: 0;"
+                                onclick="removeMember(${member.user_id})">
+                            Remove
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('members-list').innerHTML =
+                html || '<p style="color: var(--pico-muted-color);">No members found</p>';
+        },
+
+        async loadInvitations() {
+            try {
+                const response = await fetch('/api/account/invitations', {
+                    headers: { 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content }
+                });
+
+                if (!response.ok) throw new Error('Failed to load invitations');
+
+                this.invitations = await response.json();
+                this.renderInvitations();
+            } catch (error) {
+                document.getElementById('invitations-list').innerHTML =
+                    '<p style="color: var(--pico-del-color);">Error loading invitations</p>';
+            }
+        },
+
+        renderInvitations() {
+            if (!this.invitations || this.invitations.length === 0) {
+                document.getElementById('invitations-list').innerHTML =
+                    '<p style="color: var(--pico-muted-color);">No pending invitations</p>';
+                return;
+            }
+
+            const html = this.invitations.map(inv => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                    <div>
+                        <strong>${inv.email}</strong>
+                        <br><small style="color: var(--pico-muted-color);">
+                            Sent ${new Date(inv.created_at).toLocaleDateString()} ·
+                            Expires ${new Date(inv.expires_at).toLocaleDateString()}
+                        </small>
+                    </div>
+                    <button type="button"
+                            class="outline contrast"
+                            style="margin: 0;"
+                            onclick="revokeInvitation(${inv.id})">
+                        Revoke
+                    </button>
+                </div>
+            `).join('');
+
+            document.getElementById('invitations-list').innerHTML = html;
+        },
+
+        async sendInvitation() {
+            if (!this.inviteEmail) return;
+
+            this.inviting = true;
+            this.inviteFeedback = '';
+            this.invitationToken = '';
+            this.invitationLink = '';
+
+            try {
+                const response = await fetch('/api/account/invitations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                    },
+                    body: JSON.stringify({
+                        email: this.inviteEmail,
+                        role: 'member'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || 'Failed to send invitation');
+                }
+
+                const data = await response.json();
+                this.invitationToken = data.token;
+                this.invitationLink = `${window.location.origin}/register?invite=${data.token}`;
+
+                this.inviteFeedback = '<mark>✅ Invitation sent successfully!</mark>';
+                this.inviteEmail = '';
+
+                // Reload invitations list
+                await this.loadInvitations();
+
+                // Clear feedback after 5 seconds
+                setTimeout(() => {
+                    this.inviteFeedback = '';
+                }, 5000);
+
+            } catch (error) {
+                this.inviteFeedback = `<del>❌ ${error.message}</del>`;
+            } finally {
+                this.inviting = false;
+            }
+        },
+
+        copyInvitationLink() {
+            navigator.clipboard.writeText(this.invitationLink);
+            this.copied = true;
+            setTimeout(() => {
+                this.copied = false;
+            }, 2000);
+        },
+
+        currentUserIsOwner() {
+            // This would need to be passed from the server
+            return true; // Placeholder
+        }
+    }
+}
+
+async function removeMember(userId) {
+    if (!confirm('Are you sure you want to remove this member from your account?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/account/members/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to remove member');
+
+        // Reload the page to refresh member list
+        window.location.reload();
+    } catch (error) {
+        alert('Error removing member: ' + error.message);
+    }
+}
+
+async function revokeInvitation(invitationId) {
+    if (!confirm('Are you sure you want to revoke this invitation?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/account/invitations/${invitationId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to revoke invitation');
+
+        // Reload the page to refresh invitations list
+        window.location.reload();
+    } catch (error) {
+        alert('Error revoking invitation: ' + error.message);
+    }
+}
+</script>
+
 <!-- App Settings -->
 <article style="padding: 1rem;">
     <header>

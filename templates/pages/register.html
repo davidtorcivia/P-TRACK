@@ -2,12 +2,20 @@
 <div class="min-h-screen flex items-center justify-center py-12 px-4">
     <div class="max-w-md w-full space-y-8">
         <!-- Header -->
-        <div class="text-center">
+        <div class="text-center" x-data="{ inviteToken: new URLSearchParams(window.location.search).get('invite') }">
             <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-brand-primary-bg text-brand-primary">
-                <span class="text-3xl">👤</span>
+                <span class="text-3xl" x-text="inviteToken ? '👥' : '👤'"></span>
             </div>
-            <h1 class="text-3xl font-bold mb-2 text-primary">Create Account</h1>
-            <p class="text-secondary">Register for Injection Tracker</p>
+            <h1 class="text-3xl font-bold mb-2 text-primary" x-text="inviteToken ? 'Join Account' : 'Create Account'"></h1>
+            <p class="text-secondary" x-text="inviteToken ? 'Complete registration to join your partner\'s account' : 'Register for Injection Tracker'"></p>
+
+            <!-- Show invitation info if present -->
+            <div x-show="inviteToken" style="margin-top: 1rem; padding: 0.75rem; background: var(--pico-primary-background); border: 1px solid var(--pico-primary); border-radius: var(--pico-border-radius);">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    ✉️ <strong>You've been invited!</strong><br>
+                    <small>After registration, you'll automatically join the account</small>
+                </p>
+            </div>
         </div>
 
         <div class="card">
@@ -16,9 +24,17 @@
               hx-target="#register-error"
               hx-swap="innerHTML"
               hx-indicator="#register-spinner"
-              x-data="{ password: '', confirmPassword: '', passwordMatch: true }">
+              x-data="{
+                  password: '',
+                  confirmPassword: '',
+                  passwordMatch: true,
+                  inviteToken: new URLSearchParams(window.location.search).get('invite')
+              }">
 
             <div id="register-error"></div>
+
+            <!-- Hidden field for invitation token -->
+            <input type="hidden" name="invite_token" x-model="inviteToken">
 
             <div class="form-group">
                 <label for="username" class="form-label">

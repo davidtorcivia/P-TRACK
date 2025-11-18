@@ -31,9 +31,10 @@ type LoginRequest struct {
 
 // RegisterRequest represents the registration request payload
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email,omitempty"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	Email       string `json:"email,omitempty"`
+	InviteToken string `json:"invite_token,omitempty"` // For joining existing account
 }
 
 // AuthResponse represents the authentication response
@@ -283,11 +284,24 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 	auditRepo := repository.NewAuditRepository(db)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Parse request
+		// Parse request - support both JSON and form data
 		var req RegisterRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "Invalid request body")
-			return
+		contentType := r.Header.Get("Content-Type")
+		if contentType == "application/json" {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid request body")
+				return
+			}
+		} else {
+			// Parse as form data (for HTMX)
+			if err := r.ParseForm(); err != nil {
+				respondError(w, http.StatusBadRequest, "Invalid form data")
+				return
+			}
+			req.Username = r.FormValue("username")
+			req.Password = r.FormValue("password")
+			req.Email = r.FormValue("email")
+			req.InviteToken = r.FormValue("invite_token")
 		}
 
 		ipAddress := getIPAddress(r)
@@ -374,23 +388,100 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		// Create account for the new user
+		// Create or join account
 		accountRepo := repository.NewAccountRepository(db.DB)
-		accountID, err := accountRepo.Create(nil, user.ID) // nil = no custom account name
-		if err != nil {
-			// Rollback: Delete the user if account creation fails
-			userRepo.Delete(user.ID)
+		var accountID int64
+
+		// Check if registering with an invitation
+		if req.InviteToken != "" {
+			// Validate and accept invitation
+			invitation, err := accountRepo.GetInvitationByToken(req.InviteToken)
+			if err != nil {
+				// Rollback: Delete the user if invitation is invalid
+				userRepo.Delete(user.ID)
+				auditRepo.LogWithDetails(
+					sql.NullInt64{Int64: user.ID, Valid: true},
+					"registration_failed",
+					"user",
+					sql.NullInt64{Int64: user.ID, Valid: true},
+					map[string]interface{}{"reason": "invalid_invitation"},
+					ipAddress,
+					userAgent,
+				)
+				respondError(w, http.StatusBadRequest, "Invalid or expired invitation")
+				return
+			}
+
+			// Check if invitation is expired
+			if time.Now().After(invitation.ExpiresAt) {
+				userRepo.Delete(user.ID)
+				respondError(w, http.StatusBadRequest, "Invitation has expired")
+				return
+			}
+
+			// Check if already accepted
+			if invitation.AcceptedAt.Valid {
+				userRepo.Delete(user.ID)
+				respondError(w, http.StatusBadRequest, "Invitation has already been used")
+				return
+			}
+
+			// Accept the invitation
+			if err := accountRepo.AcceptInvitation(invitation.ID, user.ID); err != nil {
+				userRepo.Delete(user.ID)
+				auditRepo.LogWithDetails(
+					sql.NullInt64{Int64: user.ID, Valid: true},
+					"registration_failed",
+					"user",
+					sql.NullInt64{Int64: user.ID, Valid: true},
+					map[string]interface{}{"reason": "invitation_accept_failed"},
+					ipAddress,
+					userAgent,
+				)
+				respondError(w, http.StatusInternalServerError, "Failed to accept invitation")
+				return
+			}
+
+			accountID = invitation.AccountID
+
 			auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
-				"registration_failed",
+				"registration_success",
 				"user",
 				sql.NullInt64{Int64: user.ID, Valid: true},
-				map[string]interface{}{"reason": "account_creation_failed"},
+				map[string]interface{}{"account_id": accountID, "via_invitation": true},
 				ipAddress,
 				userAgent,
 			)
-			respondError(w, http.StatusInternalServerError, "Failed to create account")
-			return
+		} else {
+			// No invitation - create new account
+			var err error
+			accountID, err = accountRepo.Create(nil, user.ID) // nil = no custom account name
+			if err != nil {
+				// Rollback: Delete the user if account creation fails
+				userRepo.Delete(user.ID)
+				auditRepo.LogWithDetails(
+					sql.NullInt64{Int64: user.ID, Valid: true},
+					"registration_failed",
+					"user",
+					sql.NullInt64{Int64: user.ID, Valid: true},
+					map[string]interface{}{"reason": "account_creation_failed"},
+					ipAddress,
+					userAgent,
+				)
+				respondError(w, http.StatusInternalServerError, "Failed to create account")
+				return
+			}
+
+			auditRepo.LogWithDetails(
+				sql.NullInt64{Int64: user.ID, Valid: true},
+				"registration_success",
+				"user",
+				sql.NullInt64{Int64: user.ID, Valid: true},
+				map[string]interface{}{"account_id": accountID},
+				ipAddress,
+				userAgent,
+			)
 		}
 
 		// Log successful registration
@@ -416,16 +507,23 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		)
 
 		// Respond with success
-		respondJSON(w, http.StatusCreated, AuthResponse{
-			Success: true,
-			Message: "Registration successful",
-			User: &UserResponse{
-				ID:        user.ID,
-				Username:  user.Username,
-				Email:     user.Email.String,
-				CreatedAt: user.CreatedAt.Format(time.RFC3339),
-			},
-		})
+		if r.Header.Get("HX-Request") == "true" {
+			// HTMX request - redirect to login page
+			w.Header().Set("HX-Redirect", "/login?registered=true")
+			w.WriteHeader(http.StatusOK)
+		} else {
+			// Standard JSON API response
+			respondJSON(w, http.StatusCreated, AuthResponse{
+				Success: true,
+				Message: "Registration successful",
+				User: &UserResponse{
+					ID:        user.ID,
+					Username:  user.Username,
+					Email:     user.Email.String,
+					CreatedAt: user.CreatedAt.Format(time.RFC3339),
+				},
+			})
+		}
 	}
 }
 
