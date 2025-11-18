@@ -154,9 +154,9 @@
         </div>
     </div>
 
-    <!-- Pending Invitations -->
+    <!-- Invitations -->
     <div>
-        <h4>Pending Invitations</h4>
+        <h4>Invitations</h4>
         <div id="invitations-list" style="margin-top: 1rem;">
             <p style="color: var(--pico-muted-color);">Loading invitations...</p>
         </div>
@@ -253,27 +253,32 @@ function accountSharing() {
         renderInvitations() {
             if (!this.invitations || this.invitations.length === 0) {
                 document.getElementById('invitations-list').innerHTML =
-                    '<p style="color: var(--pico-muted-color);">No pending invitations</p>';
+                    '<p style="color: var(--pico-muted-color);">No invitations</p>';
                 return;
             }
 
-            const html = this.invitations.map(inv => `
+            const html = this.invitations.map(inv => {
+                const accepted = inv.accepted_at ? `<span style="color: var(--pico-ins-color);">(Accepted ${new Date(inv.accepted_at).toLocaleDateString()})</span>` : '';
+                return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
                     <div>
-                        <strong>Invitation</strong>
+                        <strong>Invitation ${accepted}</strong>
                         <br><small style="color: var(--pico-muted-color);">
-                            Created ${new Date(inv.CreatedAt).toLocaleDateString()} -
-                            Expires ${new Date(inv.ExpiresAt).toLocaleDateString()}
+                            Created ${new Date(inv.created_at).toLocaleDateString()} -
+                            Expires ${new Date(inv.expires_at).toLocaleDateString()}
                         </small>
                     </div>
+                    ${!inv.accepted_at ? `
                     <button type="button"
                             class="outline contrast"
                             style="margin: 0;"
-                            onclick="revokeInvitation(${inv.ID})">
+                            onclick="revokeInvitation(${inv.id})">
                         Revoke
                     </button>
+                    ` : ''}
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById('invitations-list').innerHTML = html;
         },
@@ -303,8 +308,8 @@ function accountSharing() {
                 }
 
                 const data = await response.json();
-                this.invitationToken = data.Token;
-                this.invitationLink = `${window.location.origin}/register?invite=${data.Token}`;
+                this.invitationToken = data.token;
+                this.invitationLink = `${window.location.origin}/register?invite=${data.token}`;
 
                 this.inviteFeedback = '<mark>Invitation link created successfully!</mark>';
 

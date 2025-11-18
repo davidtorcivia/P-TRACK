@@ -312,7 +312,7 @@ func HandleCreateInvitation(db *database.DB) http.HandlerFunc {
 	}
 }
 
-// HandleGetInvitations returns all pending invitations for the account
+// HandleGetInvitations returns all invitations for the account (pending and accepted)
 func HandleGetInvitations(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
@@ -322,11 +322,39 @@ func HandleGetInvitations(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		accountRepo := repository.NewAccountRepository(db.DB)
-		invitations, err := accountRepo.GetPendingInvitations(accountID)
+		// Get all invitations including accepted ones
+		rows, err := db.DB.Query(`
+			SELECT
+				id, account_id, email, invited_by, role,
+				created_at, expires_at, accepted_at, accepted_by
+			FROM account_invitations
+			WHERE account_id = ?
+			ORDER BY created_at DESC
+		`, accountID)
 		if err != nil {
 			http.Error(w, "Failed to retrieve invitations", http.StatusInternalServerError)
 			return
+		}
+		defer rows.Close()
+
+		var invitations []*models.AccountInvitation
+		for rows.Next() {
+			var inv models.AccountInvitation
+			err = rows.Scan(
+				&inv.ID,
+				&inv.AccountID,
+				&inv.Email,
+				&inv.InvitedBy,
+				&inv.Role,
+				&inv.CreatedAt,
+				&inv.ExpiresAt,
+				&inv.AcceptedAt,
+				&inv.AcceptedBy,
+			)
+			if err != nil {
+				continue
+			}
+			invitations = append(invitations, &inv)
 		}
 
 		responses := make([]InvitationResponse, 0, len(invitations))
