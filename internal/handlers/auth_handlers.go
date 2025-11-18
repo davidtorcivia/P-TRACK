@@ -771,10 +771,28 @@ func respondError(w http.ResponseWriter, statusCode int, message string) {
 // respondErrorWithRequest sends an error response (HTML for HTMX, JSON otherwise)
 func respondErrorWithRequest(w http.ResponseWriter, r *http.Request, statusCode int, message string) {
 	if r.Header.Get("HX-Request") == "true" {
-		// HTMX request - return HTML error message
+		// HTMX request - return prominent HTML error message
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(statusCode)
-		fmt.Fprintf(w, `<div role="alert" style="color: var(--pico-del-color); margin-bottom: 1rem;">%s</div>`, message)
+		// Create a prominent, styled error alert
+		errorHTML := fmt.Sprintf(`
+<div role="alert" style="
+	background-color: #fee;
+	border: 2px solid #c33;
+	border-radius: 8px;
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.5rem;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+">
+	<div style="display: flex; align-items: start; gap: 0.75rem;">
+		<span style="font-size: 1.5rem; line-height: 1;">⚠️</span>
+		<div style="flex: 1;">
+			<strong style="color: #c33; font-size: 1rem; display: block; margin-bottom: 0.25rem;">Error</strong>
+			<p style="color: #333; margin: 0; font-size: 0.95rem; line-height: 1.5;">%s</p>
+		</div>
+	</div>
+</div>`, message)
+		fmt.Fprint(w, errorHTML)
 	} else {
 		// Standard JSON response
 		respondError(w, statusCode, message)
