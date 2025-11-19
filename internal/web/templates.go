@@ -77,3 +77,64 @@ func Render(w io.Writer, name string, data interface{}) error {
 	// Execute base.html which will include the content block from the page
 	return tmpl.ExecuteTemplate(w, "base.html", data)
 }
+
+// InitTestTemplates initializes minimal templates for testing
+func InitTestTemplates() error {
+	templates = make(map[string]*template.Template)
+
+	// Define helper functions
+	funcMap := template.FuncMap{
+		"formatDate":     formatDate,
+		"formatDateTime": formatDateTime,
+		"formatTime":     formatTime,
+		"sideBadgeClass": sideBadgeClass,
+		"painLevelClass": painLevelClass,
+		"painLevelEmoji": painLevelEmoji,
+		"timeAgo":        timeAgo,
+	}
+
+	// Create minimal mock templates for testing
+	// These templates just output the data as JSON for validation
+
+	// Dashboard template
+	dashboardTmpl := `{{define "base.html"}}
+<html>
+<body>
+<h1>Dashboard</h1>
+{{if .ActiveCourse}}
+<div class="course">{{.ActiveCourse.Name}}</div>
+{{end}}
+{{if .LastInjection}}
+<div class="injection">{{.LastInjection.Side}}</div>
+{{end}}
+</body>
+</html>
+{{end}}`
+
+	tmpl := template.New("dashboard.html").Funcs(funcMap)
+	tmpl, err := tmpl.Parse(dashboardTmpl)
+	if err != nil {
+		return err
+	}
+	templates["dashboard.html"] = tmpl
+
+	// Activity template
+	activityTmpl := `{{define "base.html"}}
+<html>
+<body>
+{{range .}}
+<div class="activity">{{.Type}} {{.Description}}</div>
+{{end}}
+</body>
+</html>
+{{end}}`
+
+	tmpl2 := template.New("activity.html").Funcs(funcMap)
+	tmpl2, err = tmpl2.Parse(activityTmpl)
+	if err != nil {
+		return err
+	}
+	templates["activity.html"] = tmpl2
+
+	return nil
+}

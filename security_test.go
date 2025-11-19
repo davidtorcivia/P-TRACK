@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -27,16 +26,51 @@ func setupSecurityTestDB(t *testing.T) *database.DB {
 
 	// Create minimal schema for security tests
 	schema := `
+		CREATE TABLE accounts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+
+		INSERT INTO accounts (id, name) VALUES (1, 'Test Account');
+
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT UNIQUE NOT NULL,
 			password_hash TEXT NOT NULL,
 			email TEXT,
+			account_id INTEGER NOT NULL DEFAULT 1,
+			role TEXT DEFAULT 'member',
 			is_active BOOLEAN DEFAULT 1,
 			failed_login_attempts INTEGER DEFAULT 0,
 			locked_until TIMESTAMP,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			last_login TIMESTAMP
+			last_login TIMESTAMP,
+			FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+		);
+
+		CREATE TABLE account_members (
+			account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('owner', 'member')),
+			joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			PRIMARY KEY (account_id, user_id),
+			CONSTRAINT chk_unique_user UNIQUE(user_id)
+		);
+
+		CREATE TABLE account_invitations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+			email TEXT NOT NULL COLLATE NOCASE,
+			token_hash TEXT UNIQUE NOT NULL,
+			invited_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('owner', 'member')),
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			expires_at TIMESTAMP NOT NULL,
+			accepted_at TIMESTAMP,
+			accepted_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 		);
 
 		CREATE TABLE audit_logs (
@@ -63,7 +97,6 @@ func TestSecurity_SQLInjectionPrevention(t *testing.T) {
 	db := setupSecurityTestDB(t)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
 	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour)
 
 	// Test SQL injection attempts in login
@@ -100,11 +133,11 @@ func TestSecurity_SQLInjectionPrevention(t *testing.T) {
 			}
 
 			// Response should not contain SQL error messages
-			body := w.Body.String()
+			respBody := w.Body.String()
 			sqlKeywords := []string{"SQL", "syntax", "database", "sqlite", "query"}
 			for _, keyword := range sqlKeywords {
-				if strings.Contains(strings.ToLower(body), strings.ToLower(keyword)) {
-					t.Errorf("Response contains SQL keyword '%s': %s", keyword, body)
+				if strings.Contains(strings.ToLower(respBody), strings.ToLower(keyword)) {
+					t.Errorf("Response contains SQL keyword '%s': %s", keyword, respBody)
 				}
 			}
 		})
@@ -355,7 +388,7 @@ func TestSecurity_JWTValidation(t *testing.T) {
 
 	t.Run("Expired token rejected", func(t *testing.T) {
 		shortManager := auth.NewJWTManager("secret-key", 1*time.Millisecond)
-		token, _ := shortManager.GenerateToken(1, "testuser")
+		token, _ := shortManager.GenerateToken(1, "testuser", 1, "owner")
 
 		time.Sleep(10 * time.Millisecond)
 
@@ -366,7 +399,7 @@ func TestSecurity_JWTValidation(t *testing.T) {
 	})
 
 	t.Run("Tampered token rejected", func(t *testing.T) {
-		token, _ := jwtManager.GenerateToken(1, "testuser")
+		token, _ := jwtManager.GenerateToken(1, "testuser", 1, "owner")
 
 		// Tamper with token
 		tamperedToken := token[:len(token)-5] + "XXXXX"
@@ -381,7 +414,7 @@ func TestSecurity_JWTValidation(t *testing.T) {
 		manager1 := auth.NewJWTManager("secret1", 1*time.Hour)
 		manager2 := auth.NewJWTManager("secret2", 1*time.Hour)
 
-		token, _ := manager1.GenerateToken(1, "testuser")
+		token, _ := manager1.GenerateToken(1, "testuser", 1, "owner")
 
 		_, err := manager2.ValidateToken(token)
 		if err != auth.ErrInvalidToken {
@@ -474,8 +507,19 @@ func TestSecurity_SessionManagement(t *testing.T) {
 		Username:     "testuser",
 		PasswordHash: hashedPassword,
 		IsActive:     true,
+		AccountID:    1,
+		Role:         "owner",
 	}
 	userRepo.Create(user)
+
+	// Add user to account_members table (required for login)
+	_, err := db.Exec(`
+		INSERT INTO account_members (account_id, user_id, role, joined_at)
+		VALUES (1, ?, 'owner', CURRENT_TIMESTAMP)
+	`, user.ID)
+	if err != nil {
+		t.Fatalf("Failed to add user to account_members: %v", err)
+	}
 
 	handler := handlers.HandleLogin(db, jwtManager)
 

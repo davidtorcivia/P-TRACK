@@ -55,7 +55,8 @@ type LogMedicationRequest struct {
 func HandleGetMedications(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -68,9 +69,9 @@ func HandleGetMedications(db *database.DB) http.HandlerFunc {
 		var err error
 
 		if filter == "active" {
-			medications, err = medicationRepo.ListActive()
+			medications, err = medicationRepo.ListActive(accountID)
 		} else {
-			medications, err = medicationRepo.List()
+			medications, err = medicationRepo.List(accountID)
 		}
 
 		if err != nil {
@@ -87,7 +88,8 @@ func HandleGetMedications(db *database.DB) http.HandlerFunc {
 func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -149,6 +151,7 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 			ScheduledTime:     nullString(req.ScheduledTime),
 			TimeWindowMinutes: nullInt64(req.TimeWindowMinutes),
 			ReminderEnabled:   reminderEnabled,
+		AccountID:         accountID,
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)
@@ -182,7 +185,8 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 func HandleGetMedication(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -195,7 +199,7 @@ func HandleGetMedication(db *database.DB) http.HandlerFunc {
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)
-		medication, err := medicationRepo.GetByID(id)
+		medication, err := medicationRepo.GetByID(id, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Medication not found", http.StatusNotFound)
@@ -214,7 +218,8 @@ func HandleGetMedication(db *database.DB) http.HandlerFunc {
 func HandleUpdateMedication(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -234,7 +239,7 @@ func HandleUpdateMedication(db *database.DB) http.HandlerFunc {
 
 		// Get existing medication
 		medicationRepo := repository.NewMedicationRepository(db)
-		medication, err := medicationRepo.GetByID(id)
+		medication, err := medicationRepo.GetByID(id, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Medication not found", http.StatusNotFound)
@@ -298,7 +303,7 @@ func HandleUpdateMedication(db *database.DB) http.HandlerFunc {
 		}
 
 		// Update medication
-		if err := medicationRepo.Update(medication); err != nil {
+		if err := medicationRepo.Update(medication, accountID); err != nil {
 			http.Error(w, "Failed to update medication", http.StatusInternalServerError)
 			return
 		}
@@ -326,7 +331,8 @@ func HandleUpdateMedication(db *database.DB) http.HandlerFunc {
 func HandleDeleteMedication(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -340,7 +346,7 @@ func HandleDeleteMedication(db *database.DB) http.HandlerFunc {
 
 		// Get medication details for audit log
 		medicationRepo := repository.NewMedicationRepository(db)
-		medication, err := medicationRepo.GetByID(id)
+		medication, err := medicationRepo.GetByID(id, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Medication not found", http.StatusNotFound)
@@ -351,7 +357,7 @@ func HandleDeleteMedication(db *database.DB) http.HandlerFunc {
 		}
 
 		// Hard delete medication (this will cascade delete all logs)
-		if err := medicationRepo.HardDelete(id); err != nil {
+		if err := medicationRepo.HardDelete(id, accountID); err != nil {
 			http.Error(w, "Failed to delete medication", http.StatusInternalServerError)
 			return
 		}
@@ -378,7 +384,8 @@ func HandleDeleteMedication(db *database.DB) http.HandlerFunc {
 func HandleLogMedication(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -398,7 +405,7 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 
 		// Verify medication exists
 		medicationRepo := repository.NewMedicationRepository(db)
-		medication, err := medicationRepo.GetByID(medicationID)
+		medication, err := medicationRepo.GetByID(medicationID, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Medication not found", http.StatusNotFound)
@@ -460,7 +467,8 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 func HandleGetMedicationLogs(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -474,7 +482,7 @@ func HandleGetMedicationLogs(db *database.DB) http.HandlerFunc {
 
 		// Verify medication exists
 		medicationRepo := repository.NewMedicationRepository(db)
-		_, err = medicationRepo.GetByID(medicationID)
+		_, err = medicationRepo.GetByID(medicationID, accountID)
 		if err != nil {
 			if err == repository.ErrNotFound {
 				http.Error(w, "Medication not found", http.StatusNotFound)
@@ -534,13 +542,14 @@ func HandleGetMedicationLogs(db *database.DB) http.HandlerFunc {
 func HandleGetTodaySchedule(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)
-		medications, err := medicationRepo.ListActive()
+		medications, err := medicationRepo.ListActive(accountID)
 		if err != nil {
 			http.Error(w, "Failed to retrieve medications", http.StatusInternalServerError)
 			return
@@ -567,7 +576,8 @@ func HandleGetTodaySchedule(db *database.DB) http.HandlerFunc {
 func HandleGetAdherence(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -589,13 +599,14 @@ func HandleGetAdherence(db *database.DB) http.HandlerFunc {
 func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)
-		activeMeds, err := medicationRepo.ListActive()
+		activeMeds, err := medicationRepo.ListActive(accountID)
 		if err != nil || len(activeMeds) == 0 {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(`

@@ -20,9 +20,11 @@ import (
 // getBasePageData returns common data for all authenticated pages
 func getBasePageData(r *http.Request, csrf *middleware.CSRFProtection) map[string]interface{} {
 	userID := middleware.GetUserID(r.Context())
+	accountID := middleware.GetAccountID(r.Context())
 
 	data := map[string]interface{}{
 		"IsAuthenticated": true,
+		"AccountID":        accountID,
 		"UserID":          userID,
 	}
 
@@ -52,6 +54,12 @@ func HandleHome(db *database.DB) http.HandlerFunc {
 
 // HandleLoginPage renders the login page
 func HandleLoginPage(w http.ResponseWriter, r *http.Request) {
+	// Redirect to dashboard if already logged in
+	if userCtx := middleware.GetUserContext(r); userCtx != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
 	data := map[string]interface{}{
 		"Title":           "Login",
 		"IsAuthenticated": false,
@@ -62,6 +70,12 @@ func HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	// Render login.html - the Render function will execute base.html with the login content block
 	if err := web.Render(w, "login.html", data); err != nil {
 		http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
+	// Redirect to dashboard if already logged in
+	if userCtx := middleware.GetUserContext(r); userCtx != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
 		return
 	}
 }
@@ -126,11 +140,12 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 
 		// Get user's timezone preference
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
 		userTimezone := GetUserTimezone(db, userID)
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			activeData := map[string]interface{}{
 				"ID":        activeCourse.ID,
@@ -249,11 +264,12 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 
 		// Get user's timezone preference
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
 		userTimezone := GetUserTimezone(db, userID)
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = map[string]interface{}{
 				"ID":   activeCourse.ID,
@@ -310,10 +326,11 @@ func HandleSymptomsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Symptoms"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = map[string]interface{}{
 				"ID":   activeCourse.ID,
@@ -336,9 +353,10 @@ func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 		data["Title"] = "Medications - Injection Tracker"
 		data["Action"] = r.URL.Query().Get("action")
 
+		accountID := middleware.GetAccountID(r.Context())
 		// Fetch active medications
 		medicationRepo := repository.NewMedicationRepository(db)
-		activeMeds, err := medicationRepo.ListActive()
+		activeMeds, err := medicationRepo.ListActive(accountID)
 		if err == nil && len(activeMeds) > 0 {
 			// Check if each medication was taken today
 			for _, med := range activeMeds {
@@ -356,7 +374,7 @@ func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 		}
 
 		// Fetch inactive medications
-		allMeds, err := medicationRepo.List()
+		allMeds, err := medicationRepo.List(accountID)
 		if err == nil {
 			inactiveMeds := []*models.Medication{}
 			for _, med := range allMeds {
@@ -510,10 +528,11 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Courses"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			activeData := map[string]interface{}{
 				"ID":            activeCourse.ID,
@@ -533,7 +552,7 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 		}
 
 		// Get past courses
-		courses, err := courseRepo.List()
+		courses, err := courseRepo.List(accountID)
 		if err == nil {
 			pastCourses := []map[string]interface{}{}
 			for _, course := range courses {
@@ -653,6 +672,7 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 		}
 
 		data["Settings"] = settings
+		data["UserID"] = userID
 		data["User"] = map[string]interface{}{
 			"Username": "User", // TODO: Get actual username
 			"Email":    "",
@@ -688,6 +708,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Edit Symptom - Injection Tracker"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get symptom ID from URL
 		idStr := chi.URLParam(r, "id")
@@ -699,7 +720,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 
 		// Get symptom log
 		symptomRepo := repository.NewSymptomRepository(db)
-		symptom, err := symptomRepo.GetByID(id)
+		symptom, err := symptomRepo.GetByID(id, accountID)
 		if err != nil {
 			http.Error(w, "Symptom log not found", http.StatusNotFound)
 			return
@@ -707,7 +728,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 
 		// Get active course for the template
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = activeCourse
 		}
@@ -727,10 +748,11 @@ func HandleSymptomsHistoryPage(db *database.DB, csrf *middleware.CSRFProtection)
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(r, csrf)
 		data["Title"] = "Symptom History - Injection Tracker"
+		accountID := middleware.GetAccountID(r.Context())
 
 		// Get active course for consistency with other pages
 		courseRepo := repository.NewCourseRepository(db)
-		activeCourse, err := courseRepo.GetActiveCourse()
+		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			data["ActiveCourse"] = activeCourse
 		}
@@ -790,14 +812,14 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 
 		// Get recent activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'injection' as type, timestamp, side as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM injections
 			UNION ALL
-			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'symptom' as type, timestamp, COALESCE(pain_location, '') as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM symptom_logs
 			UNION ALL
 			SELECT 'medication' as type, timestamp,
-				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				COALESCE((SELECT name FROM medications WHERE id = medication_logs.medication_id), '') as detail1,
 				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
 				notes, medication_logs.id
 			FROM medication_logs
@@ -917,14 +939,14 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 
 		// Get all activity using UNION to combine and sort by timestamp
 		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'injection' as type, timestamp, side as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM injections
 			UNION ALL
-			SELECT 'symptom' as type, timestamp, pain_location as detail1, CAST(pain_level AS TEXT) as detail2, notes, id
+			SELECT 'symptom' as type, timestamp, COALESCE(pain_location, '') as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
 			FROM symptom_logs
 			UNION ALL
 			SELECT 'medication' as type, timestamp,
-				(SELECT name FROM medications WHERE id = medication_logs.medication_id) as detail1,
+				COALESCE((SELECT name FROM medications WHERE id = medication_logs.medication_id), '') as detail1,
 				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
 				notes, medication_logs.id
 			FROM medication_logs

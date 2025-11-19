@@ -13,8 +13,10 @@ var (
 )
 
 type Claims struct {
-	UserID   int64  `json:"user_id"`
-	Username string `json:"username"`
+	UserID    int64  `json:"user_id"`
+	Username  string `json:"username"`
+	AccountID int64  `json:"account_id"` // Account the user belongs to
+	Role      string `json:"role"`       // 'owner' or 'member'
 	jwt.RegisteredClaims
 }
 
@@ -31,11 +33,13 @@ func NewJWTManager(secret string, sessionDuration time.Duration) *JWTManager {
 }
 
 // GenerateToken creates a new JWT token for a user
-func (m *JWTManager) GenerateToken(userID int64, username string) (string, error) {
+func (m *JWTManager) GenerateToken(userID int64, username string, accountID int64, role string) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
+		UserID:    userID,
+		Username:  username,
+		AccountID: accountID,
+		Role:      role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.sessionDuration)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -79,8 +83,21 @@ func (m *JWTManager) RefreshToken(tokenString string) (string, error) {
 		return "", err
 	}
 
+	// If claims is nil (which can happen with expired tokens), we need to parse without validation
+	if claims == nil {
+		token, _, err := jwt.NewParser().ParseUnverified(tokenString, &Claims{})
+		if err != nil {
+			return "", ErrInvalidToken
+		}
+		var ok bool
+		claims, ok = token.Claims.(*Claims)
+		if !ok {
+			return "", ErrInvalidToken
+		}
+	}
+
 	// Generate new token with same claims but new expiration
-	return m.GenerateToken(claims.UserID, claims.Username)
+	return m.GenerateToken(claims.UserID, claims.Username, claims.AccountID, claims.Role)
 }
 
 // SessionDuration returns the configured session duration

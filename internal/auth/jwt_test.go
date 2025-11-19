@@ -53,7 +53,7 @@ func TestGenerateToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := manager.GenerateToken(tt.userID, tt.username)
+			token, err := manager.GenerateToken(tt.userID, tt.username, 1, "owner")
 			if err != nil {
 				t.Fatalf("Failed to generate token: %v", err)
 			}
@@ -84,7 +84,7 @@ func TestValidateToken(t *testing.T) {
 	username := "testuser"
 
 	// Generate a valid token
-	token, err := manager.GenerateToken(userID, username)
+	token, err := manager.GenerateToken(userID, username, 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestValidateTokenExpired(t *testing.T) {
 	// Create manager with very short duration
 	manager := NewJWTManager("test-secret", 1*time.Millisecond)
 
-	token, err := manager.GenerateToken(1, "testuser")
+	token, err := manager.GenerateToken(1, "testuser", 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestValidateTokenWrongSecret(t *testing.T) {
 	manager2 := NewJWTManager("secret2", 1*time.Hour)
 
 	// Generate token with manager1
-	token, err := manager1.GenerateToken(1, "testuser")
+	token, err := manager1.GenerateToken(1, "testuser", 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -204,13 +204,19 @@ func TestRefreshToken(t *testing.T) {
 	username := "testuser"
 
 	// Generate original token
-	originalToken, err := manager.GenerateToken(userID, username)
+	originalToken, err := manager.GenerateToken(userID, username, 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
 
-	// Wait a bit to ensure new token has different timestamp
-	time.Sleep(100 * time.Millisecond)
+	// Get original claims
+	originalClaims, err := manager.ValidateToken(originalToken)
+	if err != nil {
+		t.Fatalf("Failed to validate original token: %v", err)
+	}
+
+	// Wait to ensure new token has different timestamp (JWT uses second precision)
+	time.Sleep(1100 * time.Millisecond)
 
 	// Refresh token
 	newToken, err := manager.RefreshToken(originalToken)
@@ -222,22 +228,28 @@ func TestRefreshToken(t *testing.T) {
 		t.Error("Expected non-empty refreshed token")
 	}
 
+	// Tokens should be different if enough time has passed (>1 second for JWT precision)
 	if newToken == originalToken {
-		t.Error("Refreshed token should be different from original")
+		t.Error("Refreshed token should be different from original after waiting >1 second")
 	}
 
 	// Validate new token
-	claims, err := manager.ValidateToken(newToken)
+	newClaims, err := manager.ValidateToken(newToken)
 	if err != nil {
 		t.Fatalf("Failed to validate refreshed token: %v", err)
 	}
 
-	if claims.UserID != userID {
-		t.Errorf("Expected UserID %d, got %d", userID, claims.UserID)
+	if newClaims.UserID != userID {
+		t.Errorf("Expected UserID %d, got %d", userID, newClaims.UserID)
 	}
 
-	if claims.Username != username {
-		t.Errorf("Expected Username %s, got %s", username, claims.Username)
+	if newClaims.Username != username {
+		t.Errorf("Expected Username %s, got %s", username, newClaims.Username)
+	}
+
+	// Verify the new token has a later expiration time (purpose of refresh)
+	if !newClaims.ExpiresAt.Time.After(originalClaims.ExpiresAt.Time) {
+		t.Error("Refreshed token should have later expiration time than original")
 	}
 }
 
@@ -245,7 +257,7 @@ func TestRefreshTokenExpired(t *testing.T) {
 	// Create manager with very short duration
 	manager := NewJWTManager("test-secret", 1*time.Millisecond)
 
-	token, err := manager.GenerateToken(1, "testuser")
+	token, err := manager.GenerateToken(1, "testuser", 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -314,7 +326,7 @@ func TestTokenClaims(t *testing.T) {
 	userID := int64(42)
 	username := "testuser"
 
-	token, err := manager.GenerateToken(userID, username)
+	token, err := manager.GenerateToken(userID, username, 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -363,7 +375,7 @@ func TestTokenClaims(t *testing.T) {
 func TestTokenSigningMethod(t *testing.T) {
 	manager := NewJWTManager("test-secret", 1*time.Hour)
 
-	token, err := manager.GenerateToken(1, "testuser")
+	token, err := manager.GenerateToken(1, "testuser", 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -382,7 +394,7 @@ func TestTokenSigningMethod(t *testing.T) {
 func TestTokenNotBeforeClaim(t *testing.T) {
 	manager := NewJWTManager("test-secret", 1*time.Hour)
 
-	token, err := manager.GenerateToken(1, "testuser")
+	token, err := manager.GenerateToken(1, "testuser", 1, "owner")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -407,13 +419,13 @@ func BenchmarkGenerateToken(b *testing.B) {
 	manager := NewJWTManager("benchmark-secret", 2*time.Hour)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = manager.GenerateToken(int64(i), "benchuser")
+		_, _ = manager.GenerateToken(int64(i), "benchuser", 1, "owner")
 	}
 }
 
 func BenchmarkValidateToken(b *testing.B) {
 	manager := NewJWTManager("benchmark-secret", 2*time.Hour)
-	token, _ := manager.GenerateToken(1, "benchuser")
+	token, _ := manager.GenerateToken(1, "benchuser", 1, "owner")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = manager.ValidateToken(token)
@@ -422,7 +434,7 @@ func BenchmarkValidateToken(b *testing.B) {
 
 func BenchmarkRefreshToken(b *testing.B) {
 	manager := NewJWTManager("benchmark-secret", 2*time.Hour)
-	token, _ := manager.GenerateToken(1, "benchuser")
+	token, _ := manager.GenerateToken(1, "benchuser", 1, "owner")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = manager.RefreshToken(token)
@@ -439,7 +451,7 @@ func TestConcurrentTokenOperations(t *testing.T) {
 		done := make(chan bool, goroutines)
 		for i := 0; i < goroutines; i++ {
 			go func(id int) {
-				_, err := manager.GenerateToken(int64(id), "user")
+				_, err := manager.GenerateToken(int64(id), "user", 1, "owner")
 				if err != nil {
 					t.Errorf("Failed to generate token: %v", err)
 				}
@@ -454,7 +466,7 @@ func TestConcurrentTokenOperations(t *testing.T) {
 
 	// Test concurrent token validation
 	t.Run("Concurrent validation", func(t *testing.T) {
-		token, _ := manager.GenerateToken(1, "testuser")
+		token, _ := manager.GenerateToken(1, "testuser", 1, "owner")
 		done := make(chan bool, goroutines)
 		for i := 0; i < goroutines; i++ {
 			go func() {

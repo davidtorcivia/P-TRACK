@@ -99,6 +99,395 @@
     </article>
 </div>
 
+<!-- Account & Sharing Section -->
+<article style="padding: 1rem;"
+         x-data="accountSharing()"
+         x-init="currentUserID = {{ .UserID }}; init()">
+    <header>
+        <h3>Account & Sharing</h3>
+        <p>Share your injection tracking data with your partner</p>
+    </header>
+
+    <!-- Account Members -->
+    <div style="margin-bottom: 2rem;">
+        <h4>Account Members</h4>
+        <div id="members-list" style="margin-top: 1rem;">
+            <p style="color: var(--pico-muted-color);">Loading members...</p>
+        </div>
+    </div>
+
+    <!-- Invite New Member -->
+    <div style="margin-bottom: 2rem;">
+        <h4>Invite Partner</h4>
+        <p style="margin-bottom: 1rem;">Generate a one-time invitation link to share with your partner. The link expires in 7 days.</p>
+
+        <form @submit.prevent="sendInvitation()" style="margin-top: 1rem;">
+            <div id="invite-feedback" x-html="inviteFeedback"></div>
+
+            <button type="submit" :disabled="inviting">
+                <span x-show="!inviting">Generate Invitation Link</span>
+                <span x-show="inviting">Creating...</span>
+            </button>
+        </form>
+
+        <!-- Show invitation link after creation -->
+        <div x-show="invitationToken" style="margin-top: 1rem; padding: 1rem; background: var(--pico-primary-background); border: 1px solid var(--pico-primary); border-radius: var(--pico-border-radius);">
+            <p><strong>Invitation Link Created!</strong></p>
+            <p style="margin-top: 0.5rem;">Share this link with your partner:</p>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+                <input type="text"
+                       x-model="invitationLink"
+                       readonly
+                       style="flex: 1; font-family: monospace; font-size: 0.85rem;"
+                       @click="$el.select()">
+                <button type="button"
+                        class="outline"
+                        @click="copyInvitationLink()"
+                        style="white-space: nowrap;">
+                    <span x-show="!copied">Copy Link</span>
+                    <span x-show="copied">Copied!</span>
+                </button>
+            </div>
+            <small style="display: block; margin-top: 0.5rem;">
+                Expires in 7 days - One-time use only
+            </small>
+        </div>
+    </div>
+
+    <!-- Invitations -->
+    <div>
+        <h4>Invitations</h4>
+        <div id="invitations-list" style="margin-top: 1rem;">
+            <p style="color: var(--pico-muted-color);">Loading invitations...</p>
+        </div>
+    </div>
+</article>
+
+<script>
+function accountSharing() {
+    return {
+        members: [],
+        invitations: [],
+        inviting: false,
+        inviteFeedback: '',
+        invitationToken: '',
+        invitationLink: '',
+        copied: false,
+        currentUserID: 0,
+        currentUserRole: '',
+
+        init() {
+            this.loadMembers();
+            this.loadInvitations();
+        },
+
+        async loadMembers() {
+            try {
+                const response = await fetch('/api/account/members', {
+                    headers: { 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content }
+                });
+
+                if (!response.ok) throw new Error('Failed to load members');
+
+                this.members = await response.json();
+
+                // Find current user's role
+                const currentMember = this.members.find(m => m.UserID === this.currentUserID);
+                if (currentMember) {
+                    this.currentUserRole = currentMember.Role;
+                }
+
+                this.renderMembers();
+            } catch (error) {
+                document.getElementById('members-list').innerHTML =
+                    '<p style="color: var(--pico-del-color);">Error loading members</p>';
+            }
+        },
+
+        renderMembers() {
+            const html = this.members.map(member => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                    <div>
+                        <strong>${member.Username || 'Unknown User'}</strong>
+                        ${member.Role === 'owner' ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-primary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">Owner</span>' : ''}
+                        ${member.UserID === this.currentUserID ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-secondary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">You</span>' : ''}
+                    </div>
+                    ${member.UserID !== this.currentUserID && this.currentUserRole === 'owner' ? `
+                        <button type="button"
+                                class="outline contrast"
+                                style="margin: 0;"
+                                onclick="removeMember(${member.UserID}, '${member.Username}')">
+                            Remove
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('members-list').innerHTML =
+                html || '<p style="color: var(--pico-muted-color);">No members found</p>';
+        },
+
+        async loadInvitations() {
+            try {
+                const response = await fetch('/api/invitations', {
+                    headers: { 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content }
+                });
+
+                if (!response.ok) {
+                    // Don't show error for empty list
+                    this.invitations = [];
+                    this.renderInvitations();
+                    return;
+                }
+
+                const data = await response.json();
+                this.invitations = data || [];
+                this.renderInvitations();
+            } catch (error) {
+                // Show empty list instead of error
+                this.invitations = [];
+                this.renderInvitations();
+            }
+        },
+
+        renderInvitations() {
+            if (!this.invitations || this.invitations.length === 0) {
+                document.getElementById('invitations-list').innerHTML =
+                    '<p style="color: var(--pico-muted-color);">No invitations</p>';
+                return;
+            }
+
+            const html = this.invitations.map(inv => {
+                const accepted = inv.accepted_at ? `<span style="color: var(--pico-ins-color);">(Accepted ${new Date(inv.accepted_at).toLocaleDateString()})</span>` : '';
+
+                // Get stored token from localStorage for pending invitations
+                const storedToken = !inv.accepted_at ? localStorage.getItem(`invite_token_${inv.id}`) : null;
+                const inviteLink = storedToken ? `${window.location.origin}/register?invite=${storedToken}` : null;
+
+                return `
+                <div style="padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>Invitation ${accepted}</strong>
+                            <br><small style="color: var(--pico-muted-color);">
+                                Created ${new Date(inv.created_at).toLocaleDateString()} -
+                                Expires ${new Date(inv.expires_at).toLocaleDateString()}
+                            </small>
+                        </div>
+                        ${!inv.accepted_at ? `
+                        <button type="button"
+                                class="outline contrast"
+                                style="margin: 0;"
+                                onclick="confirmRevokeInvitation(${inv.id})">
+                            Revoke
+                        </button>
+                        ` : ''}
+                    </div>
+                    ${inviteLink ? `
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--pico-muted-border-color);">
+                        <small style="color: var(--pico-muted-color); display: block; margin-bottom: 0.5rem;">Invitation Link:</small>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text"
+                                   value="${inviteLink}"
+                                   readonly
+                                   onclick="this.select()"
+                                   style="flex: 1; font-family: monospace; font-size: 0.85rem; margin: 0;">
+                            <button type="button"
+                                    class="outline"
+                                    onclick="copyToClipboard('${inviteLink}', this)"
+                                    style="margin: 0; white-space: nowrap;">
+                                Copy Link
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                `;
+            }).join('');
+
+            document.getElementById('invitations-list').innerHTML = html;
+        },
+
+        async sendInvitation() {
+            this.inviting = true;
+            this.inviteFeedback = '';
+            this.invitationToken = '';
+            this.invitationLink = '';
+
+            try {
+                const response = await fetch('/api/invitations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                    },
+                    body: JSON.stringify({
+                        email: 'invitation@localhost',
+                        role: 'member'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || 'Failed to create invitation');
+                }
+
+                const data = await response.json();
+                this.invitationToken = data.token;
+                this.invitationLink = `${window.location.origin}/register?invite=${data.token}`;
+
+                // Store token in localStorage so we can display it later
+                localStorage.setItem(`invite_token_${data.id}`, data.token);
+
+                this.inviteFeedback = '<mark>Invitation link created successfully!</mark>';
+
+                // Reload invitations list
+                await this.loadInvitations();
+
+                // Clear feedback after 5 seconds
+                setTimeout(() => {
+                    this.inviteFeedback = '';
+                }, 5000);
+
+            } catch (error) {
+                this.inviteFeedback = `<del>Error: ${error.message}</del>`;
+            } finally {
+                this.inviting = false;
+            }
+        },
+
+        copyInvitationLink() {
+            navigator.clipboard.writeText(this.invitationLink);
+            this.copied = true;
+            setTimeout(() => {
+                this.copied = false;
+            }, 2000);
+        }
+    }
+}
+
+async function removeMember(userId, username) {
+    const modal = document.getElementById('remove-member-modal');
+    document.getElementById('remove-member-name').textContent = username;
+    modal.showModal();
+
+    // Store for confirmation
+    window.pendingRemoveUserId = userId;
+}
+
+async function confirmRemoveMember() {
+    const modal = document.getElementById('remove-member-modal');
+    const userId = window.pendingRemoveUserId;
+
+    try {
+        const response = await fetch(`/api/account/members/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to remove member');
+
+        modal.close();
+        window.location.reload();
+    } catch (error) {
+        modal.close();
+        alert('Error removing member: ' + error.message);
+    }
+}
+
+function confirmRevokeInvitation(invitationId) {
+    const modal = document.getElementById('revoke-invitation-modal');
+    modal.showModal();
+
+    // Store for confirmation
+    window.pendingRevokeInvitationId = invitationId;
+}
+
+async function revokeInvitation() {
+    const modal = document.getElementById('revoke-invitation-modal');
+    const invitationId = window.pendingRevokeInvitationId;
+
+    try {
+        const response = await fetch(`/api/invitations/${invitationId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to revoke invitation');
+        }
+
+        // Remove token from localStorage
+        localStorage.removeItem(`invite_token_${invitationId}`);
+
+        modal.close();
+        window.location.reload();
+    } catch (error) {
+        modal.close();
+        alert('Error revoking invitation: ' + error.message);
+    }
+}
+
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 2000);
+    });
+}
+</script>
+
+<!-- Revoke Invitation Modal -->
+<dialog id="revoke-invitation-modal">
+    <article style="max-width: 500px; margin: 0;">
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('revoke-invitation-modal').close()"></button>
+            <h3>Revoke Invitation</h3>
+        </header>
+        <p>Are you sure you want to revoke this invitation link?</p>
+        <p style="color: var(--pico-muted-color);">The link will no longer work and cannot be used to register.</p>
+        <footer>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="secondary" onclick="document.getElementById('revoke-invitation-modal').close()">
+                    Cancel
+                </button>
+                <button class="contrast" onclick="revokeInvitation()">
+                    Revoke Invitation
+                </button>
+            </div>
+        </footer>
+    </article>
+</dialog>
+
+<!-- Remove Member Modal -->
+<dialog id="remove-member-modal">
+    <article style="max-width: 500px; margin: 0;">
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('remove-member-modal').close()"></button>
+            <h3>Remove Member</h3>
+        </header>
+        <p>Are you sure you want to remove <strong id="remove-member-name"></strong> from your account?</p>
+        <p style="color: var(--pico-del-color);">They will immediately lose access to all shared data.</p>
+        <footer>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="secondary" onclick="document.getElementById('remove-member-modal').close()">
+                    Cancel
+                </button>
+                <button class="contrast" onclick="confirmRemoveMember()">
+                    Remove Member
+                </button>
+            </div>
+        </footer>
+    </article>
+</dialog>
+
 <!-- App Settings -->
 <article style="padding: 1rem;">
     <header>
