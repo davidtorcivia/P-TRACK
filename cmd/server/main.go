@@ -243,6 +243,8 @@ func main() {
 		r.Get("/calendar", handlers.HandleCalendarPage(db, csrfProtection))
 		r.Get("/reports", handlers.HandleReportsPage(db, csrfProtection))
 		r.Get("/settings", handlers.HandleSettingsPage(db, csrfProtection))
+		r.Get("/help", handlers.HandleHelpPage(db, csrfProtection))
+		r.Get("/about", handlers.HandleAboutPage(db, csrfProtection))
 	})
 
 	// Start server

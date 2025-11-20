@@ -10,63 +10,19 @@
     <a href="/courses" role="button" class="btn outline w-full" style="text-align:center">Manage Courses</a>
 </div>
 
-<!-- Injections Table/List -->
-<article class="card" style="padding: 0; overflow: hidden;">
-    <header style="padding: var(--space-4); margin-bottom: 0; border-bottom: 1px solid var(--color-border);">
+<!-- Injections Grid (Responsive) -->
+<article class="card" style="padding: 0; background: transparent; border: none; box-shadow: none;">
+    <header style="padding: var(--space-4); margin-bottom: var(--space-4); border-bottom: none; background: transparent; padding-left: 0;">
         <h3 style="margin: 0; font-size: var(--text-lg);">All Injections</h3>
     </header>
-    <div id="injections-table">
-        {{ if .Injections }}
-        <!-- Desktop Table -->
-        <div class="desktop-only" style="overflow-x: auto;">
-            <table style="margin-bottom: 0;">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Side</th>
-                        <th>Pain</th>
-                        <th>Notes</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{ range .Injections }}
-                    <tr>
-                        <td>{{ .Date }}</td>
-                        <td>{{ .Time }}</td>
-                        <td>
-                            <span class="badge {{ if eq .Side "Left" }}badge-primary{{ else }}badge-secondary{{ end }}">
-                                {{ .Side }}
-                            </span>
-                        </td>
-                        <td>
-                            {{ if .PainLevel }}
-                                <span class="badge {{ if gt .PainLevel 7 }}badge-danger{{ else if gt .PainLevel 4 }}badge-warning{{ else }}badge-success{{ end }}">
-                                    {{ .PainLevel }}/10
-                                </span>
-                            {{ else }}-{{ end }}
-                        </td>
-                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ if .Notes }}{{ .Notes }}{{ else }}-{{ end }}</td>
-                        <td>
-                            <div style="display: flex; gap: var(--space-2);">
-                                <button onclick="document.getElementById('edit-injection-{{ .ID }}').showModal()" class="btn-sm outline" style="padding: var(--space-1) var(--space-2);">Edit</button>
-                                <button onclick="showDeleteInjectionConfirmation('{{ .ID }}', '{{ .Side }}', '{{ .Date }}')" class="btn-sm outline secondary" style="padding: var(--space-1) var(--space-2); color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {{ end }}
-                </tbody>
-            </table>
-        </div>
 
-        <!-- Mobile Card List -->
-        <div class="mobile-only" style="display: none; flex-direction: column;">
+    <div id="injections-grid" class="grid desktop-grid-cols-3 mobile-grid-cols-1" style="gap: var(--space-4);">
+        {{ if .Injections }}
             {{ range .Injections }}
-            <div style="padding: var(--space-4); border-bottom: 1px solid var(--color-border);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-2);">
+            <div class="card" style="margin: 0; padding: var(--space-4); border: 1px solid var(--color-border); display: flex; flex-direction: column; height: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3);">
                     <div>
-                        <div style="font-weight: bold; margin-bottom: var(--space-1);">{{ .Date }}</div>
+                        <div style="font-weight: bold; font-size: var(--text-base);">{{ .Date }}</div>
                         <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">{{ .Time }}</div>
                     </div>
                     <span class="badge {{ if eq .Side "Left" }}badge-primary{{ else }}badge-secondary{{ end }}">
@@ -74,119 +30,37 @@
                     </span>
                 </div>
 
-                <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2);">
-                    <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">Pain:</span>
-                    {{ if .PainLevel }}
-                        <span class="badge {{ if gt .PainLevel 7 }}badge-danger{{ else if gt .PainLevel 4 }}badge-warning{{ else }}badge-success{{ end }}">
-                            {{ .PainLevel }}/10
-                        </span>
+                <div style="margin-bottom: var(--space-3); flex-grow: 1;">
+                    <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2);">
+                        <span style="font-size: var(--text-sm); color: var(--color-text-secondary); font-weight: 500;">Pain Level:</span>
+                        {{ if .PainLevel }}
+                            <span class="badge {{ if gt .PainLevel 7 }}badge-danger{{ else if gt .PainLevel 4 }}badge-warning{{ else }}badge-success{{ end }}">
+                                {{ .PainLevel }}/10
+                            </span>
+                        {{ else }}
+                            <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">-</span>
+                        {{ end }}
+                    </div>
+
+                    {{ if .Notes }}
+                    <div style="font-size: var(--text-sm); color: var(--color-text-primary); background-color: var(--color-bg-tertiary); padding: var(--space-2); border-radius: var(--radius-sm); font-style: italic;">
+                        "{{ .Notes }}"
+                    </div>
                     {{ else }}
-                        <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">-</span>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-muted); font-style: italic;">
+                        No notes
+                    </div>
                     {{ end }}
                 </div>
 
-                {{ if .Notes }}
-                <div style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--color-text-primary); background-color: var(--color-bg-tertiary); padding: var(--space-2); border-radius: var(--radius-sm);">
-                    {{ .Notes }}
-                </div>
-                {{ end }}
-
-                <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
-                    <button onclick="document.getElementById('edit-injection-{{ .ID }}').showModal()" class="btn-sm outline" style="width: auto;">Edit</button>
-                    <button onclick="showDeleteInjectionConfirmation('{{ .ID }}', '{{ .Side }}', '{{ .Date }}')" class="btn-sm outline secondary" style="width: auto; color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+                <div style="display: flex; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); margin-top: auto;">
+                    <button onclick="document.getElementById('edit-injection-{{ .ID }}').showModal()" class="btn-sm outline w-full">Edit</button>
+                    <button onclick="showDeleteInjectionConfirmation('{{ .ID }}', '{{ .Side }}', '{{ .Date }}')" class="btn-sm outline secondary w-full" style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
                 </div>
             </div>
             {{ end }}
-        </div>
-
-        <!-- Edit Modals -->
-        {{ range .Injections }}
-        <dialog id="edit-injection-{{ .ID }}">
-            <article style="margin: 0;">
-                <header>
-                    <h3>Edit Injection</h3>
-                    <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-injection-{{ .ID }}').close()"></button>
-                </header>
-                <form x-data="{
-                    side: '{{ .SideLower }}',
-                    painLevel: {{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end }},
-                    notes: '{{ .Notes }}'
-                }" @submit.prevent="
-                    const btn = $el.querySelector('button[type=submit]');
-                    btn.disabled = true;
-                    btn.setAttribute('aria-busy', 'true');
-
-                    fetch('/api/injections/{{ .ID }}', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': '{{ $.CSRFToken }}'
-                        },
-                        body: JSON.stringify({
-                            side: side,
-                            pain_level: parseInt(painLevel),
-                            notes: notes
-                        })
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            window.location.reload();
-                        } else {
-                            response.text().then(text => {
-                                console.error('Error:', text);
-                                btn.disabled = false;
-                                btn.removeAttribute('aria-busy');
-                                window.location.reload();
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error.message);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                        window.location.reload();
-                    });
-                ">
-                    <fieldset>
-                        <legend>Which side?</legend>
-                        <div class="grid-2">
-                            <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'left' }">
-                                <input type="radio" x-model="side" value="left" name="side-{{ .ID }}" style="margin:0;">
-                                <span>Left</span>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'right' }">
-                                <input type="radio" x-model="side" value="right" name="side-{{ .ID }}" style="margin:0;">
-                                <span>Right</span>
-                            </label>
-                        </div>
-                    </fieldset>
-
-                    <label>
-                        Pain Level: <span x-text="painLevel"></span>/10
-                        <input type="range" x-model="painLevel" min="1" max="10" style="width: 100%;">
-                        <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-secondary);">
-                            <span>No Pain</span>
-                            <span>Severe Pain</span>
-                        </div>
-                    </label>
-
-                    <label>
-                        Notes
-                        <textarea x-model="notes" rows="2"></textarea>
-                    </label>
-
-                    <footer>
-                        <div class="grid-2">
-                            <button type="button" class="secondary" onclick="document.getElementById('edit-injection-{{ .ID }}').close()">Cancel</button>
-                            <button type="submit">Save Changes</button>
-                        </div>
-                    </footer>
-                </form>
-            </article>
-        </dialog>
-        {{ end }}
         {{ else }}
-        <div style="text-align: center; padding: var(--space-8); color: var(--color-text-secondary);">
+        <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-8); color: var(--color-text-secondary); background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
             <p>No injections recorded yet.</p>
             <button onclick="document.getElementById('log-injection').showModal()" class="outline">Record Your First Injection</button>
         </div>
@@ -194,12 +68,92 @@
     </div>
 </article>
 
-<style>
-    @media (max-width: 768px) {
-        .desktop-only { display: none !important; }
-        .mobile-only { display: flex !important; }
-    }
-</style>
+<!-- Edit Modals -->
+{{ range .Injections }}
+<dialog id="edit-injection-{{ .ID }}">
+    <article style="margin: 0;">
+        <header>
+            <h3>Edit Injection</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-injection-{{ .ID }}').close()"></button>
+        </header>
+        <form x-data="{
+            side: '{{ .SideLower }}',
+            painLevel: {{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end }},
+            notes: '{{ .Notes }}'
+        }" @submit.prevent="
+            const btn = $el.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+
+            fetch('/api/injections/{{ .ID }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ $.CSRFToken }}'
+                },
+                body: JSON.stringify({
+                    side: side,
+                    pain_level: parseInt(painLevel),
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    response.text().then(text => {
+                        console.error('Error:', text);
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                        window.location.reload();
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error.message);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+                window.location.reload();
+            });
+        ">
+            <fieldset>
+                <legend>Which side?</legend>
+                <div class="grid-2">
+                    <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'left' }">
+                        <input type="radio" x-model="side" value="left" name="side-{{ .ID }}" style="margin:0;">
+                        <span>Left</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'right' }">
+                        <input type="radio" x-model="side" value="right" name="side-{{ .ID }}" style="margin:0;">
+                        <span>Right</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <label>
+                Pain Level: <span x-text="painLevel"></span>/10
+                <input type="range" x-model="painLevel" min="1" max="10" style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-secondary);">
+                    <span>No Pain</span>
+                    <span>Severe Pain</span>
+                </div>
+            </label>
+
+            <label>
+                Notes
+                <textarea x-model="notes" rows="2"></textarea>
+            </label>
+
+            <footer>
+                <div class="grid-2">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-injection-{{ .ID }}').close()">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </footer>
+        </form>
+    </article>
+</dialog>
+{{ end }}
 
 {{ else }}
 <article class="card" style="text-align: center; padding: var(--space-8);">

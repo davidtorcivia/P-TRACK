@@ -1,13 +1,12 @@
 /* ===== INJECTION TRACKER APP STYLES ===== */
 /* Based on Redesign System, adapted for existing HTML structure */
 
-/* Note: redesign.css contains the base variables. We will override some here for the aesthetic improvements */
 @import 'redesign.css';
 
 /* ===== COLOR OVERRIDES & THEME IMPROVEMENTS ===== */
 :root {
     /* Base neutral palette overrides */
-    --color-bg-body: #f8fafc; /* Softer off-white for light mode background */
+    --color-bg-body: #f8fafc;
 }
 
 [data-theme="dark"] {
@@ -18,27 +17,30 @@
     --brand-primary-bg: rgba(52, 211, 153, 0.15);
 
     /* Harmonious Greys for Dark Mode */
-    --color-bg-body: #0f172a; /* Slate 900 - slightly blue-tinted dark grey, very modern */
-    --color-surface: #1e293b; /* Slate 800 */
-    --color-bg-tertiary: #334155; /* Slate 700 */
+    --color-bg-body: #0f172a;
+    --color-surface: #1e293b;
+    --color-bg-tertiary: #334155;
     --color-border: #334155;
-    --color-text-primary: #f1f5f9; /* Slate 100 */
-    --color-text-secondary: #94a3b8; /* Slate 400 */
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #94a3b8;
+
+    /* 5) Fix Dark Mode Button Contrast */
+    /* Secondary/Outline buttons need better visibility */
 }
 
 [data-theme="light"] {
-    /* 8) Fix "Ugly Blue" & "Too Much White" */
-    --brand-primary: #0e7490; /* Cyan 700 - Deep, professional teal/cyan */
-    --brand-primary-light: #22d3ee;
-    --brand-primary-dark: #155e75;
-    --brand-primary-bg: rgba(14, 116, 144, 0.1);
+    /* 7) Good Green for Light Mode (instead of Teal) */
+    --brand-primary: #059669; /* Emerald 600 */
+    --brand-primary-light: #10b981;
+    --brand-primary-dark: #047857;
+    --brand-primary-bg: rgba(5, 150, 105, 0.1);
 
-    --color-bg-body: #f1f5f9; /* Slate 100 - Light grey/blue tint to reduce harsh white */
+    --color-bg-body: #f0fdf4; /* Very light green tint for healthy feel */
     --color-surface: #ffffff;
-    --color-bg-tertiary: #f8fafc; /* Slate 50 */
-    --color-border: #e2e8f0; /* Slate 200 */
-    --color-text-primary: #0f172a; /* Slate 900 */
-    --color-text-secondary: #64748b; /* Slate 500 */
+    --color-bg-tertiary: #f0fdfa;
+    --color-border: #d1fae5; /* Green-tinted border */
+    --color-text-primary: #064e3b; /* Dark green text */
+    --color-text-secondary: #374151;
 }
 
 /* ===== GLOBAL LAYOUT ===== */
@@ -47,13 +49,13 @@ body {
     color: var(--color-text-primary);
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* 6) Fix floating footer */
+    min-height: 100vh;
 }
 
 main {
     padding-top: var(--space-8);
     padding-bottom: var(--space-12);
-    flex: 1; /* Push footer down */
+    flex: 1;
 }
 
 /* ===== GRID SYSTEM ===== */
@@ -88,15 +90,13 @@ article, .card {
     border-radius: var(--radius-xl);
     padding: var(--space-6);
     box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--transition-base), border-color var(--transition-base); /* 5) Remove transform on hover */
+    transition: box-shadow var(--transition-base), border-color var(--transition-base);
     margin-bottom: var(--space-6);
 }
 
-/* 5) Dashboard feel "solid" - subtle lift only, no large movement */
 article:hover, .card:hover {
     box-shadow: var(--shadow-md);
     border-color: var(--color-border-hover);
-    /* Removed transform: translateY(-2px); */
 }
 
 article header, .card header {
@@ -149,14 +149,14 @@ input[type="reset"],
     font-size: var(--text-sm);
     min-height: 2.5rem;
     background-color: var(--brand-primary);
-    color: white; /* Ensure text is readable on primary */
+    color: white;
     border-color: var(--brand-primary);
     box-shadow: var(--shadow-sm);
 }
 
 [data-theme="dark"] button,
 [data-theme="dark"] .btn {
-    color: #0f172a; /* Dark text on the bright green primary */
+    color: #0f172a;
 }
 
 button:hover,
@@ -165,7 +165,6 @@ button:hover,
     background-color: var(--brand-primary-dark);
     border-color: var(--brand-primary-dark);
     box-shadow: var(--shadow-md);
-    /* Removed transform */
 }
 
 /* Button Variants */
@@ -173,6 +172,14 @@ button:hover,
     background-color: var(--color-bg-tertiary);
     color: var(--color-text-primary);
     border-color: var(--color-border);
+}
+
+/* 5) Dark Mode Button Contrast Fix */
+[data-theme="dark"] .secondary,
+[data-theme="dark"] button.secondary,
+[data-theme="dark"] [role="button"].secondary {
+    color: var(--color-text-primary); /* Ensure readable text */
+    border-color: var(--color-text-secondary); /* Higher contrast border */
 }
 
 .secondary:hover, button.secondary:hover, [role="button"].secondary:hover {
@@ -185,6 +192,13 @@ button:hover,
     color: var(--brand-primary);
     border-color: var(--brand-primary);
     box-shadow: none;
+}
+
+[data-theme="dark"] .outline,
+[data-theme="dark"] button.outline,
+[data-theme="dark"] [role="button"].outline {
+    color: var(--brand-primary); /* Keep green */
+    border-color: var(--brand-primary);
 }
 
 .outline:hover, button.outline:hover, [role="button"].outline:hover {
@@ -322,6 +336,14 @@ nav.container-fluid {
     background-color: rgba(var(--color-surface), 0.9);
 }
 
+/* 2) Remove desktop nav border */
+@media (min-width: 769px) {
+    nav.container-fluid {
+        border-bottom: none;
+        box-shadow: var(--shadow-sm);
+    }
+}
+
 nav ul {
     list-style: none;
     padding: 0;
@@ -372,7 +394,7 @@ nav ul li strong {
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    z-index: 1100; /* 1) Fix mobile nav obscuring: Increased z-index above navbar (1020) */
     backdrop-filter: blur(4px);
 }
 
@@ -384,7 +406,7 @@ nav ul li strong {
     height: 100%;
     background-color: var(--color-surface);
     box-shadow: var(--shadow-2xl);
-    z-index: 1001;
+    z-index: 1101; /* 1) Higher than overlay */
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     padding: var(--space-6);
     overflow-y: auto;
@@ -401,7 +423,7 @@ nav ul li strong {
     align-items: stretch;
     width: 100%;
     gap: var(--space-2);
-    list-style: none; /* 3) Ensure no bullets */
+    list-style: none;
     padding: 0;
 }
 
@@ -436,8 +458,6 @@ nav ul li strong {
     .mobile-menu-toggle {
         display: block;
     }
-
-    /* 1) Remove border-bottom on mobile nav */
     nav.container-fluid {
         border-bottom: none;
     }
@@ -543,45 +563,57 @@ details.dropdown[open] ul {
     pointer-events: auto;
 }
 
-/* 4) Injection History Card Layout for Mobile */
-@media (max-width: 768px) {
-    .mobile-card-table thead {
-        display: none;
-    }
+/* 4) & 6) Desktop and Mobile Card Layout for Injections */
+/* Use the card table layout for ALL viewports now */
+.mobile-card-table thead {
+    display: none; /* Hide table header on all views */
+}
 
-    .mobile-card-table tr {
-        display: block;
-        background-color: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        margin-bottom: var(--space-4);
-        padding: var(--space-4);
-        box-shadow: var(--shadow-sm);
-    }
+.mobile-card-table {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid of cards */
+    gap: var(--space-4);
+    width: 100%;
+    border-collapse: separate;
+}
 
-    .mobile-card-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: var(--space-2) 0;
-        border-bottom: 1px solid var(--color-border);
-        text-align: right;
-    }
+.mobile-card-table tbody {
+    display: contents;
+}
 
-    .mobile-card-table td:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-        justify-content: flex-end;
-        gap: var(--space-2);
-    }
+.mobile-card-table tr {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-sm);
+}
 
-    .mobile-card-table td::before {
-        content: attr(data-label);
-        font-weight: var(--font-semibold);
-        color: var(--color-text-secondary);
-        font-size: var(--text-sm);
-        text-transform: uppercase;
-        text-align: left;
-        margin-right: var(--space-4);
-    }
+.mobile-card-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    text-align: right;
+}
+
+.mobile-card-table td:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: auto; /* Push actions to bottom */
+}
+
+.mobile-card-table td::before {
+    content: attr(data-label);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    text-align: left;
+    margin-right: var(--space-4);
 }

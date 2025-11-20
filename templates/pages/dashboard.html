@@ -45,15 +45,15 @@
 <!-- Quick Actions -->
 <div class="grid-3" style="margin-bottom: var(--space-6);">
     <a href="/injections" role="button" class="btn w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
-        <span style="font-size: 1.5rem;">●</span>
+        <span style="font-size: 1.5rem;">✚</span>
         <span>Log Injection</span>
     </a>
     <a href="/symptoms" role="button" class="btn secondary w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
-        <span style="font-size: 1.5rem;">▲</span>
+        <span style="font-size: 1.5rem;">⚠</span>
         <span>Log Symptoms</span>
     </a>
     <a href="/medications" role="button" class="btn outline w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
-        <span style="font-size: 1.5rem;">■</span>
+        <span style="font-size: 1.5rem;">RX</span>
         <span>Log Medication</span>
     </a>
 </div>
@@ -96,6 +96,9 @@
 {{ else }}
 <!-- No Course -->
 <article class="card" style="text-align: center; padding: var(--space-12) var(--space-8);">
+    <div style="margin-bottom: var(--space-6);">
+        <span style="font-size: 3rem; background: var(--brand-primary-bg); padding: var(--space-4); border-radius: 50%; color: var(--brand-primary);">+</span>
+    </div>
     <hgroup>
         <h2>Welcome to Injection Tracker</h2>
         <p>Create your first course to get started</p>
