@@ -6,9 +6,12 @@
     <meta name="csrf-token" content="{{ .CSRFToken }}">
     <title>{{ if .Title }}{{ .Title }} - {{ end }}P-TRACK</title>
 
-    <!-- Preconnect to font provider if needed, using system fonts for now as per redesign.css -->
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Main Application Stylesheet (Replaces Pico + Theme) -->
+    <!-- Main Application Stylesheet -->
     <link rel="stylesheet" href="/static/css/app.css">
 
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -20,77 +23,25 @@
     <meta name="theme-color" content="#FAFAF9">
     <style>
         [x-cloak] { display: none !important; }
-
-        /* Mobile Menu Styles - Integrated here for specificity */
-        @media (max-width: 768px) {
-            nav.container-fluid ul:last-child {
-                display: none;
-            }
-
-            nav.container-fluid ul:last-child.mobile-menu-open {
-                display: flex;
-                flex-direction: column;
-                position: absolute;
-                top: 60px;
-                left: 0;
-                right: 0;
-                background: var(--color-surface);
-                border-bottom: 2px solid var(--brand-primary);
-                padding: var(--space-4);
-                z-index: 1000;
-                box-shadow: var(--shadow-lg);
-                align-items: stretch;
-            }
-
-            nav.container-fluid ul:last-child.mobile-menu-open li {
-                margin: var(--space-2) 0;
-                width: 100%;
-            }
-
-            nav.container-fluid ul:last-child.mobile-menu-open a {
-                display: block;
-                padding: var(--space-3);
-                border-radius: var(--radius-md);
-                width: 100%;
-            }
-
-            .mobile-menu-toggle {
-                display: flex !important;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                padding: var(--space-2);
-                font-size: 1.5rem;
-                user-select: none;
-                color: var(--color-text-primary);
-            }
-
-            nav.container-fluid .dropdown ul {
-                position: static;
-                box-shadow: none;
-                border: none;
-                padding-left: var(--space-4);
-                background: transparent;
-            }
-        }
-
-        @media (min-width: 769px) {
-            .mobile-menu-toggle {
-                display: none !important;
-            }
-        }
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
 <body>
     {{ if .IsAuthenticated }}
+    <!-- Navbar -->
     <nav class="container-fluid">
+        <!-- Brand -->
         <ul>
-            <li><strong>P-TRACK</strong></li>
-            <li class="mobile-menu-toggle" id="mobile-menu-toggle">
-                <span id="menu-icon">☰</span>
+            <li>
+                <a href="/dashboard" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.5rem; color: var(--brand-primary);">+</span>
+                    <strong>P-TRACK</strong>
+                </a>
             </li>
         </ul>
-        <ul id="mobile-menu">
+
+        <!-- Desktop Menu -->
+        <ul class="desktop-menu">
             <li><a href="/dashboard">Dashboard</a></li>
             <li><a href="/courses">Courses</a></li>
             <li><a href="/injections">Injections</a></li>
@@ -108,83 +59,110 @@
                 </details>
             </li>
             <li>
-                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" class="outline" style="border:none; padding: var(--space-2);"></a>
+                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" class="outline" style="border:none; padding: var(--space-2); font-size: 1.2rem;"></a>
             </li>
         </ul>
+
+        <!-- Mobile Menu Toggle -->
+        <div class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            <span>☰</span>
+        </div>
     </nav>
 
+    <!-- Mobile Menu Overlay & Drawer -->
+    <div id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+    <div id="mobile-menu-drawer">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
+            <strong>Menu</strong>
+            <button onclick="closeMobileMenu()" class="close" style="font-size: 1.5rem;">✕</button>
+        </div>
+        <ul>
+            <li><a href="/dashboard" onclick="closeMobileMenu()">Dashboard</a></li>
+            <li><a href="/courses" onclick="closeMobileMenu()">Courses</a></li>
+            <li><a href="/injections" onclick="closeMobileMenu()">Injections</a></li>
+            <li><a href="/symptoms" onclick="closeMobileMenu()">Symptoms</a></li>
+            <li><a href="/medications" onclick="closeMobileMenu()">Medications</a></li>
+            <li><a href="/inventory" onclick="closeMobileMenu()">Inventory</a></li>
+            <li>
+                <a href="#" onclick="toggleMobileDropdown(event)">Account ▼</a>
+                <div class="dropdown-content">
+                    <a href="/settings" onclick="closeMobileMenu()">Settings</a>
+                    <a href="/reports" onclick="closeMobileMenu()">Reports</a>
+                    <a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a>
+                </div>
+            </li>
+            <li style="margin-top: var(--space-4); border-top: 1px solid var(--color-border); padding-top: var(--space-4);">
+                 <a href="#" x-data="theme()" @click.prevent="toggle()" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span x-text="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"></span>
+                    <span x-text="icon"></span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
     <script>
-        // Plain JavaScript hamburger menu
-        (function() {
-            const toggle = document.getElementById('mobile-menu-toggle');
-            const menu = document.getElementById('mobile-menu');
-            const icon = document.getElementById('menu-icon');
+        function toggleMobileMenu() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const drawer = document.getElementById('mobile-menu-drawer');
 
-            if (toggle && menu && icon) {
-                let isOpen = false;
-
-                toggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    isOpen = !isOpen;
-
-                    if (isOpen) {
-                        menu.classList.add('mobile-menu-open');
-                        icon.textContent = '✕';
-                    } else {
-                        menu.classList.remove('mobile-menu-open');
-                        icon.textContent = '☰';
-                    }
-                });
-
-                // Close menu when clicking outside
-                document.addEventListener('click', function(e) {
-                    // Don't close if clicking on a link - let it navigate first
-                    if (e.target.tagName === 'A') {
-                        return;
-                    }
-                    if (isOpen && !menu.contains(e.target) && !toggle.contains(e.target)) {
-                        isOpen = false;
-                        menu.classList.remove('mobile-menu-open');
-                        icon.textContent = '☰';
-                    }
-                });
-
-                // Close menu when clicking on a direct menu link (not dropdown)
-                const menuLinks = menu.querySelectorAll('a:not(.dropdown a)');
-                menuLinks.forEach(function(link) {
-                    link.addEventListener('click', function(e) {
-                        // Let the link navigate, just close the menu
-                        if (isOpen) {
-                            isOpen = false;
-                            menu.classList.remove('mobile-menu-open');
-                            icon.textContent = '☰';
-                        }
-                    });
-                });
+            if (drawer.classList.contains('open')) {
+                closeMobileMenu();
+            } else {
+                overlay.style.display = 'block';
+                // Small timeout to allow display:block to apply before adding class for transition
+                setTimeout(() => {
+                    drawer.classList.add('open');
+                }, 10);
             }
-        })();
+        }
+
+        function closeMobileMenu() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const drawer = document.getElementById('mobile-menu-drawer');
+
+            drawer.classList.remove('open');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 300); // Match transition duration
+        }
+
+        function toggleMobileDropdown(event) {
+            event.preventDefault();
+            const content = event.target.nextElementSibling;
+            content.classList.toggle('show');
+            const arrow = event.target;
+            arrow.textContent = content.classList.contains('show') ? 'Account ▲' : 'Account ▼';
+        }
     </script>
     {{ end }}
 
     <main class="container">
         {{ if .SuccessMessage }}
-        <div class="alert-success">{{ .SuccessMessage }}</div>
+        <div class="alert-success">
+            <span>✓</span>
+            <span>{{ .SuccessMessage }}</span>
+        </div>
         {{ end }}
 
         {{ if .ErrorMessage }}
-        <div class="alert-danger">{{ .ErrorMessage }}</div>
+        <div class="alert-danger">
+            <span>!</span>
+            <span>{{ .ErrorMessage }}</span>
+        </div>
         {{ end }}
 
         {{ template "content" . }}
     </main>
 
-    <footer class="container-fluid">
-        <small style="text-align: center; display: block; color: var(--color-text-muted); margin-top: var(--space-8); padding-bottom: var(--space-4);">
-            P-TRACK v1.0 &bull;
-            <a href="/help">Help</a> &bull;
-            <a href="/about">About</a>
-        </small>
+    <footer class="container-fluid" style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-8) 0; margin-top: var(--space-12);">
+        <div class="container" style="text-align: center; color: var(--color-text-muted);">
+            <p style="margin-bottom: var(--space-2);"><strong>P-TRACK</strong> — Personal Injection Tracker</p>
+            <small>
+                v1.0 &bull;
+                <a href="/help" style="color: var(--color-text-secondary);">Help</a> &bull;
+                <a href="/about" style="color: var(--color-text-secondary);">About</a>
+            </small>
+        </div>
     </footer>
 
     <script>
