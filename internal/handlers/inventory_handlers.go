@@ -96,25 +96,43 @@ type InventoryHistoryResponse struct {
 	Notes          *string    `json:"notes,omitempty"`
 }
 
-// InventoryAlertResponse represents a low stock alert
+// InventoryAlertResponse represents a low stock or expiration alert
 type InventoryAlertResponse struct {
-	ItemType          string  `json:"item_type"`
-	Quantity          float64 `json:"quantity"`
-	LowStockThreshold float64 `json:"low_stock_threshold"`
-	Unit              string  `json:"unit"`
-	Severity          string  `json:"severity"` // "warning", "critical"
+	ItemType          string     `json:"item_type"`
+	Quantity          float64    `json:"quantity"`
+	LowStockThreshold float64    `json:"low_stock_threshold,omitempty"`
+	Unit              string     `json:"unit"`
+	Severity          string     `json:"severity"` // "warning", "critical"
+	AlertType         string     `json:"alert_type"` // "low_stock", "expiring", "expired"
+	ExpirationDate    *time.Time `json:"expiration_date,omitempty"`
+	DaysUntilExpiry   *int       `json:"days_until_expiry,omitempty"`
+	Message           string     `json:"message"`
 }
 
 // HandleGetInventory returns all inventory items with current quantities
 func HandleGetInventory(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Query all inventory items
+		userID := middleware.GetUserID(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Get user's account ID
+		accountID, err := getUserAccountID(db, userID)
+		if err != nil {
+			http.Error(w, "Failed to get account ID", http.StatusInternalServerError)
+			return
+		}
+
+		// Query inventory items for the user's account
 		rows, err := db.Query(`
 			SELECT id, item_type, quantity, unit, expiration_date,
-				lot_number, low_stock_threshold, notes, created_at, updated_at
+				lot_number, low_stock_threshold, notes, account_id, created_at, updated_at
 			FROM inventory_items
+			WHERE account_id = ?
 			ORDER BY item_type
-		`)
+		`, accountID)
 		if err != nil {
 			http.Error(w, "Failed to query inventory", http.StatusInternalServerError)
 			return
@@ -133,6 +151,7 @@ func HandleGetInventory(db *database.DB) http.HandlerFunc {
 				&item.LotNumber,
 				&item.LowStockThreshold,
 				&item.Notes,
+				&item.AccountID,
 				&item.CreatedAt,
 				&item.UpdatedAt,
 			)
@@ -530,14 +549,30 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 	}
 }
 
-// HandleGetInventoryAlerts returns items below low stock threshold
+// HandleGetInventoryAlerts returns items below low stock threshold or expiring soon
 func HandleGetInventoryAlerts(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Query items where quantity is below threshold
-		rows, err := db.Query(`
+		userID := middleware.GetUserID(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Get user's account ID
+		accountID, err := getUserAccountID(db, userID)
+		if err != nil {
+			http.Error(w, "Failed to get account ID", http.StatusInternalServerError)
+			return
+		}
+
+		alerts := []InventoryAlertResponse{}
+
+		// Query 1: Low stock items
+		lowStockRows, err := db.Query(`
 			SELECT item_type, quantity, low_stock_threshold, unit
 			FROM inventory_items
-			WHERE low_stock_threshold IS NOT NULL
+			WHERE account_id = ?
+			  AND low_stock_threshold IS NOT NULL
 			  AND quantity <= low_stock_threshold
 			ORDER BY
 				CASE
@@ -545,18 +580,17 @@ func HandleGetInventoryAlerts(db *database.DB) http.HandlerFunc {
 					ELSE 2
 				END,
 				quantity ASC
-		`)
+		`, accountID)
 		if err != nil {
 			http.Error(w, "Failed to query inventory alerts", http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
+		defer lowStockRows.Close()
 
-		alerts := []InventoryAlertResponse{}
-		for rows.Next() {
+		for lowStockRows.Next() {
 			var alert InventoryAlertResponse
 			var threshold sql.NullFloat64
-			err := rows.Scan(
+			err := lowStockRows.Scan(
 				&alert.ItemType,
 				&alert.Quantity,
 				&threshold,
@@ -569,25 +603,95 @@ func HandleGetInventoryAlerts(db *database.DB) http.HandlerFunc {
 
 			if threshold.Valid {
 				alert.LowStockThreshold = threshold.Float64
+				alert.AlertType = "low_stock"
 
 				// Determine severity
 				if alert.Quantity <= alert.LowStockThreshold/2 {
 					alert.Severity = "critical"
+					alert.Message = fmt.Sprintf("%s is critically low (%.1f %s remaining)",
+						formatItemTypeName(alert.ItemType), alert.Quantity, alert.Unit)
 				} else {
 					alert.Severity = "warning"
+					alert.Message = fmt.Sprintf("%s is running low (%.1f %s remaining)",
+						formatItemTypeName(alert.ItemType), alert.Quantity, alert.Unit)
 				}
 			}
 
 			alerts = append(alerts, alert)
 		}
 
-		if err := rows.Err(); err != nil {
-			http.Error(w, "Error iterating alerts", http.StatusInternalServerError)
+		if err := lowStockRows.Err(); err != nil {
+			http.Error(w, "Error iterating low stock alerts", http.StatusInternalServerError)
+			return
+		}
+
+		// Query 2: Expiring or expired items
+		expirationRows, err := db.Query(`
+			SELECT item_type, quantity, unit, expiration_date
+			FROM inventory_items
+			WHERE account_id = ?
+			  AND expiration_date IS NOT NULL
+			  AND expiration_date <= date('now', '+30 days')
+			ORDER BY expiration_date ASC
+		`, accountID)
+		if err != nil {
+			http.Error(w, "Failed to query expiration alerts", http.StatusInternalServerError)
+			return
+		}
+		defer expirationRows.Close()
+
+		now := time.Now()
+		for expirationRows.Next() {
+			var alert InventoryAlertResponse
+			var expirationDate time.Time
+			err := expirationRows.Scan(
+				&alert.ItemType,
+				&alert.Quantity,
+				&alert.Unit,
+				&expirationDate,
+			)
+			if err != nil {
+				http.Error(w, "Failed to scan expiration alert", http.StatusInternalServerError)
+				return
+			}
+
+			alert.ExpirationDate = &expirationDate
+			daysUntil := int(time.Until(expirationDate).Hours() / 24)
+			alert.DaysUntilExpiry = &daysUntil
+
+			if expirationDate.Before(now) {
+				// Expired
+				alert.AlertType = "expired"
+				alert.Severity = "critical"
+				alert.Message = fmt.Sprintf("%s expired on %s - please dispose and restock",
+					formatItemTypeName(alert.ItemType), expirationDate.Format("Jan 2, 2006"))
+			} else if daysUntil <= 7 {
+				// Expiring within 7 days
+				alert.AlertType = "expiring"
+				alert.Severity = "critical"
+				alert.Message = fmt.Sprintf("%s expires in %d days (on %s)",
+					formatItemTypeName(alert.ItemType), daysUntil, expirationDate.Format("Jan 2, 2006"))
+			} else {
+				// Expiring within 30 days
+				alert.AlertType = "expiring"
+				alert.Severity = "warning"
+				alert.Message = fmt.Sprintf("%s expires in %d days (on %s)",
+					formatItemTypeName(alert.ItemType), daysUntil, expirationDate.Format("Jan 2, 2006"))
+			}
+
+			alerts = append(alerts, alert)
+		}
+
+		if err := expirationRows.Err(); err != nil {
+			http.Error(w, "Error iterating expiration alerts", http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(alerts)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"alerts": alerts,
+			"count":  len(alerts),
+		})
 	}
 }
 
@@ -610,6 +714,25 @@ func getDefaultUnit(itemType string) string {
 		return "mL"
 	}
 	return "count"
+}
+
+func formatItemTypeName(itemType string) string {
+	switch itemType {
+	case "progesterone":
+		return "Progesterone"
+	case "draw_needle":
+		return "Draw Needles"
+	case "injection_needle":
+		return "Injection Needles"
+	case "syringe":
+		return "Syringes"
+	case "swab":
+		return "Alcohol Swabs"
+	case "gauze":
+		return "Gauze Pads"
+	default:
+		return itemType
+	}
 }
 
 func getInventoryItemByType(db *database.DB, itemType string) (*models.InventoryItem, error) {
@@ -834,4 +957,19 @@ func HandleGetAllInventoryHistory(db *database.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(history)
 	}
+}
+
+// getUserAccountID gets the account ID for a given user ID
+func getUserAccountID(db *database.DB, userID int64) (int64, error) {
+	var accountID int64
+	err := db.QueryRow(`
+		SELECT account_id
+		FROM account_members
+		WHERE user_id = ?
+		LIMIT 1
+	`, userID).Scan(&accountID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get account ID for user %d: %w", userID, err)
+	}
+	return accountID, nil
 }

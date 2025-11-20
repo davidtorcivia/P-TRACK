@@ -217,8 +217,11 @@ func main() {
 			r.Post("/settings/notifications", handlers.HandleUpdateNotificationSettings(db))
 
 			// Notification routes
-			r.Get("/notifications", handleGetNotifications(db))
-			r.Put("/notifications/{id}/read", handleMarkNotificationRead(db))
+			r.Get("/notifications", handlers.HandleGetNotifications(db))
+			r.Get("/notifications/count", handlers.HandleGetUnreadCount(db))
+			r.Put("/notifications/{id}/read", handlers.HandleMarkNotificationRead(db))
+			r.Post("/notifications/mark-all-read", handlers.HandleMarkAllNotificationsRead(db))
+			r.Delete("/notifications/{id}", handlers.HandleDeleteNotification(db))
 		})
 
 		// Protected web pages (HTML responses)
@@ -324,20 +327,6 @@ func handleGetCSRFToken(csrf *middleware.CSRFProtection) http.HandlerFunc {
 	}
 }
 
-// handleGetNotifications returns user notifications (not implemented)
-func handleGetNotifications(db *database.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"notifications":[]}`)
-	}
-}
-
-// handleMarkNotificationRead marks a notification as read (not implemented)
-func handleMarkNotificationRead(db *database.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}
-}
 
 // serveManifest serves the PWA manifest.json file
 func serveManifest(w http.ResponseWriter, r *http.Request) {
