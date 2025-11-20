@@ -1,13 +1,13 @@
 {{ define "content" }}
 <div style="max-width: 600px; margin: 2rem auto;">
-    <article>
+    <article class="card">
         <hgroup>
-            <h1>🏥 Welcome to Injection Tracker</h1>
+            <h1>Welcome to Injection Tracker</h1>
             <p>First-run setup: Create your administrator account</p>
         </hgroup>
 
-        <div class="notice" style="background: var(--pico-primary-background); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
-            <p><strong>ℹ️ Important:</strong> This is a one-time setup. You're creating the first administrator account for this application.</p>
+        <div class="notice" style="background: var(--brand-primary-bg); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-6); border: 1px solid var(--brand-primary);">
+            <p class="text-brand-primary" style="margin: 0;"><strong>ℹ️ Important:</strong> This is a one-time setup. You're creating the first administrator account for this application.</p>
         </div>
 
         <form method="POST" action="/api/setup"
@@ -28,7 +28,7 @@
                        maxlength="50"
                        pattern="[a-zA-Z0-9_]+"
                        title="Only letters, numbers, and underscores">
-                <small>3-50 characters, letters, numbers, and underscores only</small>
+                <small class="text-muted">3-50 characters, letters, numbers, and underscores only</small>
             </label>
 
             <label for="email">
@@ -37,7 +37,7 @@
                        id="email"
                        name="email"
                        placeholder="your@email.com">
-                <small>Optional: For password recovery</small>
+                <small class="text-muted">Optional: For password recovery</small>
             </label>
 
             <label for="password">
@@ -50,7 +50,7 @@
                        minlength="8"
                        x-model="password"
                        @input="passwordMatch = password === confirmPassword || confirmPassword === ''; strength = password.length >= 12 ? 'Strong' : password.length >= 8 ? 'Medium' : 'Weak'">
-                <small>Minimum 8 characters - <span x-text="strength" :style="strength === 'Strong' ? 'color: green' : strength === 'Medium' ? 'color: orange' : 'color: red'"></span></small>
+                <small class="text-muted">Minimum 8 characters - <span x-text="strength" :style="strength === 'Strong' ? 'color: var(--success-primary)' : strength === 'Medium' ? 'color: var(--warning-primary)' : 'color: var(--danger-primary)'"></span></small>
             </label>
 
             <label for="confirm_password">
@@ -63,17 +63,17 @@
                        x-model="confirmPassword"
                        @input="passwordMatch = password === confirmPassword"
                        :aria-invalid="!passwordMatch && confirmPassword !== ''">
-                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--pico-del-color);">
-                    ⚠️ Passwords do not match
+                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--danger-primary);">
+                    ! Passwords do not match
                 </small>
-                <small x-show="passwordMatch && confirmPassword !== ''" style="color: green;">
+                <small x-show="passwordMatch && confirmPassword !== ''" style="color: var(--success-primary);">
                     ✓ Passwords match
                 </small>
             </label>
 
-            <div style="background: var(--pico-card-background-color); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
-                <strong>🔒 Security Tips:</strong>
-                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+            <div style="background: var(--color-bg-tertiary); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-4);">
+                <strong>Security Tips:</strong>
+                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; font-size: var(--text-sm); color: var(--color-text-secondary);">
                     <li>Use a unique password you haven't used elsewhere</li>
                     <li>Mix uppercase, lowercase, numbers, and symbols</li>
                     <li>Consider using a password manager</li>
@@ -81,21 +81,21 @@
                 </ul>
             </div>
 
-            <label for="agree">
-                <input type="checkbox" id="agree" name="agree" required>
-                I understand this is for personal/family use and not HIPAA compliant
+            <label for="agree" class="flex items-center gap-2">
+                <input type="checkbox" id="agree" name="agree" required style="width: 1rem; height: 1rem;">
+                <span>I understand this is for personal/family use and not HIPAA compliant</span>
             </label>
 
-            <button type="submit" :disabled="!passwordMatch || password.length < 8">
+            <button type="submit" :disabled="!passwordMatch || password.length < 8" class="w-full btn-lg">
                 Create Administrator Account
             </button>
         </form>
     </article>
 
     <!-- Privacy Notice -->
-    <article style="margin-top: 2rem;">
-        <small>
-            <strong>🔐 Privacy & Security:</strong> Your data is stored locally in a SQLite database.
+    <article style="margin-top: var(--space-8); background: transparent; border: none; padding: 0;">
+        <small class="text-muted" style="display: block; text-align: center;">
+            <strong>Privacy & Security:</strong> Your data is stored locally in a SQLite database.
             This application uses bcrypt password hashing, JWT authentication, CSRF protection,
             and rate limiting. All sensitive data remains on your server.
         </small>

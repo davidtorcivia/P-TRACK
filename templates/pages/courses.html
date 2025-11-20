@@ -4,27 +4,40 @@
     <p>Manage your treatment cycles</p>
 </hgroup>
 
-<a href="javascript:document.getElementById('new-course').showModal()" role="button">Create Course</a>
+<a href="javascript:document.getElementById('new-course').showModal()" role="button" class="btn w-full" style="margin-bottom: var(--space-6);">Create Course</a>
 
 <!-- Active Course -->
 {{ if .ActiveCourse }}
-<article>
+<article class="card">
     <header>
-        <hgroup>
-            <h3>{{ .ActiveCourse.Name }}</h3>
-            <p>Active Course</p>
-        </hgroup>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <hgroup>
+                <h3>{{ .ActiveCourse.Name }}</h3>
+                <span class="badge badge-success">Active Course</span>
+            </hgroup>
+        </div>
     </header>
-    <p><strong>Started:</strong> {{ .ActiveCourse.StartDate }}</p>
-    {{ if .ActiveCourse.ExpectedEndDate }}
-    <p><strong>Expected End:</strong> {{ .ActiveCourse.ExpectedEndDate }}</p>
-    {{ end }}
+    <div class="grid-2" style="margin-bottom: var(--space-4);">
+        <div>
+            <p class="text-secondary text-sm mb-1">Started</p>
+            <p><strong>{{ .ActiveCourse.StartDate }}</strong></p>
+        </div>
+        {{ if .ActiveCourse.ExpectedEndDate }}
+        <div>
+            <p class="text-secondary text-sm mb-1">Expected End</p>
+            <p><strong>{{ .ActiveCourse.ExpectedEndDate }}</strong></p>
+        </div>
+        {{ end }}
+    </div>
     {{ if .ActiveCourse.Notes }}
-    <p><strong>Notes:</strong> {{ .ActiveCourse.Notes }}</p>
+    <div style="margin-bottom: var(--space-4);">
+        <p class="text-secondary text-sm mb-1">Notes</p>
+        <p>{{ .ActiveCourse.Notes }}</p>
+    </div>
     {{ end }}
     <footer>
         <div class="grid-2">
-            <button onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').showModal()" class="outline secondary">
+            <button onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').showModal()" class="btn outline secondary w-full">
                 Edit
             </button>
             <button onclick="if(confirm('Close this course?')) {
@@ -40,7 +53,7 @@
                         window.location.reload();
                     }
                 });
-            }" class="outline">Close Course</button>
+            }" class="btn outline w-full">Close Course</button>
         </div>
     </footer>
 </article>
@@ -49,8 +62,8 @@
 <dialog id="edit-course-{{ .ActiveCourse.ID }}">
     <article>
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()"></button>
             <h3>Edit Course</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()"></button>
         </header>
         <form onsubmit="event.preventDefault();
             const formData = new FormData(event.target);
@@ -120,19 +133,19 @@
 
 <!-- Past Courses -->
 {{ if .PastCourses }}
-<h3>Past Courses</h3>
+<h3 style="margin-top: var(--space-8); margin-bottom: var(--space-4);">Past Courses</h3>
 {{ range .PastCourses }}
-<article>
+<article class="card">
     <hgroup>
         <h4>{{ .Name }}</h4>
-        <p><small>{{ .StartDate }}{{ if .ActualEndDate }} - {{ .ActualEndDate }}{{ end }}</small></p>
+        <p class="text-secondary">{{ .StartDate }}{{ if .ActualEndDate }} - {{ .ActualEndDate }}{{ end }}</p>
     </hgroup>
     {{ if .Notes }}
-    <p><small>{{ .Notes }}</small></p>
+    <p class="text-muted text-sm" style="margin-top: var(--space-2);">{{ .Notes }}</p>
     {{ end }}
     <footer>
         <div class="grid-3">
-            <button onclick="document.getElementById('edit-course-{{ .ID }}').showModal()" class="outline secondary">
+            <button onclick="document.getElementById('edit-course-{{ .ID }}').showModal()" class="btn-sm outline secondary w-full">
                 Edit
             </button>
             <button onclick="
@@ -147,7 +160,7 @@
                         window.location.reload();
                     }
                 });
-            " class="outline">Reactivate</button>
+            " class="btn-sm outline w-full">Reactivate</button>
             <button onclick="if(confirm('Delete {{ .Name }}? This will delete all associated data.')) {
                 fetch('/api/courses/{{ .ID }}', {
                     method: 'DELETE',
@@ -160,7 +173,7 @@
                         window.location.reload();
                     }
                 });
-            }" class="outline secondary">Delete</button>
+            }" class="btn-sm outline secondary w-full" style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
         </div>
     </footer>
 </article>
@@ -169,8 +182,8 @@
 <dialog id="edit-course-{{ .ID }}">
     <article>
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ID }}').close()"></button>
             <h3>Edit Course</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ID }}').close()"></button>
         </header>
         <form onsubmit="event.preventDefault();
             const formData = new FormData(event.target);
@@ -247,12 +260,12 @@
 <!-- No Courses -->
 {{ if not .ActiveCourse }}
 {{ if not .PastCourses }}
-<article style="text-align: center;">
+<article class="card" style="text-align: center; padding: var(--space-8);">
     <hgroup>
         <h3>No Courses Yet</h3>
         <p>Create your first treatment course to start tracking</p>
     </hgroup>
-    <a href="javascript:document.getElementById('new-course').showModal()" role="button">Create Your First Course</a>
+    <a href="javascript:document.getElementById('new-course').showModal()" role="button" class="btn btn-lg">Create Your First Course</a>
 </article>
 {{ end }}
 {{ end }}
@@ -261,8 +274,8 @@
 <dialog id="new-course">
     <article>
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('new-course').close()"></button>
             <h3>Create New Course</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('new-course').close()"></button>
         </header>
         <form onsubmit="event.preventDefault();
             const formData = new FormData(event.target);

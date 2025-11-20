@@ -1,14 +1,14 @@
 {{ define "content" }}
 {{ if .ActiveCourse }}
 <!-- Quick Actions -->
-<div class="grid-3">
-    <a href="/injections" role="button">Log Injection</a>
-    <a href="/symptoms" role="button" class="secondary">Log Symptoms</a>
-    <a href="/medications" role="button" class="outline">Log Medication</a>
+<div class="grid-3" style="margin-bottom: var(--space-6);">
+    <a href="/injections" role="button" class="btn w-full">Log Injection</a>
+    <a href="/symptoms" role="button" class="btn secondary w-full">Log Symptoms</a>
+    <a href="/medications" role="button" class="btn outline w-full">Log Medication</a>
 </div>
 
 <!-- Welcome -->
-<article>
+<article class="card">
     <hgroup>
         <h2>{{ .ActiveCourse.Name }}</h2>
         <p>{{ if .LastInjection }}Last injection {{ .LastInjection.TimeAgo }}{{ end }}</p>
@@ -17,17 +17,17 @@
 
 <!-- Low Stock -->
 {{ if .LowStockItems }}
-<article>
+<article class="card">
     <header><strong>Low Stock Alerts</strong></header>
     {{ range .LowStockItems }}
-    <p><strong>{{ .ItemType }}:</strong> {{ .Quantity }} {{ .Unit }} remaining</p>
+    <p class="text-danger"><strong>{{ .ItemType }}:</strong> {{ .Quantity }} {{ .Unit }} remaining</p>
     {{ end }}
-    <footer><a href="/inventory" role="button">Manage Inventory</a></footer>
+    <footer><a href="/inventory" role="button" class="btn-sm">Manage Inventory</a></footer>
 </article>
 {{ end }}
 
 <!-- Recent Activity -->
-<article>
+<article class="card">
     <header>
         <h3>Recent Activity</h3>
     </header>
@@ -35,7 +35,7 @@
         <p aria-busy="true">Loading...</p>
     </div>
     <footer>
-        <a href="/activity" role="button" class="outline">View All Activity</a>
+        <a href="/activity" role="button" class="btn outline w-full">View All Activity</a>
     </footer>
 </article>
 
@@ -46,31 +46,44 @@
         <article class="stat-card">
             <div class="stat-value">{{ .Stats.TotalInjections }}</div>
             <div class="stat-label">Total Injections</div>
-            <small>Left: {{ .Stats.LeftCount }} | Right: {{ .Stats.RightCount }}</small>
+            <div style="margin-top: var(--space-2); color: var(--color-text-secondary); font-size: var(--text-sm);">
+                Left: <strong>{{ .Stats.LeftCount }}</strong> | Right: <strong>{{ .Stats.RightCount }}</strong>
+            </div>
         </article>
     </div>
 
     <div>
         <h3>Course Info</h3>
-        <article>
-            <p><strong>Name:</strong> {{ .ActiveCourse.Name }}</p>
-            <p><strong>Start:</strong> {{ .ActiveCourse.StartDate }}</p>
-            {{ if .ActiveCourse.ExpectedEndDate }}
-            <p><strong>Expected End:</strong> {{ .ActiveCourse.ExpectedEndDate }}</p>
-            {{ end }}
-            <footer><a href="/courses" role="button" class="outline">Manage</a></footer>
+        <article class="card">
+            <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                <div>
+                    <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Name</span><br>
+                    <strong>{{ .ActiveCourse.Name }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Start Date</span><br>
+                    <strong>{{ .ActiveCourse.StartDate }}</strong>
+                </div>
+                {{ if .ActiveCourse.ExpectedEndDate }}
+                <div>
+                    <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Expected End</span><br>
+                    <strong>{{ .ActiveCourse.ExpectedEndDate }}</strong>
+                </div>
+                {{ end }}
+            </div>
+            <footer><a href="/courses" role="button" class="btn outline w-full">Manage</a></footer>
         </article>
     </div>
 </div>
 
 {{ else }}
 <!-- No Course -->
-<article style="text-align: center;">
+<article class="card" style="text-align: center; padding: var(--space-8);">
     <hgroup>
         <h2>Welcome to Injection Tracker</h2>
         <p>Create your first course to get started</p>
     </hgroup>
-    <a href="/courses" role="button">Create Course</a>
+    <a href="/courses" role="button" class="btn btn-lg">Create Course</a>
 </article>
 {{ end }}
 {{ end }}

@@ -6,8 +6,10 @@
     <meta name="csrf-token" content="{{ .CSRFToken }}">
     <title>{{ if .Title }}{{ .Title }} - {{ end }}P-TRACK</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/static/css/theme.css">
+    <!-- Preconnect to font provider if needed, using system fonts for now as per redesign.css -->
+
+    <!-- Main Application Stylesheet (Replaces Pico + Theme) -->
+    <link rel="stylesheet" href="/static/css/app.css">
 
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
@@ -19,140 +21,57 @@
     <style>
         [x-cloak] { display: none !important; }
 
-        /* Clean, simple header design */
-        nav.container-fluid {
-            background: var(--pico-background-color);
-            border-bottom: 1px solid var(--pico-muted-border-color);
-            padding: 0.75rem 1rem;
-            margin-bottom: 0;
-        }
-
-        nav.container-fluid strong {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            color: var(--pico-color);
-        }
-
-        nav.container-fluid a {
-            color: var(--pico-color);
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        nav.container-fluid a:hover {
-            color: var(--pico-primary);
-        }
-
-        nav.container-fluid summary {
-            color: var(--pico-color);
-        }
-
-        nav.container-fluid summary:hover {
-            color: var(--pico-primary);
-        }
-
-        /* Mobile navbar styling */
+        /* Mobile Menu Styles - Integrated here for specificity */
         @media (max-width: 768px) {
             nav.container-fluid ul:last-child {
                 display: none;
             }
 
             nav.container-fluid ul:last-child.mobile-menu-open {
-                display: block;
+                display: flex;
+                flex-direction: column;
                 position: absolute;
                 top: 60px;
                 left: 0;
                 right: 0;
-                background: var(--pico-background-color);
-                border-bottom: 2px solid var(--pico-primary);
-                padding: 1rem;
+                background: var(--color-surface);
+                border-bottom: 2px solid var(--brand-primary);
+                padding: var(--space-4);
                 z-index: 1000;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                box-shadow: var(--shadow-lg);
+                align-items: stretch;
             }
 
             nav.container-fluid ul:last-child.mobile-menu-open li {
-                display: block;
-                margin: 0.75rem 0;
+                margin: var(--space-2) 0;
+                width: 100%;
             }
 
             nav.container-fluid ul:last-child.mobile-menu-open a {
                 display: block;
-                padding: 0.5rem;
-                border-radius: 4px;
-            }
-
-            nav.container-fluid ul:last-child.mobile-menu-open a:hover {
-                background: var(--pico-muted-background-color);
+                padding: var(--space-3);
+                border-radius: var(--radius-md);
+                width: 100%;
             }
 
             .mobile-menu-toggle {
-                display: block !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
                 cursor: pointer;
-                padding: 0.5rem;
+                padding: var(--space-2);
                 font-size: 1.5rem;
                 user-select: none;
-            }
-
-            nav.container-fluid > ul:first-child {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                width: 100%;
-            }
-
-            /* Make dropdown work on mobile */
-            nav.container-fluid .dropdown {
-                position: relative;
-            }
-
-            nav.container-fluid .dropdown[open] > ul {
-                display: block !important;
-                pointer-events: auto !important;
-            }
-
-            nav.container-fluid .dropdown:not([open]) > ul {
-                display: none !important;
+                color: var(--color-text-primary);
             }
 
             nav.container-fluid .dropdown ul {
-                position: static !important;
-                width: 100%;
-                margin-top: 0.5rem;
-                padding-left: 1rem;
+                position: static;
                 box-shadow: none;
-                border-left: 2px solid var(--pico-primary);
+                border: none;
+                padding-left: var(--space-4);
                 background: transparent;
-                pointer-events: auto !important;
-                z-index: 1;
             }
-
-            nav.container-fluid .dropdown ul li {
-                list-style: none;
-                pointer-events: auto !important;
-            }
-
-            nav.container-fluid .dropdown ul a {
-                pointer-events: auto !important;
-                cursor: pointer !important;
-                display: block;
-                position: relative;
-                z-index: 2;
-            }
-
-            nav.container-fluid .dropdown summary {
-                display: block;
-                padding: 0.5rem;
-                border-radius: 4px;
-                cursor: pointer;
-                list-style: none;
-            }
-
-            nav.container-fluid .dropdown summary:hover {
-                background: var(--pico-muted-background-color);
-            }
-
-            /* Keep only Pico's default arrow, don't add custom ones */
         }
 
         @media (min-width: 769px) {
@@ -161,12 +80,6 @@
             }
         }
     </style>
-    <script>
-        // Initialize Alpine.js manually to ensure it's ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Alpine will auto-initialize
-        });
-    </script>
 </head>
 <body>
     {{ if .IsAuthenticated }}
@@ -186,7 +99,7 @@
             <li><a href="/inventory">Inventory</a></li>
             <li>
                 <details class="dropdown">
-                    <summary role="button">Account</summary>
+                    <summary role="button" class="outline">Account</summary>
                     <ul>
                         <li><a href="/settings">Settings</a></li>
                         <li><a href="/reports">Reports</a></li>
@@ -195,7 +108,7 @@
                 </details>
             </li>
             <li>
-                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label"></a>
+                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" class="outline" style="border:none; padding: var(--space-2);"></a>
             </li>
         </ul>
     </nav>
@@ -247,22 +160,8 @@
                             menu.classList.remove('mobile-menu-open');
                             icon.textContent = '☰';
                         }
-                        // Don't prevent default - let navigation happen
                     });
                 });
-
-                // Prevent dropdown details from closing when clicking links inside
-                const dropdown = menu.querySelector('.dropdown');
-                if (dropdown) {
-                    const dropdownLinks = dropdown.querySelectorAll('a');
-                    dropdownLinks.forEach(function(link) {
-                        link.addEventListener('click', function(e) {
-                            // Stop propagation to prevent details from closing
-                            e.stopPropagation();
-                            // The link will still navigate normally
-                        });
-                    });
-                }
             }
         })();
     </script>
@@ -281,7 +180,7 @@
     </main>
 
     <footer class="container-fluid">
-        <small style="text-align: center; display: block; color: var(--pico-muted-color);">
+        <small style="text-align: center; display: block; color: var(--color-text-muted); margin-top: var(--space-8); padding-bottom: var(--space-4);">
             P-TRACK v1.0 &bull;
             <a href="/help">Help</a> &bull;
             <a href="/about">About</a>

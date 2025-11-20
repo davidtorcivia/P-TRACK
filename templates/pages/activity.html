@@ -1,60 +1,69 @@
 {{ define "content" }}
-<article>
-    <header>
+<article class="card" style="margin-bottom: var(--space-6);">
+    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4);">
         <hgroup>
             <h1>Activity History</h1>
             <p>All logged injections, symptoms, and medications</p>
         </hgroup>
-        <button onclick="window.location.href='/dashboard'" class="outline">
+        <button onclick="window.location.href='/dashboard'" class="btn outline">
             Back to Dashboard
         </button>
     </header>
 
     {{ if .Activities }}
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
+    <div style="display: flex; flex-direction: column; gap: var(--space-4);">
         {{ range .Activities }}
-        <article style="margin: 0;">
+        <article class="card" style="margin: 0; padding: var(--space-4); border: 1px solid var(--color-border);">
             <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 200px;">
                     {{ if eq .Type "injection" }}
-                        <h4 style="margin: 0 0 0.25rem 0;">Injection ({{ .Detail1 }})</h4>
-                        <div style="color: var(--pico-muted-color); font-size: 0.9rem;">
-                            {{ if ne .Detail2 "0" }}{{ if ne .Detail2 "" }}Pain: {{ .Detail2 }}/10{{ end }}{{ end }}
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: var(--text-lg);">
+                            <span style="display: inline-block; padding: 0.25rem 0.5rem; background-color: var(--brand-primary-bg); color: var(--brand-primary); border-radius: var(--radius-sm); font-size: 0.75rem; margin-right: 0.5rem;">INJECTION</span>
+                            {{ .Detail1 }}
+                        </h4>
+                        <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">
+                            {{ if ne .Detail2 "0" }}{{ if ne .Detail2 "" }}Pain Level: {{ .Detail2 }}/10{{ end }}{{ end }}
                         </div>
                     {{ else if eq .Type "symptom" }}
-                        <h4 style="margin: 0 0 0.25rem 0;">Symptom Logged</h4>
-                        <div style="color: var(--pico-muted-color); font-size: 0.9rem;">
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: var(--text-lg);">
+                            <span style="display: inline-block; padding: 0.25rem 0.5rem; background-color: var(--warning-bg); color: var(--warning-primary); border-radius: var(--radius-sm); font-size: 0.75rem; margin-right: 0.5rem;">SYMPTOM</span>
+                            Symptom Logged
+                        </h4>
+                        <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">
                             {{ if .Detail1 }}Location: {{ .Detail1 }}{{ end }}
                             {{ if ne .Detail2 "0" }}{{ if ne .Detail2 "" }} | Pain: {{ .Detail2 }}/10{{ end }}{{ end }}
                         </div>
                     {{ else if eq .Type "medication" }}
-                        <h4 style="margin: 0 0 0.25rem 0;">{{ .Detail1 }}</h4>
-                        <div style="font-size: 0.9rem;">
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: var(--text-lg);">
+                            <span style="display: inline-block; padding: 0.25rem 0.5rem; background-color: var(--info-bg); color: var(--info-primary); border-radius: var(--radius-sm); font-size: 0.75rem; margin-right: 0.5rem;">MEDICATION</span>
+                            {{ .Detail1 }}
+                        </h4>
+                        <div style="font-size: var(--text-sm);">
                             {{ if eq .Detail2 "taken" }}
-                                <span style="color: var(--pico-ins-color);">Taken</span>
+                                <span style="color: var(--success-primary); font-weight: bold;">Taken</span>
                             {{ else }}
-                                <span style="color: var(--pico-del-color);">Missed</span>
+                                <span style="color: var(--danger-primary); font-weight: bold;">Missed</span>
                             {{ end }}
                         </div>
                     {{ end }}
 
                     {{ if .Notes }}
-                    <div style="margin-top: 0.5rem; font-size: 0.9rem;">
-                        <em>{{ .Notes }}</em>
+                    <div style="margin-top: 0.5rem; font-size: var(--text-sm); color: var(--color-text-secondary); font-style: italic;">
+                        "{{ .Notes }}"
                     </div>
                     {{ end }}
                 </div>
 
-                <div style="text-align: right; color: var(--pico-muted-color); font-size: 0.9rem; white-space: nowrap;">
-                    <div>{{ .TimeAgo }}</div>
-                    <div style="font-size: 0.8rem;">{{ .FormattedDate }}</div>
+                <div style="text-align: right; color: var(--color-text-muted); font-size: var(--text-sm); white-space: nowrap; margin-left: var(--space-4);">
+                    <div style="font-weight: var(--font-medium);">{{ .TimeAgo }}</div>
+                    <div style="font-size: var(--text-xs);">{{ .FormattedDate }}</div>
                 </div>
             </div>
         </article>
         {{ end }}
     </div>
     {{ else }}
-    <div style="text-align: center; padding: 3rem; color: var(--pico-muted-color);">
+    <div style="text-align: center; padding: var(--space-8); color: var(--color-text-muted);">
         <p>No activity yet.</p>
         <small>Start by logging your first injection, symptom, or medication!</small>
     </div>
@@ -71,6 +80,7 @@
         article > div > div:last-child {
             text-align: left;
             margin-top: 0.5rem;
+            margin-left: 0;
         }
     }
 </style>

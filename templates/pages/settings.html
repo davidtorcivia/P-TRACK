@@ -1,16 +1,14 @@
 {{ define "content" }}
-<article style="padding: 1rem;">
-    <header>
-        <hgroup>
-            <h1>Settings</h1>
-            <p>Manage your account and preferences</p>
-        </hgroup>
-    </header>
+<article class="card" style="margin-bottom: var(--space-6);">
+    <hgroup>
+        <h1>Settings</h1>
+        <p>Manage your account and preferences</p>
+    </hgroup>
 </article>
 
-<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1rem; align-items: start;">
+<div class="grid desktop-grid-cols-2" style="gap: var(--space-6); align-items: start;">
     <!-- Profile Settings -->
-    <article style="margin: 0;">
+    <article class="card" style="margin: 0;">
         <header>
             <h3>Profile</h3>
         </header>
@@ -38,15 +36,15 @@
                        name="email"
                        value="{{ .User.Email }}"
                        placeholder="your@email.com">
-                <small>For password recovery only</small>
+                <small class="text-muted">For password recovery only</small>
             </label>
 
-            <button type="submit">Update Profile</button>
+            <button type="submit" class="w-full">Update Profile</button>
         </form>
     </article>
 
     <!-- Change Password -->
-    <article style="margin: 0;">
+    <article class="card" style="margin: 0;">
         <header>
             <h3>Change Password</h3>
         </header>
@@ -75,7 +73,7 @@
                        @input="passwordMatch = newPassword === confirmPassword || confirmPassword === ''"
                        minlength="8"
                        required>
-                <small>Minimum 8 characters</small>
+                <small class="text-muted">Minimum 8 characters</small>
             </label>
 
             <label for="confirm-password">
@@ -87,12 +85,12 @@
                        @input="passwordMatch = newPassword === confirmPassword"
                        :aria-invalid="!passwordMatch && confirmPassword !== ''"
                        required>
-                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--pico-del-color);">
+                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--danger-primary);">
                     Passwords do not match
                 </small>
             </label>
 
-            <button type="submit" :disabled="!passwordMatch">
+            <button type="submit" :disabled="!passwordMatch" class="w-full">
                 Change Password
             </button>
         </form>
@@ -100,7 +98,7 @@
 </div>
 
 <!-- Account & Sharing Section -->
-<article style="padding: 1rem;"
+<article class="card" style="margin-top: var(--space-6);"
          x-data="accountSharing()"
          x-init="currentUserID = {{ .UserID }}; init()">
     <header>
@@ -109,46 +107,46 @@
     </header>
 
     <!-- Account Members -->
-    <div style="margin-bottom: 2rem;">
+    <div style="margin-bottom: var(--space-6);">
         <h4>Account Members</h4>
-        <div id="members-list" style="margin-top: 1rem;">
-            <p style="color: var(--pico-muted-color);">Loading members...</p>
+        <div id="members-list" style="margin-top: var(--space-4);">
+            <p style="color: var(--color-text-muted);">Loading members...</p>
         </div>
     </div>
 
     <!-- Invite New Member -->
-    <div style="margin-bottom: 2rem;">
+    <div style="margin-bottom: var(--space-6);">
         <h4>Invite Partner</h4>
-        <p style="margin-bottom: 1rem;">Generate a one-time invitation link to share with your partner. The link expires in 7 days.</p>
+        <p style="margin-bottom: var(--space-4); color: var(--color-text-secondary);">Generate a one-time invitation link to share with your partner. The link expires in 7 days.</p>
 
-        <form @submit.prevent="sendInvitation()" style="margin-top: 1rem;">
+        <form @submit.prevent="sendInvitation()" style="margin-top: var(--space-4);">
             <div id="invite-feedback" x-html="inviteFeedback"></div>
 
-            <button type="submit" :disabled="inviting">
+            <button type="submit" :disabled="inviting" class="w-full btn-primary">
                 <span x-show="!inviting">Generate Invitation Link</span>
                 <span x-show="inviting">Creating...</span>
             </button>
         </form>
 
         <!-- Show invitation link after creation -->
-        <div x-show="invitationToken" style="margin-top: 1rem; padding: 1rem; background: var(--pico-primary-background); border: 1px solid var(--pico-primary); border-radius: var(--pico-border-radius);">
+        <div x-show="invitationToken" style="margin-top: var(--space-4); padding: var(--space-4); background: var(--brand-primary-bg); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg);">
             <p><strong>Invitation Link Created!</strong></p>
-            <p style="margin-top: 0.5rem;">Share this link with your partner:</p>
-            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+            <p style="margin-top: var(--space-2);">Share this link with your partner:</p>
+            <div style="display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-2);">
                 <input type="text"
                        x-model="invitationLink"
                        readonly
                        style="flex: 1; font-family: monospace; font-size: 0.85rem;"
                        @click="$el.select()">
                 <button type="button"
-                        class="outline"
+                        class="btn-sm outline"
                         @click="copyInvitationLink()"
                         style="white-space: nowrap;">
                     <span x-show="!copied">Copy Link</span>
                     <span x-show="copied">Copied!</span>
                 </button>
             </div>
-            <small style="display: block; margin-top: 0.5rem;">
+            <small style="display: block; margin-top: var(--space-2); color: var(--color-text-muted);">
                 Expires in 7 days - One-time use only
             </small>
         </div>
@@ -157,8 +155,8 @@
     <!-- Invitations -->
     <div>
         <h4>Invitations</h4>
-        <div id="invitations-list" style="margin-top: 1rem;">
-            <p style="color: var(--pico-muted-color);">Loading invitations...</p>
+        <div id="invitations-list" style="margin-top: var(--space-4);">
+            <p style="color: var(--color-text-muted);">Loading invitations...</p>
         </div>
     </div>
 </article>
@@ -200,22 +198,22 @@ function accountSharing() {
                 this.renderMembers();
             } catch (error) {
                 document.getElementById('members-list').innerHTML =
-                    '<p style="color: var(--pico-del-color);">Error loading members</p>';
+                    '<p style="color: var(--danger-primary);">Error loading members</p>';
             }
         },
 
         renderMembers() {
             const html = this.members.map(member => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: var(--space-2);">
                     <div>
                         <strong>${member.Username || 'Unknown User'}</strong>
-                        ${member.Role === 'owner' ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-primary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">Owner</span>' : ''}
-                        ${member.UserID === this.currentUserID ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; background: var(--pico-secondary); color: white; border-radius: 0.25rem; font-size: 0.75rem;">You</span>' : ''}
+                        ${member.Role === 'owner' ? '<span class="badge badge-primary" style="margin-left: 0.5rem;">Owner</span>' : ''}
+                        ${member.UserID === this.currentUserID ? '<span class="badge badge-secondary" style="margin-left: 0.5rem;">You</span>' : ''}
                     </div>
                     ${member.UserID !== this.currentUserID && this.currentUserRole === 'owner' ? `
                         <button type="button"
-                                class="outline contrast"
-                                style="margin: 0;"
+                                class="btn-sm outline secondary"
+                                style="margin: 0; color: var(--danger-primary); border-color: var(--danger-border);"
                                 onclick="removeMember(${member.UserID}, '${member.Username}')">
                             Remove
                         </button>
@@ -224,7 +222,7 @@ function accountSharing() {
             `).join('');
 
             document.getElementById('members-list').innerHTML =
-                html || '<p style="color: var(--pico-muted-color);">No members found</p>';
+                html || '<p style="color: var(--color-text-muted);">No members found</p>';
         },
 
         async loadInvitations() {
@@ -253,47 +251,47 @@ function accountSharing() {
         renderInvitations() {
             if (!this.invitations || this.invitations.length === 0) {
                 document.getElementById('invitations-list').innerHTML =
-                    '<p style="color: var(--pico-muted-color);">No invitations</p>';
+                    '<p style="color: var(--color-text-muted);">No invitations</p>';
                 return;
             }
 
             const html = this.invitations.map(inv => {
-                const accepted = inv.accepted_at ? `<span style="color: var(--pico-ins-color);">(Accepted ${new Date(inv.accepted_at).toLocaleDateString()})</span>` : '';
+                const accepted = inv.accepted_at ? `<span class="text-success" style="margin-left: 0.5rem;">(Accepted ${new Date(inv.accepted_at).toLocaleDateString()})</span>` : '';
 
                 // Get stored token from localStorage for pending invitations
                 const storedToken = !inv.accepted_at ? localStorage.getItem(`invite_token_${inv.id}`) : null;
                 const inviteLink = storedToken ? `${window.location.origin}/register?invite=${storedToken}` : null;
 
                 return `
-                <div style="padding: 0.75rem; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); margin-bottom: 0.5rem;">
+                <div style="padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: var(--space-2);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>Invitation ${accepted}</strong>
-                            <br><small style="color: var(--pico-muted-color);">
+                            <br><small style="color: var(--color-text-muted);">
                                 Created ${new Date(inv.created_at).toLocaleDateString()} -
                                 Expires ${new Date(inv.expires_at).toLocaleDateString()}
                             </small>
                         </div>
                         ${!inv.accepted_at ? `
                         <button type="button"
-                                class="outline contrast"
-                                style="margin: 0;"
+                                class="btn-sm outline secondary"
+                                style="margin: 0; color: var(--danger-primary); border-color: var(--danger-border);"
                                 onclick="confirmRevokeInvitation(${inv.id})">
                             Revoke
                         </button>
                         ` : ''}
                     </div>
                     ${inviteLink ? `
-                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--pico-muted-border-color);">
-                        <small style="color: var(--pico-muted-color); display: block; margin-bottom: 0.5rem;">Invitation Link:</small>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">
+                        <small style="color: var(--color-text-muted); display: block; margin-bottom: var(--space-2);">Invitation Link:</small>
+                        <div style="display: flex; gap: var(--space-2); align-items: center;">
                             <input type="text"
                                    value="${inviteLink}"
                                    readonly
                                    onclick="this.select()"
                                    style="flex: 1; font-family: monospace; font-size: 0.85rem; margin: 0;">
                             <button type="button"
-                                    class="outline"
+                                    class="btn-sm outline"
                                     onclick="copyToClipboard('${inviteLink}', this)"
                                     style="margin: 0; white-space: nowrap;">
                                 Copy Link
@@ -339,7 +337,7 @@ function accountSharing() {
                 // Store token in localStorage so we can display it later
                 localStorage.setItem(`invite_token_${data.id}`, data.token);
 
-                this.inviteFeedback = '<mark>Invitation link created successfully!</mark>';
+                this.inviteFeedback = '<div class="alert-success">Invitation link created successfully!</div>';
 
                 // Reload invitations list
                 await this.loadInvitations();
@@ -350,7 +348,7 @@ function accountSharing() {
                 }, 5000);
 
             } catch (error) {
-                this.inviteFeedback = `<del>Error: ${error.message}</del>`;
+                this.inviteFeedback = `<div class="alert-danger">Error: ${error.message}</div>`;
             } finally {
                 this.inviting = false;
             }
@@ -448,17 +446,17 @@ function copyToClipboard(text, button) {
 <dialog id="revoke-invitation-modal">
     <article style="max-width: 500px; margin: 0;">
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('revoke-invitation-modal').close()"></button>
             <h3>Revoke Invitation</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('revoke-invitation-modal').close()"></button>
         </header>
         <p>Are you sure you want to revoke this invitation link?</p>
-        <p style="color: var(--pico-muted-color);">The link will no longer work and cannot be used to register.</p>
+        <p class="text-muted">The link will no longer work and cannot be used to register.</p>
         <footer>
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
                 <button class="secondary" onclick="document.getElementById('revoke-invitation-modal').close()">
                     Cancel
                 </button>
-                <button class="contrast" onclick="revokeInvitation()">
+                <button class="contrast" onclick="revokeInvitation()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">
                     Revoke Invitation
                 </button>
             </div>
@@ -470,17 +468,17 @@ function copyToClipboard(text, button) {
 <dialog id="remove-member-modal">
     <article style="max-width: 500px; margin: 0;">
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('remove-member-modal').close()"></button>
             <h3>Remove Member</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('remove-member-modal').close()"></button>
         </header>
         <p>Are you sure you want to remove <strong id="remove-member-name"></strong> from your account?</p>
-        <p style="color: var(--pico-del-color);">They will immediately lose access to all shared data.</p>
+        <p class="text-danger">They will immediately lose access to all shared data.</p>
         <footer>
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
                 <button class="secondary" onclick="document.getElementById('remove-member-modal').close()">
                     Cancel
                 </button>
-                <button class="contrast" onclick="confirmRemoveMember()">
+                <button class="contrast" onclick="confirmRemoveMember()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">
                     Remove Member
                 </button>
             </div>
@@ -489,7 +487,7 @@ function copyToClipboard(text, button) {
 </dialog>
 
 <!-- App Settings -->
-<article style="padding: 1rem;">
+<article class="card" style="margin-top: var(--space-6);">
     <header>
         <h3>Application Settings</h3>
     </header>
@@ -521,20 +519,20 @@ function copyToClipboard(text, button) {
                     } else {
                         window.themeManager.setTheme(data.theme);
                     }
-                    document.getElementById('app-feedback').innerHTML = '<mark>Settings saved successfully!</mark>';
+                    document.getElementById('app-feedback').innerHTML = '<div class=\'alert-success\'>Settings saved successfully!</div>';
                     setTimeout(() => document.getElementById('app-feedback').innerHTML = '', 3000);
                 } else {
-                    document.getElementById('app-feedback').innerHTML = '<del>Failed to save settings</del>';
+                    document.getElementById('app-feedback').innerHTML = '<div class=\'alert-danger\'>Failed to save settings</div>';
                 }
             })
             .catch(error => {
-                document.getElementById('app-feedback').innerHTML = '<del>Error: ' + error.message + '</del>';
+                document.getElementById('app-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
             });
           ">
 
         <div id="app-feedback"></div>
 
-        <div class="grid">
+        <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
             <label for="theme">
                 Theme
                 <select id="theme" name="theme">
@@ -565,11 +563,11 @@ function copyToClipboard(text, button) {
                     <option value="Australia/Sydney" {{ if eq .Settings.Timezone "Australia/Sydney" }}selected{{ end }}>Sydney (AEDT)</option>
                     <option value="Pacific/Auckland" {{ if eq .Settings.Timezone "Pacific/Auckland" }}selected{{ end }}>New Zealand (NZDT)</option>
                 </select>
-                <small>All dates and times will be shown in your timezone</small>
+                <small class="text-muted">All dates and times will be shown in your timezone</small>
             </label>
         </div>
 
-        <div class="grid">
+        <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
             <label for="date-format">
                 Date Format
                 <select id="date-format" name="date_format">
@@ -588,22 +586,23 @@ function copyToClipboard(text, button) {
             </label>
         </div>
 
-        <label for="advanced-mode">
+        <label for="advanced-mode" class="flex items-center gap-2" style="margin-bottom: var(--space-4);">
             <input type="checkbox"
                    id="advanced-mode"
                    name="advanced_mode"
                    role="switch"
-                   {{ if .Settings.AdvancedMode }}checked{{ end }}>
-            Enable Advanced Mode
-            <small>Shows anatomical diagram for precise injection site tracking</small>
+                   {{ if .Settings.AdvancedMode }}checked{{ end }}
+                   style="width: 2rem;">
+            <span>Enable Advanced Mode</span>
+            <br><small class="text-muted">Shows anatomical diagram for precise injection site tracking</small>
         </label>
 
-        <button type="submit">Save Settings</button>
+        <button type="submit" class="w-full">Save Settings</button>
     </form>
 </article>
 
 <!-- Notification Settings -->
-<article style="padding: 1rem;">
+<article class="card" style="margin-top: var(--space-6);">
     <header>
         <h3>Notifications & Reminders</h3>
     </header>
@@ -628,99 +627,100 @@ function copyToClipboard(text, button) {
             })
             .then(response => {
                 if (response.ok) {
-                    document.getElementById('notification-feedback').innerHTML = '<mark>Notification settings saved!</mark>';
+                    document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-success\'>Notification settings saved!</div>';
                     setTimeout(() => document.getElementById('notification-feedback').innerHTML = '', 3000);
                 } else {
-                    document.getElementById('notification-feedback').innerHTML = '<del>Failed to save settings</del>';
+                    document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-danger\'>Failed to save settings</div>';
                 }
             })
             .catch(error => {
-                document.getElementById('notification-feedback').innerHTML = '<del>Error: ' + error.message + '</del>';
+                document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
             });
           ">
 
         <div id="notification-feedback"></div>
 
-        <label for="enable-notifications">
+        <label for="enable-notifications" class="flex items-center gap-2">
             <input type="checkbox"
                    id="enable-notifications"
                    name="enable_notifications"
                    role="switch"
-                   {{ if .Settings.EnableNotifications }}checked{{ end }}>
-            Enable Push Notifications
-            <small>Receive browser notifications for reminders</small>
+                   {{ if .Settings.EnableNotifications }}checked{{ end }}
+                   style="width: 2rem;">
+            <span>Enable Push Notifications</span>
+            <small class="text-muted" style="display: block;">Receive browser notifications for reminders</small>
         </label>
 
-        <label for="injection-reminders">
+        <label for="injection-reminders" class="flex items-center gap-2" style="margin-top: var(--space-4);">
             <input type="checkbox"
                    id="injection-reminders"
                    name="injection_reminders"
                    role="switch"
-                   {{ if .Settings.InjectionReminders }}checked{{ end }}>
-            Injection Reminders
-            <small>Get reminded when it's time for your next injection</small>
+                   {{ if .Settings.InjectionReminders }}checked{{ end }}
+                   style="width: 2rem;">
+            <span>Injection Reminders</span>
+            <small class="text-muted" style="display: block;">Get reminded when it's time for your next injection</small>
         </label>
 
-        <label for="reminder-time">
+        <label for="reminder-time" style="margin-top: var(--space-4);">
             Default Reminder Time
             <input type="time"
                    id="reminder-time"
                    name="reminder_time"
                    value="{{ .Settings.ReminderTime }}">
-            <small>Default time for medication reminders</small>
+            <small class="text-muted">Default time for medication reminders</small>
         </label>
 
-        <label for="low-stock-alerts">
+        <label for="low-stock-alerts" class="flex items-center gap-2" style="margin-top: var(--space-4);">
             <input type="checkbox"
                    id="low-stock-alerts"
                    name="low_stock_alerts"
                    role="switch"
-                   {{ if .Settings.LowStockAlerts }}checked{{ end }}>
-            Low Stock Alerts
-            <small>Get notified when inventory is running low</small>
+                   {{ if .Settings.LowStockAlerts }}checked{{ end }}
+                   style="width: 2rem;">
+            <span>Low Stock Alerts</span>
+            <small class="text-muted" style="display: block;">Get notified when inventory is running low</small>
         </label>
 
-        <button type="submit">Save Notification Settings</button>
+        <button type="submit" class="w-full" style="margin-top: var(--space-4);">Save Notification Settings</button>
     </form>
 </article>
 
 <!-- Data Management -->
-<article style="padding: 1rem;">
+<article class="card" style="margin-top: var(--space-6);">
     <header>
         <h3>Data Management</h3>
     </header>
 
-    <div class="grid">
+    <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
         <div>
             <button onclick="window.location.href='/api/export/all'"
-                    class="outline"
-                    style="width: 100%;">
+                    class="outline w-full">
                 Export All Data
             </button>
-            <small>Download all data as JSON</small>
+            <small class="text-muted">Download all data as JSON</small>
         </div>
 
         <div>
             <button onclick="window.location.href='/api/export/pdf?full=true'"
-                    class="outline"
-                    style="width: 100%;">
+                    class="outline w-full">
                 Generate Full Report
             </button>
-            <small>Create PDF report for healthcare provider</small>
+            <small class="text-muted">Create PDF report for healthcare provider</small>
         </div>
     </div>
 
-    <details style="margin-top: 2rem;">
-        <summary style="color: var(--pico-del-color);">
-            <strong>Danger Zone</strong>
+    <details style="margin-top: var(--space-6); border: 1px solid var(--danger-border); border-radius: var(--radius-lg); padding: var(--space-4);">
+        <summary style="color: var(--danger-primary); font-weight: bold; cursor: pointer;">
+            Danger Zone
         </summary>
 
-        <div style="padding: 1rem; border: 1px solid var(--pico-del-color); border-radius: var(--pico-border-radius); margin-top: 1rem; background-color: var(--pico-card-background-color);">
+        <div style="margin-top: var(--space-4);">
             <p><strong>Delete All Data</strong></p>
-            <p>This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
+            <p class="text-muted">This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
             <button onclick="showDeleteAllConfirmation()"
-                    class="outline"
-                    style="color: var(--pico-del-color); border-color: var(--pico-del-color);">
+                    class="outline w-full"
+                    style="color: var(--danger-primary); border-color: var(--danger-primary);">
                 Delete All Data
             </button>
         </div>
@@ -728,29 +728,29 @@ function copyToClipboard(text, button) {
 </article>
 
 <!-- About -->
-<article style="padding: 1rem;">
+<article class="card" style="margin-top: var(--space-6);">
     <header>
         <h3>About</h3>
     </header>
 
-    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+    <div class="grid desktop-grid-cols-4" style="gap: var(--space-4);">
         <div>
-            <strong>Version</strong>
+            <strong class="text-sm text-secondary">Version</strong>
             <p>1.0.0</p>
         </div>
 
         <div>
-            <strong>Database Size</strong>
+            <strong class="text-sm text-secondary">Database Size</strong>
             <p>{{ .DatabaseSize }}</p>
         </div>
 
         <div>
-            <strong>Last Backup</strong>
+            <strong class="text-sm text-secondary">Last Backup</strong>
             <p>{{ .LastBackup }}</p>
         </div>
 
         <div>
-            <strong>Documentation</strong>
+            <strong class="text-sm text-secondary">Documentation</strong>
             <p><a href="https://github.com/yourusername/injection-tracker" target="_blank">View on GitHub</a></p>
         </div>
     </div>
@@ -770,13 +770,13 @@ function copyToClipboard(text, button) {
             <li>All courses</li>
             <li>All inventory history</li>
         </ul>
-        <p style="color: var(--pico-del-color);"><strong>This action CANNOT be undone!</strong></p>
+        <p class="text-danger"><strong>This action CANNOT be undone!</strong></p>
         <p>Type <strong>DELETE</strong> to confirm:</p>
         <input type="text" id="delete-confirmation-input" placeholder="Type DELETE" style="font-family: monospace;">
         <footer>
-            <div class="grid-2">
+            <div class="grid-2" style="gap: var(--space-2);">
                 <button type="button" class="secondary" onclick="document.getElementById('delete-all-data-confirm').close(); document.getElementById('delete-confirmation-input').value = '';">Cancel</button>
-                <button type="button" class="contrast" onclick="confirmDeleteAllData()">Delete Everything</button>
+                <button type="button" class="contrast" onclick="confirmDeleteAllData()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete Everything</button>
             </div>
         </footer>
     </article>
@@ -810,31 +810,4 @@ function confirmDeleteAllData() {
     });
 }
 </script>
-
-<style>
-/* Better spacing for settings page */
-article {
-    margin-bottom: 1rem;
-}
-
-/* Improve form layout */
-label small {
-    display: block;
-    margin-top: 0.25rem;
-    color: var(--pico-muted-color);
-}
-
-/* Grid improvements */
-.grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-}
-
-@media (max-width: 768px) {
-    .grid {
-        grid-template-columns: 1fr !important;
-    }
-}
-</style>
 {{ end }}

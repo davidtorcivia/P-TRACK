@@ -3,19 +3,19 @@
     <div class="max-w-md w-full space-y-8">
         <!-- Header -->
         <div class="text-center" x-data="{ inviteToken: new URLSearchParams(window.location.search).get('invite') }">
-            <h1 class="text-3xl font-bold mb-2 text-primary" x-text="inviteToken ? 'Join Account' : 'Create Account'"></h1>
-            <p class="text-secondary" x-text="inviteToken ? 'Complete registration to join your partner\'s account' : 'Register for Injection Tracker'"></p>
+            <h1 class="text-3xl font-bold mb-2" x-text="inviteToken ? 'Join Account' : 'Create Account'" style="color: var(--color-text-primary);"></h1>
+            <p style="color: var(--color-text-secondary);" x-text="inviteToken ? 'Complete registration to join your partner\'s account' : 'Register for Injection Tracker'"></p>
 
             <!-- Show invitation info if present -->
-            <div x-show="inviteToken" style="margin-top: 1rem; padding: 0.75rem; background: var(--pico-primary-background); border: 1px solid var(--pico-primary); border-radius: var(--pico-border-radius);">
-                <p style="margin: 0; font-size: 0.9rem;">
+            <div x-show="inviteToken" style="margin-top: 1rem; padding: 0.75rem; background: var(--brand-primary-bg); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg);">
+                <p style="margin: 0; font-size: 0.9rem; color: var(--brand-primary-dark);">
                     <strong>You've been invited!</strong><br>
                     <small>After registration, you'll automatically join the account</small>
                 </p>
             </div>
         </div>
 
-        <div class="card">
+        <article class="card">
 
         <form hx-post="/api/auth/register"
               hx-target="#register-error"
@@ -26,7 +26,8 @@
                   confirmPassword: '',
                   passwordMatch: true,
                   inviteToken: new URLSearchParams(window.location.search).get('invite')
-              }">
+              }"
+              class="space-y-6">
 
             <div id="register-error"></div>
 
@@ -45,7 +46,7 @@
                            autofocus
                            minlength="3"
                            maxlength="50">
-                    <small class="text-muted">3-50 characters, letters, numbers, and underscores only</small>
+                    <small class="text-muted" style="color: var(--color-text-muted);">3-50 characters, letters, numbers, and underscores only</small>
                 </label>
             </div>
 
@@ -57,7 +58,7 @@
                            name="email"
                            placeholder="your@email.com"
                            class="form-input">
-                    <small class="text-muted">For password recovery only</small>
+                    <small class="text-muted" style="color: var(--color-text-muted);">For password recovery only</small>
                 </label>
             </div>
 
@@ -73,7 +74,7 @@
                            minlength="8"
                            x-model="password"
                            @input="passwordMatch = password === confirmPassword || confirmPassword === ''">
-                    <small class="text-muted">Minimum 8 characters</small>
+                    <small class="text-muted" style="color: var(--color-text-muted);">Minimum 8 characters</small>
                 </label>
             </div>
 
@@ -89,22 +90,22 @@
                            x-model="confirmPassword"
                            @input="passwordMatch = password === confirmPassword"
                            :aria-invalid="!passwordMatch && confirmPassword !== ''">
-                    <small x-show="!passwordMatch && confirmPassword !== ''" class="text-danger">
+                    <small x-show="!passwordMatch && confirmPassword !== ''" class="text-danger" style="color: var(--danger-primary);">
                         Passwords do not match
                     </small>
                 </label>
             </div>
 
             <div class="form-group">
-                <label for="agree" class="flex items-center gap-2">
-                    <input type="checkbox" id="agree" name="agree" required class="form-checkbox">
-                    <span class="text-sm text-secondary">I understand this is for personal use and not HIPAA compliant</span>
+                <label for="agree" style="display: flex; align-items: center; gap: var(--space-2);">
+                    <input type="checkbox" id="agree" name="agree" required style="width: 1rem; height: 1rem; margin-bottom: 0;">
+                    <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">I understand this is for personal use and not HIPAA compliant</span>
                 </label>
             </div>
 
-            <button type="submit" id="register-btn" :disabled="!passwordMatch" class="btn btn-primary btn-lg w-full">
+            <button type="submit" id="register-btn" :disabled="!passwordMatch" class="w-full">
                 <span id="register-spinner" class="htmx-indicator">
-                    <span aria-busy="true">Creating account...</span>
+                    <span>Creating account...</span>
                 </span>
                 <span class="htmx-indicator-none">
                     Create Account
@@ -112,22 +113,20 @@
             </button>
         </form>
 
-        <div class="mt-6 text-center">
-            <p class="text-sm text-secondary">
-                Already have an account? <a href="/login" class="text-brand-primary hover:text-brand-primary-dark font-medium">Log in here</a>
+        <div style="margin-top: var(--space-6); text-align: center;">
+            <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                Already have an account? <a href="/login" style="color: var(--brand-primary); font-weight: var(--font-medium);">Log in here</a>
             </p>
         </div>
-        </div>
+        </article>
 
         <!-- Privacy Notice -->
-        <div class="alert alert-info">
-            <div class="flex items-start gap-2">
-                <span class="text-lg">🔒</span>
-                <div class="text-sm">
-                    <strong>Privacy Notice:</strong> Your data is stored locally on your device/server.
-                    This application is intended for personal family use and stores sensitive medical information.
-                    Please ensure proper security measures are in place.
-                </div>
+        <div class="alert-info" style="padding: var(--space-4); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: var(--space-2);">
+            <span style="font-size: var(--text-lg); font-weight: bold;">!</span>
+            <div style="font-size: var(--text-sm);">
+                <strong>Privacy Notice:</strong> Your data is stored locally on your device/server.
+                This application is intended for personal family use and stores sensitive medical information.
+                Please ensure proper security measures are in place.
             </div>
         </div>
     </div>

@@ -1,0 +1,408 @@
+/* ===== INJECTION TRACKER APP STYLES ===== */
+/* Based on Redesign System, adapted for existing HTML structure */
+
+@import 'redesign.css';
+
+/* ===== PICO ADAPTERS ===== */
+/* These rules map the existing Semantic HTML structure to our new design system */
+
+/* LAYOUT ADAPTERS */
+main {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-12);
+}
+
+/* Map Pico grid classes to our grid system */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+@media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* CARD ADAPTERS */
+article {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-base);
+    margin-bottom: var(--space-6);
+}
+
+article:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-border-hover);
+}
+
+article header {
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+}
+
+article footer {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+/* HEADINGS IN ARTICLES */
+article h2, article h3 {
+    margin-bottom: var(--space-2);
+}
+
+hgroup {
+    margin-bottom: var(--space-4);
+}
+
+hgroup h2, hgroup h3 {
+    margin-bottom: var(--space-1);
+}
+
+hgroup p {
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+}
+
+/* BUTTON ADAPTERS */
+/* Map standard button elements to .btn styles */
+button,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+[role="button"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-family: var(--font-sans);
+    font-weight: var(--font-medium);
+    line-height: 1;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    font-size: var(--text-sm);
+    min-height: 2.5rem;
+
+    /* Default to primary style */
+    background-color: var(--brand-primary);
+    color: white;
+    border-color: var(--brand-primary);
+}
+
+button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+input[type="reset"]:hover,
+[role="button"]:hover {
+    background-color: var(--brand-primary-dark);
+    border-color: var(--brand-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    color: white;
+}
+
+/* Secondary buttons */
+button.secondary,
+[role="button"].secondary {
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    border-color: var(--color-border);
+}
+
+button.secondary:hover,
+[role="button"].secondary:hover {
+    background-color: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
+    color: var(--color-text-primary);
+}
+
+/* Outline buttons */
+button.outline,
+[role="button"].outline {
+    background-color: transparent;
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+button.outline:hover,
+[role="button"].outline:hover {
+    background-color: var(--brand-primary-bg);
+    color: var(--brand-primary-dark);
+}
+
+/* Contrast/Danger buttons */
+button.contrast,
+[role="button"].contrast {
+    background-color: var(--danger-primary);
+    color: white;
+    border-color: var(--danger-primary);
+}
+
+button.contrast:hover,
+[role="button"].contrast:hover {
+    background-color: var(--danger-light);
+    border-color: var(--danger-light);
+}
+
+/* FORM ADAPTERS */
+input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-text-primary);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    transition: all var(--transition-fast);
+    margin-bottom: var(--space-4);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px var(--brand-primary-bg);
+}
+
+label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-2);
+}
+
+fieldset {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+legend {
+    padding: 0 var(--space-2);
+    font-weight: var(--font-semibold);
+}
+
+/* MODAL/DIALOG ADAPTERS */
+dialog {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-2xl);
+    max-width: 500px;
+    width: 100%;
+    border: none;
+    padding: 0;
+}
+
+dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+dialog article {
+    margin: 0;
+    border: none;
+    box-shadow: none;
+}
+
+dialog header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Close button in modal */
+dialog header button[rel="prev"] {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    padding: var(--space-2);
+    width: auto;
+    min-height: auto;
+}
+
+dialog header button[rel="prev"]::before {
+    content: "✕"; /* Standard unicode cross */
+    font-size: 1.2rem;
+}
+
+dialog header button[rel="prev"]:hover {
+    background-color: var(--color-surface-hover);
+    color: var(--color-text-primary);
+    transform: none;
+    box-shadow: none;
+}
+
+/* TABLE ADAPTERS */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+
+th {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-secondary);
+}
+
+td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+}
+
+tbody tr:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
+/* NAVIGATION ADAPTERS */
+/* Override Pico nav styles if we keep the HTML structure */
+nav.container-fluid {
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+nav ul li {
+    padding: 0;
+}
+
+nav ul li a {
+    color: var(--color-text-secondary);
+    font-weight: var(--font-medium);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    text-decoration: none;
+}
+
+nav ul li a:hover {
+    color: var(--brand-primary);
+    background-color: var(--brand-primary-bg);
+}
+
+nav ul li strong {
+    color: var(--brand-primary);
+    font-size: var(--text-lg);
+}
+
+/* ALERTS */
+.alert-success {
+    background-color: var(--success-bg);
+    border: 1px solid var(--success-border);
+    color: var(--success-primary);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+}
+
+.alert-danger {
+    background-color: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    color: var(--danger-primary);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+}
+
+/* STAT CARDS */
+.stat-card {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-value {
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    color: var(--brand-primary);
+    line-height: 1;
+    margin-bottom: var(--space-2);
+}
+
+.stat-label {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    font-weight: var(--font-semibold);
+}
+
+/* DROPDOWN FIXES */
+details.dropdown summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+details.dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+details.dropdown ul {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-2);
+    min-width: 200px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+    z-index: var(--z-dropdown);
+}
+
+details.dropdown[open] ul {
+    display: flex;
+}

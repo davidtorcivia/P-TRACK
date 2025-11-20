@@ -4,14 +4,14 @@
         <!-- Header -->
         <div class="text-center">
             <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style="background-color: var(--brand-primary-50); color: var(--brand-primary);">
-                <span class="text-3xl">💉</span>
+                <span class="text-3xl" style="font-weight: bold;">+</span>
             </div>
             <h1 class="text-3xl font-bold mb-2" style="color: var(--color-text-primary);">Welcome Back</h1>
             <p style="color: var(--color-text-secondary);">Log in to your Injection Tracker account</p>
         </div>
 
         <!-- Login Form -->
-        <div class="card">
+        <article class="card">
             <form hx-post="/api/auth/login"
                   hx-target="#login-error"
                   hx-swap="innerHTML"
@@ -45,12 +45,12 @@
                 </div>
 
                 <!-- Remember Me -->
-                <div class="flex items-center">
+                <div style="display: flex; align-items: center; gap: var(--space-2);">
                     <input type="checkbox"
                            id="remember"
                            name="remember"
-                           class="form-checkbox">
-                    <label for="remember" class="ml-2 text-sm" style="color: var(--color-text-secondary);">
+                           style="width: 1rem; height: 1rem; margin-bottom: 0;">
+                    <label for="remember" style="margin-bottom: 0; color: var(--color-text-secondary);">
                         Remember me for 2 weeks
                     </label>
                 </div>
@@ -58,45 +58,38 @@
                 <!-- Submit Button -->
                 <button type="submit"
                         id="login-btn"
-                        class="btn btn-primary w-full btn-lg">
+                        class="w-full">
                     <span id="login-spinner" class="htmx-indicator hidden">
-                        <span class="animate-pulse">⏳ Logging in...</span>
+                        <span>Logging in...</span>
                     </span>
-                    <span class="htmx-indicator-default">
-                        <span>🔐</span>
+                    <span class="htmx-indicator-default" style="display: flex; align-items: center; justify-content: center; gap: var(--space-2);">
                         <span>Log In</span>
                     </span>
                 </button>
             </form>
 
             <!-- Footer Links -->
-            <div class="mt-6 text-center space-y-2">
-                <p class="text-sm" style="color: var(--color-text-secondary);">
+            <div style="margin-top: var(--space-6); text-align: center; display: flex; flex-direction: column; gap: var(--space-2);">
+                <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">
                     Don't have an account?
-                    <a href="/register" style="color: var(--brand-primary); text-decoration: none;"
-                       onmouseover="this.style.color='var(--brand-primary-dark)'"
-                       onmouseout="this.style.color='var(--brand-primary)'">
+                    <a href="/register" style="color: var(--brand-primary);">
                         Register here
                     </a>
                 </p>
-                <p class="text-sm">
-                    <a href="/forgot-password" style="color: var(--brand-primary); text-decoration: none;"
-                       onmouseover="this.style.color='var(--brand-primary-dark)'"
-                       onmouseout="this.style.color='var(--brand-primary)'">
+                <p style="font-size: var(--text-sm);">
+                    <a href="/forgot-password" style="color: var(--brand-primary);">
                         Forgot your password?
                     </a>
                 </p>
             </div>
-        </div>
+        </article>
 
         <!-- Security Notice -->
-        <div class="alert alert-info">
-            <div class="flex items-start gap-2">
-                <span class="text-lg">🔒</span>
-                <div class="text-sm">
-                    <strong>Security Notice:</strong> This application stores sensitive medical information.
-                    Please ensure you're using a secure device and connection.
-                </div>
+        <div class="alert-info" style="padding: var(--space-4); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: var(--space-2);">
+            <span style="font-size: var(--text-lg); font-weight: bold;">!</span>
+            <div style="font-size: var(--text-sm);">
+                <strong>Security Notice:</strong> This application stores sensitive medical information.
+                Please ensure you're using a secure device and connection.
             </div>
         </div>
     </div>

@@ -1,465 +1,458 @@
 {{ define "content" }}
-<article>
-    <header>
-        <hgroup>
-            <h1>Inventory Management</h1>
-            <p>Track medical supplies and get low stock alerts</p>
-        </hgroup>
-    </header>
+<article class="card" style="margin-bottom: var(--space-6);">
+    <hgroup>
+        <h1>Inventory Management</h1>
+        <p>Track medical supplies and get low stock alerts</p>
+    </hgroup>
+</article>
 
-    <!-- Quick Stats -->
-    <div class="grid" style="margin-bottom: 2rem;">
-        <article style="text-align: center;">
-            <header><strong>Items Tracked</strong></header>
-            <h2 style="margin: 0;">{{ .TotalItems }}</h2>
-        </article>
-        <article style="text-align: center; background-color: var(--pico-warning-background);">
-            <header><strong>Low Stock</strong></header>
-            <h2 style="margin: 0;">{{ .LowStockCount }}</h2>
-        </article>
-        <article style="text-align: center; background-color: var(--pico-danger-background);">
-            <header><strong>Expiring Soon</strong></header>
-            <h2 style="margin: 0;">{{ .ExpiringSoonCount }}</h2>
-        </article>
-    </div>
-
-    <!-- Add New Item -->
-    <article x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '', lowStockThreshold: '' }">
-        <header>
-            <h3>Add Inventory</h3>
-        </header>
-        <form @submit.prevent="
-            const btn = $el.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.textContent = 'Adding...';
-
-            let changeAmount;
-            if (itemType === 'progesterone') {
-                changeAmount = parseFloat(vialSize) * parseFloat(amount);
-            } else {
-                changeAmount = parseInt(amount);
-            }
-
-            const data = {
-                change_amount: changeAmount,
-                reason: reason,
-                notes: 'Added inventory'
-            };
-
-            if (lotNumber) data.lot_number = lotNumber;
-            if (expirationDate) data.expiration_date = expirationDate;
-            if (lowStockThreshold) data.low_stock_threshold = parseFloat(lowStockThreshold);
-
-            fetch('/api/inventory/' + itemType + '/adjust', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ .CSRFToken }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    return response.text().then(text => {
-                        btn.disabled = false;
-                        btn.textContent = 'Add to Inventory';
-                        console.error('Error:', text);
-                        window.location.reload();
-                    });
-                }
-            })
-            .catch(error => {
-                btn.disabled = false;
-                btn.textContent = 'Add to Inventory';
-                console.error('Error:', error.message);
-                window.location.reload();
-            });
-        ">
-            <div class="grid">
-                <label>
-                    Item Type
-                    <select x-model="itemType" required>
-                        <option value="progesterone">Progesterone (vials)</option>
-                        <option value="draw_needle">Draw Needles</option>
-                        <option value="injection_needle">Injection Needles</option>
-                        <option value="syringe">Syringes</option>
-                        <option value="swab">Alcohol Swabs</option>
-                        <option value="gauze">Gauze Pads</option>
-                    </select>
-                </label>
-                <label x-show="itemType === 'progesterone'">
-                    Vial Size (mL)
-                    <input type="number" x-model="vialSize" step="0.1" min="0.1">
-                </label>
-                <label>
-                    <span x-text="itemType === 'progesterone' ? 'Number of Vials' : 'Quantity'"></span>
-                    <input type="number" x-model="amount" :step="itemType === 'progesterone' ? '1' : '1'" min="1" required>
-                </label>
-            </div>
-            <div class="grid">
-                <label>
-                    Lot Number (optional)
-                    <input type="text" x-model="lotNumber" placeholder="Lot/batch number">
-                </label>
-                <label>
-                    Expiration Date (optional)
-                    <input type="date" x-model="expirationDate">
-                </label>
-                <label>
-                    Low Stock Alert Threshold (optional)
-                    <input type="number" x-model="lowStockThreshold" :step="itemType === 'progesterone' ? '0.1' : '1'" min="0" placeholder="Alert when quantity is below...">
-                    <small>Get alerts when stock falls below this amount</small>
-                </label>
-            </div>
-            <button type="submit">Add to Inventory</button>
-        </form>
+<!-- Quick Stats -->
+<div class="grid-3" style="margin-bottom: var(--space-6);">
+    <article class="card stat-card">
+        <div class="stat-label">Items Tracked</div>
+        <div class="stat-value">{{ .TotalItems }}</div>
     </article>
+    <article class="card stat-card" style="background-color: var(--warning-bg); border-color: var(--warning-border);">
+        <div class="stat-label" style="color: var(--warning-primary);">Low Stock</div>
+        <div class="stat-value" style="color: var(--warning-primary);">{{ .LowStockCount }}</div>
+    </article>
+    <article class="card stat-card" style="background-color: var(--danger-bg); border-color: var(--danger-border);">
+        <div class="stat-label" style="color: var(--danger-primary);">Expiring Soon</div>
+        <div class="stat-value" style="color: var(--danger-primary);">{{ .ExpiringSoonCount }}</div>
+    </article>
+</div>
 
-    <!-- Current Inventory -->
-    <article>
-        <header>
-            <h3>Current Stock</h3>
-        </header>
-        <div id="inventory-items">
-        {{ range .InventoryItems }}
-        <article x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '', lowStockThreshold: {{ if .LowStockThreshold }}{{ .LowStockThreshold }}{{ else }}0{{ end }} }">
-            <div class="grid">
+<!-- Add New Item -->
+<article class="card" style="margin-bottom: var(--space-6);" x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '', lowStockThreshold: '' }">
+    <header>
+        <h3>Add Inventory</h3>
+    </header>
+    <form @submit.prevent="
+        const btn = $el.querySelector('button[type=submit]');
+        btn.disabled = true;
+        btn.textContent = 'Adding...';
+
+        let changeAmount;
+        if (itemType === 'progesterone') {
+            changeAmount = parseFloat(vialSize) * parseFloat(amount);
+        } else {
+            changeAmount = parseInt(amount);
+        }
+
+        const data = {
+            change_amount: changeAmount,
+            reason: reason,
+            notes: 'Added inventory'
+        };
+
+        if (lotNumber) data.lot_number = lotNumber;
+        if (expirationDate) data.expiration_date = expirationDate;
+        if (lowStockThreshold) data.low_stock_threshold = parseFloat(lowStockThreshold);
+
+        fetch('/api/inventory/' + itemType + '/adjust', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ .CSRFToken }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                return response.text().then(text => {
+                    btn.disabled = false;
+                    btn.textContent = 'Add to Inventory';
+                    console.error('Error:', text);
+                    window.location.reload();
+                });
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.textContent = 'Add to Inventory';
+            console.error('Error:', error.message);
+            window.location.reload();
+        });
+    ">
+        <div class="grid-3">
+            <label>
+                Item Type
+                <select x-model="itemType" required>
+                    <option value="progesterone">Progesterone (vials)</option>
+                    <option value="draw_needle">Draw Needles</option>
+                    <option value="injection_needle">Injection Needles</option>
+                    <option value="syringe">Syringes</option>
+                    <option value="swab">Alcohol Swabs</option>
+                    <option value="gauze">Gauze Pads</option>
+                </select>
+            </label>
+            <label x-show="itemType === 'progesterone'">
+                Vial Size (mL)
+                <input type="number" x-model="vialSize" step="0.1" min="0.1">
+            </label>
+            <label>
+                <span x-text="itemType === 'progesterone' ? 'Number of Vials' : 'Quantity'"></span>
+                <input type="number" x-model="amount" :step="itemType === 'progesterone' ? '1' : '1'" min="1" required>
+            </label>
+        </div>
+        <div class="grid-3">
+            <label>
+                Lot Number (optional)
+                <input type="text" x-model="lotNumber" placeholder="Lot/batch number">
+            </label>
+            <label>
+                Expiration Date (optional)
+                <input type="date" x-model="expirationDate">
+            </label>
+            <label>
+                Low Stock Alert Threshold (optional)
+                <input type="number" x-model="lowStockThreshold" :step="itemType === 'progesterone' ? '0.1' : '1'" min="0" placeholder="Alert when quantity is below...">
+                <small class="text-muted">Get alerts when stock falls below this amount</small>
+            </label>
+        </div>
+        <button type="submit" class="w-full">Add to Inventory</button>
+    </form>
+</article>
+
+<!-- Current Inventory -->
+<article class="card" style="margin-bottom: var(--space-6);">
+    <header>
+        <h3>Current Stock</h3>
+    </header>
+    <div id="inventory-items" class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
+    {{ range .InventoryItems }}
+    <div class="card" style="border: 1px solid var(--color-border); padding: var(--space-4); margin: 0;" x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '', lowStockThreshold: {{ if .LowStockThreshold }}{{ .LowStockThreshold }}{{ else }}0{{ end }} }">
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                    <h3 style="margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: var(--text-lg);">
                         {{ .Icon }} {{ .DisplayName }}
                     </h3>
-                    <p style="margin: 0;">
-                        <strong style="font-size: 1.5rem;">{{ .Quantity }} {{ .Unit }}</strong>
-                        {{ if .LowStock }}
-                        <span style="color: var(--pico-warning);">Low Stock</span>
-                        {{ end }}
-                    </p>
-                    {{ if .ExpirationDate }}
-                    <small>
-                        Expires: {{ .FormattedExpiration }}
-                        {{ if .ExpiringSoon }}
-                        <span style="color: var(--pico-del-color);">Expiring soon!</span>
-                        {{ end }}
-                    </small>
-                    {{ end }}
-                    {{ if .LotNumber }}
-                    <small>Lot #: {{ .LotNumber }}</small>
+                    <div style="margin-top: var(--space-2);">
+                        <strong style="font-size: var(--text-2xl); color: var(--brand-primary);">{{ .Quantity }} <span style="font-size: var(--text-base);">{{ .Unit }}</span></strong>
+                    </div>
+                    {{ if .LowStock }}
+                    <span class="badge badge-warning" style="margin-top: var(--space-1);">Low Stock</span>
                     {{ end }}
                 </div>
-                <div style="text-align: right;">
-                    <button @click="showAdjust = !showAdjust" class="outline">
+                <div style="text-align: right; display: flex; flex-direction: column; gap: var(--space-2);">
+                    <button @click="showAdjust = !showAdjust" class="btn-sm outline">
                         <span x-text="showAdjust ? 'Cancel' : 'Adjust'"></span>
                     </button>
                     <button onclick="window.location.href='/inventory/{{ .ItemType }}/history'"
-                            class="outline secondary">
+                            class="btn-sm outline secondary">
                         History
                     </button>
                 </div>
             </div>
 
-            <!-- Adjustment Form -->
-            <div x-show="showAdjust" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
-                <form @submit.prevent="
-                    const btn = $el.querySelector('button[type=submit]');
-                    btn.disabled = true;
-                    btn.setAttribute('aria-busy', 'true');
-
-                    const data = {
-                        change_amount: parseFloat(adjustAmount),
-                        reason: adjustReason,
-                        notes: adjustNotes || null
-                    };
-
-                    if (adjustReason === 'restock') {
-                        const lotNum = $el.querySelector('[name=lot_number]')?.value;
-                        const expDate = $el.querySelector('[name=expiration_date]')?.value;
-                        if (lotNum) data.lot_number = lotNum;
-                        if (expDate) data.expiration_date = expDate;
-                    }
-
-                    if (lowStockThreshold && lowStockThreshold > 0) {
-                        data.low_stock_threshold = parseFloat(lowStockThreshold);
-                    }
-
-                    fetch('/api/inventory/{{ .ItemType }}/adjust', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': '{{ $.CSRFToken }}'
-                        },
-                        body: JSON.stringify(data)
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            window.location.reload();
-                        } else {
-                            return response.text().then(text => {
-                                console.error('Error:', text);
-                                btn.disabled = false;
-                                btn.removeAttribute('aria-busy');
-                                window.location.reload();
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error.message);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                        window.location.reload();
-                    });
-                ">
-
-                    <div class="grid">
-                        <label for="adjust-amount-{{ .ItemType }}">
-                            Amount
-                            <input type="number"
-                                   id="adjust-amount-{{ .ItemType }}"
-                                   name="amount"
-                                   step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
-                                   x-model="adjustAmount"
-                                   placeholder="Use - for decrease"
-                                   required>
-                            <small>Positive to add, negative to remove</small>
-                        </label>
-
-                        <label for="adjust-reason-{{ .ItemType }}">
-                            Reason
-                            <select id="adjust-reason-{{ .ItemType }}"
-                                    name="reason"
-                                    x-model="adjustReason"
-                                    required>
-                                <option value="">Select reason...</option>
-                                <option value="restock">Restock</option>
-                                <option value="manual_adjustment">Manual Adjustment</option>
-                                <option value="expired">Expired/Discarded</option>
-                                <option value="damaged">Damaged</option>
-                                <option value="correction">Correction</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <label for="adjust-notes-{{ .ItemType }}">
-                        Notes (optional)
-                        <textarea id="adjust-notes-{{ .ItemType }}"
-                                  name="notes"
-                                  x-model="adjustNotes"
-                                  rows="2"
-                                  placeholder="Additional details..."></textarea>
-                    </label>
-
-                    <label for="low-stock-threshold-{{ .ItemType }}">
-                        Low Stock Alert Threshold (optional)
-                        <input type="number"
-                               id="low-stock-threshold-{{ .ItemType }}"
-                               name="low_stock_threshold"
-                               x-model="lowStockThreshold"
-                               step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
-                               min="0"
-                               placeholder="Alert when quantity is below...">
-                        <small>Get alerts when stock falls below this amount</small>
-                    </label>
-
-                    <!-- Optional fields for restock -->
-                    <div x-show="adjustReason === 'restock'">
-                        <div class="grid">
-                            <label for="lot-number-{{ .ItemType }}">
-                                Lot Number (optional)
-                                <input type="text"
-                                       id="lot-number-{{ .ItemType }}"
-                                       name="lot_number"
-                                       placeholder="Lot/batch number">
-                            </label>
-
-                            <label for="expiration-date-{{ .ItemType }}">
-                                Expiration Date (optional)
-                                <input type="date"
-                                       id="expiration-date-{{ .ItemType }}"
-                                       name="expiration_date">
-                            </label>
-                        </div>
-                    </div>
-
-                    <button type="submit" :disabled="!adjustAmount || !adjustReason">
-                        Update Inventory
-                    </button>
-                </form>
+            <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                {{ if .ExpirationDate }}
+                <div>
+                    Expires: {{ .FormattedExpiration }}
+                    {{ if .ExpiringSoon }}
+                    <span style="color: var(--danger-primary); font-weight: bold;">Expiring soon!</span>
+                    {{ end }}
+                </div>
+                {{ end }}
+                {{ if .LotNumber }}
+                <div>Lot #: {{ .LotNumber }}</div>
+                {{ end }}
             </div>
-
-            <!-- Progress Bar for Low Stock -->
-            {{ if .LowStockThreshold }}
-            <div style="margin-top: 1rem;">
-                <progress value="{{ .Quantity }}"
-                          max="{{ .LowStockThreshold }}"
-                          style="width: 100%;"></progress>
-                <small>Threshold: {{ .LowStockThreshold }} {{ .Unit }}</small>
-            </div>
-            {{ end }}
-        </article>
-        {{ end }}
         </div>
-    </article>
 
-    <!-- Auto-Deduction Settings -->
-    <article>
-        <header>
-            <h3>Auto-Deduction Settings</h3>
-            <p>Configure how much inventory is deducted per injection</p>
-        </header>
+        <!-- Adjustment Form -->
+        <div x-show="showAdjust" style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+            <form @submit.prevent="
+                const btn = $el.querySelector('button[type=submit]');
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
 
-        <form @submit.prevent="
-            const btn = $el.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.textContent = 'Saving...';
+                const data = {
+                    change_amount: parseFloat(adjustAmount),
+                    reason: adjustReason,
+                    notes: adjustNotes || null
+                };
 
-            const progPerInj = parseFloat(document.getElementById('progesterone-per-injection').value);
-            const autoDeduct = document.getElementById('auto-deduct').checked;
-
-            fetch('/api/inventory/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ .CSRFToken }}'
-                },
-                body: JSON.stringify({
-                    progesterone_per_injection: progPerInj,
-                    auto_deduct: autoDeduct
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('settings-feedback').innerHTML = '<div style=color:green;>Settings saved successfully!</div>';
-                    setTimeout(() => {
-                        document.getElementById('settings-feedback').innerHTML = '';
-                    }, 3000);
-                } else {
-                    return response.text().then(text => {
-                        document.getElementById('settings-feedback').innerHTML = '<div style=color:red;>Error: ' + text + '</div>';
-                    });
+                if (adjustReason === 'restock') {
+                    const lotNum = $el.querySelector('[name=lot_number]')?.value;
+                    const expDate = $el.querySelector('[name=expiration_date]')?.value;
+                    if (lotNum) data.lot_number = lotNum;
+                    if (expDate) data.expiration_date = expDate;
                 }
-                btn.disabled = false;
-                btn.textContent = 'Save Settings';
-            })
-            .catch(error => {
-                document.getElementById('settings-feedback').innerHTML = '<div style=color:red;>Error: ' + error.message + '</div>';
-                btn.disabled = false;
-                btn.textContent = 'Save Settings';
-            });
-        ">
 
-            <div id="settings-feedback"></div>
+                if (lowStockThreshold && lowStockThreshold > 0) {
+                    data.low_stock_threshold = parseFloat(lowStockThreshold);
+                }
 
-            <div class="grid">
-                <label for="progesterone-per-injection">
-                    Progesterone per injection (mL)
+                fetch('/api/inventory/{{ .ItemType }}/adjust', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ $.CSRFToken }}'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        return response.text().then(text => {
+                            console.error('Error:', text);
+                            btn.disabled = false;
+                            btn.removeAttribute('aria-busy');
+                            window.location.reload();
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error.message);
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-busy');
+                    window.location.reload();
+                });
+            ">
+
+                <div class="grid-2">
+                    <label for="adjust-amount-{{ .ItemType }}">
+                        Amount
+                        <input type="number"
+                               id="adjust-amount-{{ .ItemType }}"
+                               name="amount"
+                               step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
+                               x-model="adjustAmount"
+                               placeholder="Use - for decrease"
+                               required>
+                        <small class="text-muted">Positive to add, negative to remove</small>
+                    </label>
+
+                    <label for="adjust-reason-{{ .ItemType }}">
+                        Reason
+                        <select id="adjust-reason-{{ .ItemType }}"
+                                name="reason"
+                                x-model="adjustReason"
+                                required>
+                            <option value="">Select reason...</option>
+                            <option value="restock">Restock</option>
+                            <option value="manual_adjustment">Manual Adjustment</option>
+                            <option value="expired">Expired/Discarded</option>
+                            <option value="damaged">Damaged</option>
+                            <option value="correction">Correction</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label for="adjust-notes-{{ .ItemType }}">
+                    Notes (optional)
+                    <textarea id="adjust-notes-{{ .ItemType }}"
+                              name="notes"
+                              x-model="adjustNotes"
+                              rows="2"
+                              placeholder="Additional details..."></textarea>
+                </label>
+
+                <label for="low-stock-threshold-{{ .ItemType }}">
+                    Low Stock Alert Threshold (optional)
                     <input type="number"
-                           id="progesterone-per-injection"
-                           name="progesterone_per_injection"
-                           step="0.1"
-                           value="{{ .Settings.ProgesteronePerInjection }}"
-                           required>
+                           id="low-stock-threshold-{{ .ItemType }}"
+                           name="low_stock_threshold"
+                           x-model="lowStockThreshold"
+                           step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
+                           min="0"
+                           placeholder="Alert when quantity is below...">
+                    <small class="text-muted">Get alerts when stock falls below this amount</small>
                 </label>
 
-                <label for="auto-deduct">
-                    <input type="checkbox"
-                           id="auto-deduct"
-                           name="auto_deduct"
-                           role="switch"
-                           {{ if .Settings.AutoDeduct }}checked{{ end }}>
-                    Enable auto-deduction
-                </label>
+                <!-- Optional fields for restock -->
+                <div x-show="adjustReason === 'restock'">
+                    <div class="grid-2">
+                        <label for="lot-number-{{ .ItemType }}">
+                            Lot Number (optional)
+                            <input type="text"
+                                   id="lot-number-{{ .ItemType }}"
+                                   name="lot_number"
+                                   placeholder="Lot/batch number">
+                        </label>
+
+                        <label for="expiration-date-{{ .ItemType }}">
+                            Expiration Date (optional)
+                            <input type="date"
+                                   id="expiration-date-{{ .ItemType }}"
+                                   name="expiration_date">
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" :disabled="!adjustAmount || !adjustReason" class="w-full btn-sm">
+                    Update Inventory
+                </button>
+            </form>
+        </div>
+
+        <!-- Progress Bar for Low Stock -->
+        {{ if .LowStockThreshold }}
+        <div style="margin-top: var(--space-3);">
+            <div style="width: 100%; height: 8px; background-color: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
+                <div style="width: {{ if gt .Quantity .LowStockThreshold }}100%{{ else }}50%{{ end }}; height: 100%; background-color: {{ if .LowStock }}var(--danger-primary){{ else }}var(--success-primary){{ end }};"></div>
             </div>
+            <small class="text-muted">Threshold: {{ .LowStockThreshold }} {{ .Unit }}</small>
+        </div>
+        {{ end }}
+    </div>
+    {{ end }}
+    </div>
+</article>
 
-            <details>
-                <summary>Advanced Settings</summary>
+<!-- Auto-Deduction Settings -->
+<article class="card" style="margin-bottom: var(--space-6);">
+    <header>
+        <h3>Auto-Deduction Settings</h3>
+        <p>Configure how much inventory is deducted per injection</p>
+    </header>
 
-                <fieldset>
-                    <legend>Items deducted per injection</legend>
+    <form @submit.prevent="
+        const btn = $el.querySelector('button[type=submit]');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
 
-                    <label>
-                        <input type="checkbox" name="deduct_draw_needle" checked disabled>
+        const progPerInj = parseFloat(document.getElementById('progesterone-per-injection').value);
+        const autoDeduct = document.getElementById('auto-deduct').checked;
+
+        fetch('/api/inventory/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ .CSRFToken }}'
+            },
+            body: JSON.stringify({
+                progesterone_per_injection: progPerInj,
+                auto_deduct: autoDeduct
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                document.getElementById('settings-feedback').innerHTML = '<div class=\'alert-success\'>Settings saved successfully!</div>';
+                setTimeout(() => {
+                    document.getElementById('settings-feedback').innerHTML = '';
+                }, 3000);
+            } else {
+                return response.text().then(text => {
+                    document.getElementById('settings-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + text + '</div>';
+                });
+            }
+            btn.disabled = false;
+            btn.textContent = 'Save Settings';
+        })
+        .catch(error => {
+            document.getElementById('settings-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
+            btn.disabled = false;
+            btn.textContent = 'Save Settings';
+        });
+    ">
+
+        <div id="settings-feedback"></div>
+
+        <div class="grid-2">
+            <label for="progesterone-per-injection">
+                Progesterone per injection (mL)
+                <input type="number"
+                       id="progesterone-per-injection"
+                       name="progesterone_per_injection"
+                       step="0.1"
+                       value="{{ .Settings.ProgesteronePerInjection }}"
+                       required>
+            </label>
+
+            <label for="auto-deduct" style="display: flex; align-items: center; gap: var(--space-2); height: 100%; padding-top: 1.5rem;">
+                <input type="checkbox"
+                       id="auto-deduct"
+                       name="auto_deduct"
+                       role="switch"
+                       {{ if .Settings.AutoDeduct }}checked{{ end }}
+                       style="width: 2rem;">
+                Enable auto-deduction
+            </label>
+        </div>
+
+        <details style="margin: var(--space-4) 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3);">
+            <summary style="font-weight: var(--font-medium); cursor: pointer;">Advanced Settings</summary>
+
+            <fieldset style="border: none; padding: 0; margin-top: var(--space-3);">
+                <legend style="font-size: var(--text-sm); font-weight: var(--font-semibold); margin-bottom: var(--space-2);">Items deducted per injection</legend>
+
+                <div class="grid-2">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="deduct_draw_needle" checked disabled style="width: 1rem; height: 1rem;">
                         1× Draw Needle
                     </label>
 
-                    <label>
-                        <input type="checkbox" name="deduct_injection_needle" checked disabled>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="deduct_injection_needle" checked disabled style="width: 1rem; height: 1rem;">
                         1× Injection Needle
                     </label>
 
-                    <label>
-                        <input type="checkbox" name="deduct_syringe" checked disabled>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="deduct_syringe" checked disabled style="width: 1rem; height: 1rem;">
                         1× Syringe
                     </label>
 
-                    <label>
-                        <input type="checkbox" name="deduct_swab" checked disabled>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="deduct_swab" checked disabled style="width: 1rem; height: 1rem;">
                         1× Alcohol Swab
                     </label>
 
-                    <label>
-                        <input type="checkbox" name="deduct_gauze" checked disabled>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="deduct_gauze" checked disabled style="width: 1rem; height: 1rem;">
                         1× Gauze Pad
                     </label>
+                </div>
 
-                    <small>Note: These items are always deducted per injection</small>
-                </fieldset>
-            </details>
+                <small class="text-muted mt-2 block">Note: These items are always deducted per injection</small>
+            </fieldset>
+        </details>
 
-            <button type="submit">Save Settings</button>
-        </form>
-    </article>
+        <button type="submit" class="w-full">Save Settings</button>
+    </form>
+</article>
 
-    <!-- Inventory History Summary -->
-    <article>
-        <header>
-            <h3>Recent Changes</h3>
-        </header>
+<!-- Inventory History Summary -->
+<article class="card">
+    <header>
+        <h3>Recent Changes</h3>
+    </header>
 
-        <div id="recent-inventory-changes"
-             hx-get="/api/inventory/history/recent"
-             hx-trigger="load"
-             hx-swap="innerHTML">
-            <p aria-busy="true">Loading recent changes...</p>
-        </div>
+    <div id="recent-inventory-changes"
+         hx-get="/api/inventory/history/recent"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p aria-busy="true">Loading recent changes...</p>
+    </div>
 
-        <footer>
-            <a href="/inventory/history">View full history →</a>
-        </footer>
-    </article>
+    <footer style="margin-top: var(--space-4);">
+        <a href="/inventory/history" class="btn outline w-full">View full history →</a>
+    </footer>
 </article>
 
 <style>
-    /* Mobile responsiveness */
-    @media (max-width: 768px) {
-        .grid {
-            grid-template-columns: 1fr !important;
-        }
+    /* Progress bar fix */
+    progress {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background-color: var(--color-bg-tertiary);
+        border: none;
+        overflow: hidden;
     }
-
-    /* Progress bar colors */
-    progress[value]::-webkit-progress-value {
-        transition: width 0.3s ease;
+    progress::-webkit-progress-bar {
+        background-color: var(--color-bg-tertiary);
     }
-
-    progress[value] {
-        appearance: none;
-        height: 20px;
+    progress::-webkit-progress-value {
+        background-color: var(--brand-primary);
     }
-
-    progress[value]::-webkit-progress-bar {
-        background-color: var(--pico-muted-border-color);
-        border-radius: var(--pico-border-radius);
-    }
-
-    progress[value]::-webkit-progress-value {
-        background-color: var(--pico-primary);
-        border-radius: var(--pico-border-radius);
-    }
-
-    progress[value]::-moz-progress-bar {
-        background-color: var(--pico-primary);
-        border-radius: var(--pico-border-radius);
+    progress::-moz-progress-bar {
+        background-color: var(--brand-primary);
     }
 </style>
 {{ end }}

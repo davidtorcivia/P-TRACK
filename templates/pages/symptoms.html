@@ -4,10 +4,10 @@
     <p>Log and monitor your symptoms</p>
 </hgroup>
 
-<div id="notification" style="display: none; margin-bottom: 1rem;" role="alert"></div>
+<div id="notification" style="display: none; margin-bottom: var(--space-4);" role="alert"></div>
 
 {{ if .ActiveCourse }}
-<article>
+<article class="card">
     <header><h3>Log Symptoms</h3></header>
 
     <form x-data="{
@@ -51,7 +51,7 @@
                 notes = '';
 
                 const notif = document.getElementById('notification');
-                notif.innerHTML = '<article><mark>Symptoms logged successfully!</mark></article>';
+                notif.innerHTML = '<div class=\'alert-success\'>Symptoms logged successfully!</div>';
                 notif.style.display = 'block';
                 setTimeout(() => notif.style.display = 'none', 3000);
 
@@ -59,7 +59,7 @@
             } else {
                 response.text().then(text => {
                     const notif = document.getElementById('notification');
-                    notif.innerHTML = '<article><del>Error: ' + text + '</del></article>';
+                    notif.innerHTML = '<div class=\'alert-danger\'>Error: ' + text + '</div>';
                     notif.style.display = 'block';
                 });
             }
@@ -68,7 +68,7 @@
             btn.disabled = false;
             btn.removeAttribute('aria-busy');
             const notif = document.getElementById('notification');
-            notif.innerHTML = '<article><del>Error: ' + error.message + '</del></article>';
+            notif.innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
             notif.style.display = 'block';
         });
     ">
@@ -76,7 +76,7 @@
             <div>
                 <label>
                     Pain Level: <span x-text="painLevel"></span>/10
-                    <input type="range" x-model="painLevel" min="1" max="10">
+                    <input type="range" x-model="painLevel" min="1" max="10" style="width: 100%;">
                 </label>
             </div>
 
@@ -116,24 +116,24 @@
         </div>
 
         <div style="margin-bottom: 1rem;">
-            <label>
-                <input type="checkbox" x-model="hasKnots" role="switch">
-                Has Knots/Hardness at Site
+            <label class="flex items-center gap-2">
+                <input type="checkbox" x-model="hasKnots" role="switch" style="width: 2rem;">
+                <span>Has Knots/Hardness at Site</span>
             </label>
         </div>
 
         <fieldset>
             <legend>Additional Symptoms</legend>
             <div class="grid-4">
-                <label><input type="checkbox" x-model="symptoms" value="nausea"> Nausea</label>
-                <label><input type="checkbox" x-model="symptoms" value="fatigue"> Fatigue</label>
-                <label><input type="checkbox" x-model="symptoms" value="headache"> Headache</label>
-                <label><input type="checkbox" x-model="symptoms" value="mood_changes"> Mood Changes</label>
-                <label><input type="checkbox" x-model="symptoms" value="bloating"> Bloating</label>
-                <label><input type="checkbox" x-model="symptoms" value="breast_tenderness"> Tenderness</label>
-                <label><input type="checkbox" x-model="symptoms" value="spotting"> Spotting</label>
-                <label><input type="checkbox" x-model="symptoms" value="hot_flashes"> Hot Flashes</label>
-                <label><input type="checkbox" x-model="symptoms" value="knots"> Knots</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="nausea" style="width: 1rem; height: 1rem;"> Nausea</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="fatigue" style="width: 1rem; height: 1rem;"> Fatigue</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="headache" style="width: 1rem; height: 1rem;"> Headache</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="mood_changes" style="width: 1rem; height: 1rem;"> Mood Changes</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="bloating" style="width: 1rem; height: 1rem;"> Bloating</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="breast_tenderness" style="width: 1rem; height: 1rem;"> Tenderness</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="spotting" style="width: 1rem; height: 1rem;"> Spotting</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="hot_flashes" style="width: 1rem; height: 1rem;"> Hot Flashes</label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="knots" style="width: 1rem; height: 1rem;"> Knots</label>
             </div>
         </fieldset>
 
@@ -142,17 +142,17 @@
             <textarea x-model="notes" rows="3"></textarea>
         </label>
 
-        <button type="submit">Log Symptoms</button>
+        <button type="submit" class="w-full">Log Symptoms</button>
     </form>
 </article>
 
-<article>
+<article class="card">
     <header><h3>Recent Symptoms</h3></header>
     <div id="recent-symptoms" hx-get="/api/symptoms/recent" hx-trigger="load, refresh from:body">
         <p aria-busy="true">Loading...</p>
     </div>
     <footer>
-        <a href="/symptoms/history" role="button" class="outline">View History</a>
+        <a href="/symptoms/history" role="button" class="btn outline w-full">View History</a>
     </footer>
 </article>
 
@@ -160,8 +160,8 @@
 <dialog id="edit-symptom-modal">
     <article>
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-symptom-modal').close()"></button>
             <h3>Edit Symptom Log</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-symptom-modal').close()"></button>
         </header>
         <form id="edit-symptom-form" x-data="{
             symptomId: 0,
@@ -195,7 +195,7 @@
                     document.getElementById('edit-symptom-modal').close();
                     htmx.trigger('#recent-symptoms', 'refresh');
                     const notif = document.getElementById('notification');
-                    notif.innerHTML = '<article><mark>Symptom updated successfully!</mark></article>';
+                    notif.innerHTML = '<div class=\'alert-success\'>Symptom updated successfully!</div>';
                     notif.style.display = 'block';
                     setTimeout(() => notif.style.display = 'none', 3000);
                 } else {
@@ -214,7 +214,7 @@
         ">
             <label>
                 Pain Level: <span x-text="painLevel"></span>/10
-                <input type="range" x-model="painLevel" min="1" max="10">
+                <input type="range" x-model="painLevel" min="1" max="10" style="width: 100%;">
             </label>
 
             <div class="grid-2">
@@ -253,14 +253,14 @@
             <fieldset>
                 <legend>Additional Symptoms</legend>
                 <div class="grid-4">
-                    <label><input type="checkbox" x-model="symptoms" value="nausea"> Nausea</label>
-                    <label><input type="checkbox" x-model="symptoms" value="fatigue"> Fatigue</label>
-                    <label><input type="checkbox" x-model="symptoms" value="headache"> Headache</label>
-                    <label><input type="checkbox" x-model="symptoms" value="mood_changes"> Mood Changes</label>
-                    <label><input type="checkbox" x-model="symptoms" value="bloating"> Bloating</label>
-                    <label><input type="checkbox" x-model="symptoms" value="breast_tenderness"> Tenderness</label>
-                    <label><input type="checkbox" x-model="symptoms" value="spotting"> Spotting</label>
-                    <label><input type="checkbox" x-model="symptoms" value="hot_flashes"> Hot Flashes</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="nausea" style="width: 1rem; height: 1rem;"> Nausea</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="fatigue" style="width: 1rem; height: 1rem;"> Fatigue</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="headache" style="width: 1rem; height: 1rem;"> Headache</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="mood_changes" style="width: 1rem; height: 1rem;"> Mood Changes</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="bloating" style="width: 1rem; height: 1rem;"> Bloating</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="breast_tenderness" style="width: 1rem; height: 1rem;"> Tenderness</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="spotting" style="width: 1rem; height: 1rem;"> Spotting</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" x-model="symptoms" value="hot_flashes" style="width: 1rem; height: 1rem;"> Hot Flashes</label>
                 </div>
             </fieldset>
 
@@ -346,7 +346,7 @@ function confirmDeleteSymptom() {
         if (response.ok) {
             htmx.trigger('#recent-symptoms', 'refresh');
             const notif = document.getElementById('notification');
-            notif.innerHTML = '<article><mark>Symptom deleted successfully!</mark></article>';
+            notif.innerHTML = '<div class=\'alert-success\'>Symptom deleted successfully!</div>';
             notif.style.display = 'block';
             setTimeout(() => notif.style.display = 'none', 3000);
         } else {
@@ -368,25 +368,26 @@ function confirmDeleteSymptom() {
     <article style="max-width: 400px;">
         <header>
             <h3>Confirm Deletion</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('delete-symptom-confirm').close()"></button>
         </header>
         <p>Delete this symptom log?</p>
-        <p><small>This action cannot be undone.</small></p>
+        <p><small class="text-danger">This action cannot be undone.</small></p>
         <footer>
             <div class="grid-2">
                 <button type="button" class="secondary" onclick="document.getElementById('delete-symptom-confirm').close()">Cancel</button>
-                <button type="button" class="contrast" onclick="confirmDeleteSymptom()">Delete</button>
+                <button type="button" class="contrast" onclick="confirmDeleteSymptom()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
             </div>
         </footer>
     </article>
 </dialog>
 
 {{ else }}
-<article style="text-align: center;">
+<article class="card" style="text-align: center; padding: var(--space-8);">
     <hgroup>
         <h3>No Active Course</h3>
         <p>Create a course to track symptoms</p>
     </hgroup>
-    <a href="/courses" role="button">Manage Courses</a>
+    <a href="/courses" role="button" class="btn btn-lg">Manage Courses</a>
 </article>
 {{ end }}
 {{ end }}

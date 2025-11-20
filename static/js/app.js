@@ -74,7 +74,7 @@ document.addEventListener('htmx:afterRequest', () => {
 // Enhanced flash message handling
 document.addEventListener('DOMContentLoaded', () => {
     // Auto-hide flash messages
-    const flashMessages = document.querySelectorAll('.alert');
+    const flashMessages = document.querySelectorAll('.alert-success, .alert-danger, .alert-warning, .alert-info');
     flashMessages.forEach((message, index) => {
         setTimeout(() => {
             message.style.opacity = '0';
@@ -112,9 +112,10 @@ function initializeTooltips() {
             tooltip.textContent = text;
             tooltip.style.cssText = `
                 position: absolute;
-                background: var(--color-bg-tertiary);
+                background: var(--color-surface);
                 color: var(--color-text-primary);
                 padding: var(--space-2) var(--space-3);
+                border: 1px solid var(--color-border);
                 border-radius: var(--radius-md);
                 font-size: var(--text-xs);
                 font-weight: var(--font-medium);
@@ -200,7 +201,7 @@ function enhanceForms() {
 
 // Theme management
 function initTheme() {
-    const theme = localStorage.getItem('theme') || 'auto';
+    const theme = localStorage.getItem('injection-tracker-theme') || 'auto';
     applyTheme(theme);
 }
 
@@ -211,12 +212,13 @@ function applyTheme(theme) {
     } else {
         document.documentElement.setAttribute('data-theme', theme);
     }
-    localStorage.setItem('theme', theme);
+    // Use the key consistent with theme.js
+    localStorage.setItem('injection-tracker-theme', theme);
 }
 
 // Listen for theme changes
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    const theme = localStorage.getItem('theme');
+    const theme = localStorage.getItem('injection-tracker-theme');
     if (theme === 'auto') {
         document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
     }
@@ -238,8 +240,8 @@ function checkOfflineStatus() {
             const indicator = document.createElement('div');
             indicator.className = 'offline-indicator alert alert-warning';
             indicator.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span>⚠️</span>
+                <div style="display: flex; align-items: center; gap: var(--space-2);">
+                    <span>!</span>
                     <span>You are currently offline. Changes will be saved when connection is restored.</span>
                 </div>
             `;
@@ -321,12 +323,12 @@ function showKeyboardShortcuts() {
         { key: 'Escape', description: 'Close modal' }
     ];
 
-    let html = '<div class="space-y-2">';
+    let html = '<div style="display: flex; flex-direction: column; gap: var(--space-2);">';
     shortcuts.forEach(shortcut => {
         html += `
-            <div class="flex justify-between">
-                <span class="font-medium">${shortcut.description}</span>
-                <kbd class="px-2 py-1 bg-surface border rounded text-xs">${shortcut.key}</kbd>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-weight: var(--font-medium);">${shortcut.description}</span>
+                <kbd style="padding: 0.25rem 0.5rem; background: var(--color-bg-tertiary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-xs);">${shortcut.key}</kbd>
             </div>
         `;
     });
@@ -340,7 +342,7 @@ function showModal(title, content) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal max-w-md">
+        <div class="modal">
             <div class="modal-header">
                 <h3 class="modal-title">${title}</h3>
                 <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
@@ -435,21 +437,33 @@ const Utils = {
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
-    toast.className = `alert alert-${type} fixed top-4 right-4 z-50 max-w-sm shadow-lg`;
+    let bgClass = '';
+    if (type === 'success') bgClass = 'alert-success';
+    else if (type === 'error') bgClass = 'alert-danger';
+    else if (type === 'warning') bgClass = 'alert-warning';
+    else bgClass = 'alert-info';
+
+    toast.className = `alert ${bgClass}`;
     toast.style.cssText = `
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        max-width: 300px;
+        box-shadow: var(--shadow-lg);
         animation: slideIn 0.3s ease;
     `;
 
     const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
+        success: '✓',
+        error: '✕',
+        warning: '!',
+        info: 'i'
     };
 
     toast.innerHTML = `
-        <div class="flex items-center gap-2">
-            <span>${icons[type] || icons.info}</span>
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+            <span style="font-weight: bold;">${icons[type] || icons.info}</span>
             <span>${message}</span>
         </div>
     `;
@@ -553,14 +567,22 @@ if ('serviceWorker' in navigator) {
 // Show update notification
 function showUpdateNotification() {
     const notification = document.createElement('div');
-    notification.className = 'alert alert-info fixed top-4 left-4 right-4 z-50 shadow-lg';
+    notification.className = 'alert alert-info';
+    notification.style.cssText = `
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        box-shadow: var(--shadow-lg);
+    `;
     notification.innerHTML = `
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span>🔄</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span>⟳</span>
                 <span>A new version is available!</span>
             </div>
-            <button onclick="location.reload()" class="btn btn-sm btn-primary">
+            <button onclick="location.reload()" class="btn-sm btn-primary" style="margin-left: var(--space-2);">
                 Update Now
             </button>
         </div>
@@ -594,7 +616,9 @@ if ('performance' in window) {
     window.addEventListener('load', () => {
         setTimeout(() => {
             const perfData = performance.getEntriesByType('navigation')[0];
-            console.log(`Page load time: ${Math.round(perfData.loadEventEnd - perfData.loadEventStart)}ms`);
+            if (perfData) {
+                console.log(`Page load time: ${Math.round(perfData.loadEventEnd - perfData.loadEventStart)}ms`);
+            }
         }, 0);
     });
 }
