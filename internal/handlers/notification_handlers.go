@@ -191,7 +191,7 @@ func HandleGetUnreadCount(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]int64{"unread_count": count})
+		json.NewEncoder(w).Encode(map[string]int64{"count": count})
 	}
 }
 

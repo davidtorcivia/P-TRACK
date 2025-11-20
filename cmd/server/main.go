@@ -218,7 +218,7 @@ func main() {
 
 			// Notification routes
 			r.Get("/notifications", handlers.HandleGetNotifications(db))
-			r.Get("/notifications/unread-count", handlers.HandleGetUnreadCount(db))
+			r.Get("/notifications/count", handlers.HandleGetUnreadCount(db))
 			r.Put("/notifications/{id}/read", handlers.HandleMarkNotificationRead(db))
 			r.Post("/notifications/mark-all-read", handlers.HandleMarkAllNotificationsRead(db))
 			r.Delete("/notifications/{id}", handlers.HandleDeleteNotification(db))
