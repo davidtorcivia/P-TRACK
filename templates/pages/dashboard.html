@@ -1,89 +1,108 @@
 {{ define "content" }}
 {{ if .ActiveCourse }}
-<!-- Quick Actions -->
-<div class="grid-3" style="margin-bottom: var(--space-6);">
-    <a href="/injections" role="button" class="btn w-full">Log Injection</a>
-    <a href="/symptoms" role="button" class="btn secondary w-full">Log Symptoms</a>
-    <a href="/medications" role="button" class="btn outline w-full">Log Medication</a>
+<!-- Dashboard Header with Quick Stats -->
+<div class="grid-2" style="align-items: stretch; margin-bottom: var(--space-6);">
+    <article class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: center;">
+        <hgroup style="margin-bottom: var(--space-2);">
+            <h2 style="font-size: var(--text-2xl); color: var(--brand-primary);">{{ .ActiveCourse.Name }}</h2>
+            <p>{{ if .LastInjection }}Last injection {{ .LastInjection.TimeAgo }}{{ else }}No injections yet{{ end }}</p>
+        </hgroup>
+        <div style="display: flex; gap: var(--space-4); margin-top: var(--space-4);">
+            <div>
+                <small class="text-muted uppercase tracking-wide text-xs">Started</small>
+                <div style="font-weight: bold;">{{ .ActiveCourse.StartDate }}</div>
+            </div>
+            {{ if .ActiveCourse.ExpectedEndDate }}
+            <div>
+                <small class="text-muted uppercase tracking-wide text-xs">Ends</small>
+                <div style="font-weight: bold;">{{ .ActiveCourse.ExpectedEndDate }}</div>
+            </div>
+            {{ end }}
+        </div>
+    </article>
+
+    <div class="grid-2" style="gap: var(--space-4);">
+        <article class="card stat-card" style="margin: 0; padding: var(--space-4);">
+            <div class="stat-value">{{ .Stats.TotalInjections }}</div>
+            <div class="stat-label">Injections</div>
+        </article>
+        <article class="card stat-card" style="margin: 0; padding: var(--space-4);">
+            <div style="display: flex; justify-content: space-around; width: 100%; align-items: center;">
+                <div style="text-align: center;">
+                    <div style="font-size: var(--text-xl); font-weight: bold; color: var(--color-text-primary);">{{ .Stats.LeftCount }}</div>
+                    <small class="text-muted">Left</small>
+                </div>
+                <div style="height: 2rem; width: 1px; background: var(--color-border);"></div>
+                <div style="text-align: center;">
+                    <div style="font-size: var(--text-xl); font-weight: bold; color: var(--color-text-primary);">{{ .Stats.RightCount }}</div>
+                    <small class="text-muted">Right</small>
+                </div>
+            </div>
+        </article>
+    </div>
 </div>
 
-<!-- Welcome -->
-<article class="card">
-    <hgroup>
-        <h2>{{ .ActiveCourse.Name }}</h2>
-        <p>{{ if .LastInjection }}Last injection {{ .LastInjection.TimeAgo }}{{ end }}</p>
-    </hgroup>
-</article>
+<!-- Quick Actions -->
+<div class="grid-3" style="margin-bottom: var(--space-6);">
+    <a href="/injections" role="button" class="btn w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
+        <span style="font-size: 1.5rem;">●</span>
+        <span>Log Injection</span>
+    </a>
+    <a href="/symptoms" role="button" class="btn secondary w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
+        <span style="font-size: 1.5rem;">▲</span>
+        <span>Log Symptoms</span>
+    </a>
+    <a href="/medications" role="button" class="btn outline w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
+        <span style="font-size: 1.5rem;">■</span>
+        <span>Log Medication</span>
+    </a>
+</div>
 
-<!-- Low Stock -->
+<!-- Low Stock Alerts -->
 {{ if .LowStockItems }}
-<article class="card">
-    <header><strong>Low Stock Alerts</strong></header>
-    {{ range .LowStockItems }}
-    <p class="text-danger"><strong>{{ .ItemType }}:</strong> {{ .Quantity }} {{ .Unit }} remaining</p>
-    {{ end }}
-    <footer><a href="/inventory" role="button" class="btn-sm">Manage Inventory</a></footer>
+<article class="card alert-danger" style="border-left: 4px solid var(--danger-primary);">
+    <header style="border: none; padding-bottom: 0; margin-bottom: var(--space-2);">
+        <strong style="color: var(--danger-primary); display: flex; align-items: center; gap: var(--space-2);">
+            <span>!</span> Low Stock Alerts
+        </strong>
+    </header>
+    <div class="grid-2" style="gap: var(--space-4);">
+        {{ range .LowStockItems }}
+        <div style="background: var(--color-surface); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--danger-light);">
+            <strong>{{ .ItemType }}</strong>
+            <div style="color: var(--danger-primary);">{{ .Quantity }} {{ .Unit }} remaining</div>
+        </div>
+        {{ end }}
+    </div>
+    <footer style="border: none; margin-top: var(--space-3); padding-top: 0;">
+        <a href="/inventory" style="font-size: var(--text-sm); text-decoration: underline;">Manage Inventory →</a>
+    </footer>
 </article>
 {{ end }}
 
 <!-- Recent Activity -->
 <article class="card">
-    <header>
-        <h3>Recent Activity</h3>
+    <header style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0;">Recent Activity</h3>
+        <a href="/activity" class="btn-sm outline">View All</a>
     </header>
     <div id="recent-activity" hx-get="/api/dashboard/recent" hx-trigger="load">
-        <p aria-busy="true">Loading...</p>
+        <div style="padding: var(--space-4); text-align: center; color: var(--color-text-secondary);">
+            <p aria-busy="true">Loading...</p>
+        </div>
     </div>
-    <footer>
-        <a href="/activity" role="button" class="btn outline w-full">View All Activity</a>
-    </footer>
 </article>
-
-<!-- Stats -->
-<div class="grid-2">
-    <div>
-        <h3>Statistics</h3>
-        <article class="stat-card">
-            <div class="stat-value">{{ .Stats.TotalInjections }}</div>
-            <div class="stat-label">Total Injections</div>
-            <div style="margin-top: var(--space-2); color: var(--color-text-secondary); font-size: var(--text-sm);">
-                Left: <strong>{{ .Stats.LeftCount }}</strong> | Right: <strong>{{ .Stats.RightCount }}</strong>
-            </div>
-        </article>
-    </div>
-
-    <div>
-        <h3>Course Info</h3>
-        <article class="card">
-            <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-                <div>
-                    <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Name</span><br>
-                    <strong>{{ .ActiveCourse.Name }}</strong>
-                </div>
-                <div>
-                    <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Start Date</span><br>
-                    <strong>{{ .ActiveCourse.StartDate }}</strong>
-                </div>
-                {{ if .ActiveCourse.ExpectedEndDate }}
-                <div>
-                    <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Expected End</span><br>
-                    <strong>{{ .ActiveCourse.ExpectedEndDate }}</strong>
-                </div>
-                {{ end }}
-            </div>
-            <footer><a href="/courses" role="button" class="btn outline w-full">Manage</a></footer>
-        </article>
-    </div>
-</div>
 
 {{ else }}
 <!-- No Course -->
-<article class="card" style="text-align: center; padding: var(--space-8);">
+<article class="card" style="text-align: center; padding: var(--space-12) var(--space-8);">
     <hgroup>
         <h2>Welcome to Injection Tracker</h2>
         <p>Create your first course to get started</p>
     </hgroup>
-    <a href="/courses" role="button" class="btn btn-lg">Create Course</a>
+    <div style="margin-top: var(--space-6);">
+        <a href="/courses" role="button" class="btn btn-lg">Create Course</a>
+    </div>
 </article>
 {{ end }}
 {{ end }}

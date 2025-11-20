@@ -91,10 +91,10 @@
                     <a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a>
                 </div>
             </li>
+            <!-- 3) Remove text "Switch to X mode" -->
             <li style="margin-top: var(--space-4); border-top: 1px solid var(--color-border); padding-top: var(--space-4);">
-                 <a href="#" x-data="theme()" @click.prevent="toggle()" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span x-text="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"></span>
-                    <span x-text="icon"></span>
+                 <a href="#" x-data="theme()" @click.prevent="toggle()" style="display: flex; justify-content: center; align-items: center; background: var(--color-bg-tertiary);">
+                    <span x-text="icon" style="font-size: 1.5rem;"></span>
                 </a>
             </li>
         </ul>
@@ -154,7 +154,7 @@
         {{ template "content" . }}
     </main>
 
-    <footer class="container-fluid" style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-8) 0; margin-top: var(--space-12);">
+    <footer class="container-fluid" style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-8) 0; margin-top: auto;">
         <div class="container" style="text-align: center; color: var(--color-text-muted);">
             <p style="margin-bottom: var(--space-2);"><strong>P-TRACK</strong> — Personal Injection Tracker</p>
             <small>

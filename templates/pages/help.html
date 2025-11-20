@@ -1,0 +1,35 @@
+{{ define "content" }}
+<article class="card">
+    <hgroup>
+        <h1>Help & Support</h1>
+        <p>Frequently asked questions and guides</p>
+    </hgroup>
+</article>
+
+<div class="grid desktop-grid-cols-2" style="gap: var(--space-6);">
+    <article class="card">
+        <header><h3>Getting Started</h3></header>
+        <p><strong>1. Create a Course:</strong> Start by creating a treatment course in the Courses section.</p>
+        <p><strong>2. Log Injections:</strong> Use the "Log Injection" button on the dashboard to record your injections.</p>
+        <p><strong>3. Track Symptoms:</strong> Record any side effects or symptoms to keep a comprehensive history.</p>
+    </article>
+
+    <article class="card">
+        <header><h3>Managing Inventory</h3></header>
+        <p>Go to the Inventory page to add your medications and supplies.</p>
+        <p>You can set low stock alerts and track expiration dates to ensure you never run out.</p>
+    </article>
+
+    <article class="card">
+        <header><h3>Reports</h3></header>
+        <p>Generate PDF reports to share with your healthcare provider.</p>
+        <p>Export your data as CSV for your own records or analysis.</p>
+    </article>
+
+    <article class="card">
+        <header><h3>Account Sharing</h3></header>
+        <p>Invite a partner to manage your tracking together.</p>
+        <p>Go to Settings > Account & Sharing to generate an invite link.</p>
+    </article>
+</div>
+{{ end }}

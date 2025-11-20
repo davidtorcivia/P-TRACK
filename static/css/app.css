@@ -1,17 +1,62 @@
 /* ===== INJECTION TRACKER APP STYLES ===== */
 /* Based on Redesign System, adapted for existing HTML structure */
 
+/* Note: redesign.css contains the base variables. We will override some here for the aesthetic improvements */
 @import 'redesign.css';
 
-/* ===== PICO ADAPTERS & CUSTOMIZATIONS ===== */
+/* ===== COLOR OVERRIDES & THEME IMPROVEMENTS ===== */
+:root {
+    /* Base neutral palette overrides */
+    --color-bg-body: #f8fafc; /* Softer off-white for light mode background */
+}
 
-/* LAYOUT */
+[data-theme="dark"] {
+    /* 2) Healthy Green for Dark Mode Highlight */
+    --brand-primary: #34d399; /* Emerald 400 */
+    --brand-primary-light: #6ee7b7;
+    --brand-primary-dark: #10b981;
+    --brand-primary-bg: rgba(52, 211, 153, 0.15);
+
+    /* Harmonious Greys for Dark Mode */
+    --color-bg-body: #0f172a; /* Slate 900 - slightly blue-tinted dark grey, very modern */
+    --color-surface: #1e293b; /* Slate 800 */
+    --color-bg-tertiary: #334155; /* Slate 700 */
+    --color-border: #334155;
+    --color-text-primary: #f1f5f9; /* Slate 100 */
+    --color-text-secondary: #94a3b8; /* Slate 400 */
+}
+
+[data-theme="light"] {
+    /* 8) Fix "Ugly Blue" & "Too Much White" */
+    --brand-primary: #0e7490; /* Cyan 700 - Deep, professional teal/cyan */
+    --brand-primary-light: #22d3ee;
+    --brand-primary-dark: #155e75;
+    --brand-primary-bg: rgba(14, 116, 144, 0.1);
+
+    --color-bg-body: #f1f5f9; /* Slate 100 - Light grey/blue tint to reduce harsh white */
+    --color-surface: #ffffff;
+    --color-bg-tertiary: #f8fafc; /* Slate 50 */
+    --color-border: #e2e8f0; /* Slate 200 */
+    --color-text-primary: #0f172a; /* Slate 900 */
+    --color-text-secondary: #64748b; /* Slate 500 */
+}
+
+/* ===== GLOBAL LAYOUT ===== */
+body {
+    background-color: var(--color-bg-body);
+    color: var(--color-text-primary);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* 6) Fix floating footer */
+}
+
 main {
     padding-top: var(--space-8);
     padding-bottom: var(--space-12);
+    flex: 1; /* Push footer down */
 }
 
-/* Grid adapters */
+/* ===== GRID SYSTEM ===== */
 .grid-2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -36,21 +81,22 @@ main {
     }
 }
 
-/* CARD STYLES */
+/* ===== CARD STYLES ===== */
 article, .card {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     padding: var(--space-6);
     box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
+    transition: box-shadow var(--transition-base), border-color var(--transition-base); /* 5) Remove transform on hover */
     margin-bottom: var(--space-6);
 }
 
+/* 5) Dashboard feel "solid" - subtle lift only, no large movement */
 article:hover, .card:hover {
     box-shadow: var(--shadow-md);
     border-color: var(--color-border-hover);
-    transform: translateY(-2px);
+    /* Removed transform: translateY(-2px); */
 }
 
 article header, .card header {
@@ -65,7 +111,7 @@ article footer, .card footer {
     border-top: 1px solid var(--color-border);
 }
 
-/* TYPOGRAPHY */
+/* ===== TYPOGRAPHY ===== */
 hgroup {
     margin-bottom: var(--space-4);
 }
@@ -80,7 +126,7 @@ hgroup p {
     font-size: var(--text-base);
 }
 
-/* BUTTONS */
+/* ===== BUTTONS ===== */
 button,
 input[type="submit"],
 input[type="button"],
@@ -103,9 +149,14 @@ input[type="reset"],
     font-size: var(--text-sm);
     min-height: 2.5rem;
     background-color: var(--brand-primary);
-    color: white;
+    color: white; /* Ensure text is readable on primary */
     border-color: var(--brand-primary);
     box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] button,
+[data-theme="dark"] .btn {
+    color: #0f172a; /* Dark text on the bright green primary */
 }
 
 button:hover,
@@ -113,14 +164,13 @@ button:hover,
 .btn:hover {
     background-color: var(--brand-primary-dark);
     border-color: var(--brand-primary-dark);
-    transform: translateY(-1px);
     box-shadow: var(--shadow-md);
-    color: white;
+    /* Removed transform */
 }
 
 /* Button Variants */
 .secondary, button.secondary, [role="button"].secondary {
-    background-color: var(--color-surface);
+    background-color: var(--color-bg-tertiary);
     color: var(--color-text-primary);
     border-color: var(--color-border);
 }
@@ -128,7 +178,6 @@ button:hover,
 .secondary:hover, button.secondary:hover, [role="button"].secondary:hover {
     background-color: var(--color-surface-hover);
     border-color: var(--color-border-hover);
-    color: var(--color-text-primary);
 }
 
 .outline, button.outline, [role="button"].outline {
@@ -167,7 +216,7 @@ button:hover,
     min-height: 3rem;
 }
 
-/* FORM ELEMENTS */
+/* ===== FORM ELEMENTS ===== */
 input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
@@ -200,7 +249,7 @@ label {
     margin-bottom: var(--space-2);
 }
 
-/* DIALOG / MODAL */
+/* ===== DIALOG / MODAL ===== */
 dialog {
     background-color: var(--color-surface);
     border-radius: var(--radius-2xl);
@@ -235,7 +284,6 @@ dialog header {
     align-items: center;
 }
 
-/* Close button in modal header */
 dialog header button[rel="prev"],
 button.close {
     background: transparent;
@@ -259,7 +307,7 @@ button.close:hover {
     transform: none;
 }
 
-/* NAVIGATION BAR */
+/* ===== NAVIGATION BAR ===== */
 nav.container-fluid {
     background-color: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
@@ -331,7 +379,7 @@ nav ul li strong {
 #mobile-menu-drawer {
     position: fixed;
     top: 0;
-    right: -300px; /* Hidden by default */
+    right: -300px;
     width: 300px;
     height: 100%;
     background-color: var(--color-surface);
@@ -353,6 +401,8 @@ nav ul li strong {
     align-items: stretch;
     width: 100%;
     gap: var(--space-2);
+    list-style: none; /* 3) Ensure no bullets */
+    padding: 0;
 }
 
 #mobile-menu-drawer a {
@@ -360,6 +410,8 @@ nav ul li strong {
     padding: var(--space-3);
     font-size: var(--text-base);
     border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--color-text-primary);
 }
 
 #mobile-menu-drawer .dropdown-content {
@@ -384,31 +436,33 @@ nav ul li strong {
     .mobile-menu-toggle {
         display: block;
     }
+
+    /* 1) Remove border-bottom on mobile nav */
+    nav.container-fluid {
+        border-bottom: none;
+    }
 }
 
-/* ALERTS & BADGES */
-.alert-success {
-    background-color: var(--success-bg);
-    border: 1px solid var(--success-border);
-    color: var(--success-primary);
+/* ===== ALERTS & BADGES ===== */
+.alert-success, .alert-danger {
     padding: var(--space-4);
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-4);
     display: flex;
     align-items: center;
     gap: var(--space-3);
+}
+
+.alert-success {
+    background-color: var(--success-bg);
+    border: 1px solid var(--success-border);
+    color: var(--success-primary);
 }
 
 .alert-danger {
     background-color: var(--danger-bg);
     border: 1px solid var(--danger-border);
     color: var(--danger-primary);
-    padding: var(--space-4);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-4);
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
 }
 
 .badge {
@@ -426,7 +480,7 @@ nav ul li strong {
 .badge-warning { background-color: var(--warning-bg); color: var(--warning-primary); }
 .badge-secondary { background-color: var(--color-bg-tertiary); color: var(--color-text-secondary); }
 
-/* STAT CARDS */
+/* ===== STAT CARDS ===== */
 .stat-card {
     text-align: center;
     display: flex;
@@ -452,7 +506,7 @@ nav ul li strong {
     font-weight: var(--font-semibold);
 }
 
-/* DROPDOWN (Desktop) */
+/* ===== DROPDOWN (Desktop) ===== */
 details.dropdown summary {
     list-style: none;
     cursor: pointer;
@@ -487,4 +541,47 @@ details.dropdown[open] ul {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+/* 4) Injection History Card Layout for Mobile */
+@media (max-width: 768px) {
+    .mobile-card-table thead {
+        display: none;
+    }
+
+    .mobile-card-table tr {
+        display: block;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--space-4);
+        padding: var(--space-4);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .mobile-card-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-2) 0;
+        border-bottom: 1px solid var(--color-border);
+        text-align: right;
+    }
+
+    .mobile-card-table td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+        justify-content: flex-end;
+        gap: var(--space-2);
+    }
+
+    .mobile-card-table td::before {
+        content: attr(data-label);
+        font-weight: var(--font-semibold);
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+        text-transform: uppercase;
+        text-align: left;
+        margin-right: var(--space-4);
+    }
 }
