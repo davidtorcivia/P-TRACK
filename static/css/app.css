@@ -133,6 +133,18 @@ article.modal-card:hover {
     border-color: transparent !important;
 }
 
+/* Global Dialog Fix */
+dialog {
+    border: none;
+    background: transparent;
+    padding: 0;
+    max-width: 100%;
+}
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
 .card header, article header {
     margin-bottom: var(--space-6);
     padding-bottom: var(--space-4);
