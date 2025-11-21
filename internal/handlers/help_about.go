@@ -1,3 +1,13 @@
+package handlers
+
+import (
+	"net/http"
+
+	"injection-tracker/internal/database"
+	"injection-tracker/internal/middleware"
+	"injection-tracker/internal/web"
+)
+
 // HandleHelpPage renders the help page
 func HandleHelpPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

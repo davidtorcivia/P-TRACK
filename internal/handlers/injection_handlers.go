@@ -736,10 +736,10 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 		}
 
 		// Build query based on whether course_id is provided
-		whereClause := ""
+		whereClause := " WHERE 1=1"
 		args := []interface{}{}
 		if courseID != "" {
-			whereClause = " WHERE course_id = ?"
+			whereClause += " AND course_id = ?"
 			args = append(args, courseID)
 		}
 
@@ -748,6 +748,7 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 		_ = db.QueryRow(query, args...).Scan(&stats.TotalInjections)
 
 		// Get left/right counts
+		// Note: Assuming 'left' and 'right' are lowercase in DB as enforced by HandleCreateInjection
 		query = "SELECT COUNT(*) FROM injections" + whereClause + " AND side = 'left'"
 		_ = db.QueryRow(query, args...).Scan(&stats.LeftCount)
 
@@ -833,20 +834,20 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 			html := fmt.Sprintf(`
 				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
 					<div style="text-align: center;">
-						<strong>Total</strong><br>
-						<span style="font-size: 2rem;">%d</span>
+						<div style="font-size: 0.85rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Total</div>
+						<div style="font-size: 2rem; font-weight: bold; color: var(--brand-primary); line-height: 1;">%d</div>
 					</div>
 					<div style="text-align: center;">
-						<strong>Left</strong><br>
-						<span style="font-size: 2rem;">%d</span>
+						<div style="font-size: 0.85rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Left</div>
+						<div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary); line-height: 1;">%d</div>
 					</div>
 					<div style="text-align: center;">
-						<strong>Right</strong><br>
-						<span style="font-size: 2rem;">%d</span>
+						<div style="font-size: 0.85rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Right</div>
+						<div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary); line-height: 1;">%d</div>
 					</div>
 					<div style="text-align: center;">
-						<strong>Avg Pain</strong><br>
-						<span style="font-size: 2rem;">%.1f/10</span>
+						<div style="font-size: 0.85rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Avg Pain</div>
+						<div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary); line-height: 1;">%.1f<small style="font-size: 1rem; color: var(--color-text-muted);">/10</small></div>
 					</div>
 				</div>
 			`, stats.TotalInjections, stats.LeftCount, stats.RightCount, stats.AvgPainLevel)

@@ -1,114 +1,94 @@
 {{ define "content" }}
-<div class="min-h-screen flex items-center justify-center py-12 px-4">
-    <div class="max-w-md w-full space-y-8">
+<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem;">
+    <div style="max-width: 420px; width: 100%;">
         <!-- Header -->
-        <div class="text-center">
-            <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style="background-color: var(--brand-primary-50); color: var(--brand-primary);">
-                <span class="text-3xl" style="font-weight: bold;">+</span>
+        <div class="text-center" style="margin-bottom: 2rem;">
+            <div style="width: 64px; height: 64px; background: var(--brand-primary-bg); color: var(--brand-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
             </div>
-            <h1 class="text-3xl font-bold mb-2" style="color: var(--color-text-primary);">Welcome Back</h1>
-            <p style="color: var(--color-text-secondary);">Log in to your Injection Tracker account</p>
+            <h1 style="margin-bottom: 0.5rem; font-size: 1.75rem;">Welcome Back</h1>
+            <p style="color: var(--color-text-secondary);">Log in to your Injection Tracker</p>
         </div>
 
         <!-- Login Form -->
-        <article class="card">
+        <article class="card" style="padding: 2.5rem;">
             <form hx-post="/api/auth/login"
                   hx-target="#login-error"
                   hx-swap="innerHTML"
-                  hx-indicator="#login-spinner"
-                  class="space-y-6">
+                  hx-indicator="#login-spinner">
 
                 <!-- Error Container -->
                 <div id="login-error"></div>
 
                 <!-- Username Field -->
-                <div class="form-group">
-                    <label for="username" class="form-label">Username</label>
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="username">Username</label>
                     <input type="text"
                            id="username"
                            name="username"
-                           class="form-input"
                            placeholder="Enter your username"
                            required
-                           autofocus>
+                           autofocus
+                           style="margin-bottom: 0;">
                 </div>
 
                 <!-- Password Field -->
-                <div class="form-group">
-                    <label for="password" class="form-label">Password</label>
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="password">Password</label>
                     <input type="password"
                            id="password"
                            name="password"
-                           class="form-input"
                            placeholder="Enter your password"
-                           required>
+                           required
+                           style="margin-bottom: 0;">
                 </div>
 
                 <!-- Remember Me -->
-                <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
                     <input type="checkbox"
                            id="remember"
                            name="remember"
-                           style="width: 1rem; height: 1rem; margin-bottom: 0;">
-                    <label for="remember" style="margin-bottom: 0; color: var(--color-text-secondary);">
-                        Remember me for 2 weeks
+                           style="width: 1.1rem; height: 1.1rem; margin: 0;">
+                    <label for="remember" style="margin: 0; font-weight: normal; color: var(--color-text-secondary); cursor: pointer;">
+                        Remember me
                     </label>
                 </div>
 
                 <!-- Submit Button -->
-                <button type="submit"
-                        id="login-btn"
-                        class="w-full">
-                    <span id="login-spinner" class="htmx-indicator hidden">
-                        <span>Logging in...</span>
+                <button type="submit" id="login-btn" class="w-full btn-lg">
+                    <span id="login-spinner" class="htmx-indicator hidden" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        Logging in...
                     </span>
-                    <span class="htmx-indicator-default" style="display: flex; align-items: center; justify-content: center; gap: var(--space-2);">
-                        <span>Log In</span>
-                    </span>
+                    <span class="htmx-indicator-default">Log In</span>
                 </button>
             </form>
 
             <!-- Footer Links -->
-            <div style="margin-top: var(--space-6); text-align: center; display: flex; flex-direction: column; gap: var(--space-2);">
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+            <div style="margin-top: 2rem; text-align: center; display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+                <p style="margin: 0; font-size: 0.95rem; color: var(--color-text-secondary);">
                     Don't have an account?
-                    <a href="/register" style="color: var(--brand-primary);">
-                        Register here
-                    </a>
+                    <a href="/register" style="color: var(--brand-primary); font-weight: 600; margin-left: 0.25rem;">Register</a>
                 </p>
-                <p style="font-size: var(--text-sm);">
-                    <a href="/forgot-password" style="color: var(--brand-primary);">
-                        Forgot your password?
-                    </a>
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <a href="/forgot-password" style="color: var(--color-text-muted);">Forgot password?</a>
                 </p>
             </div>
         </article>
 
-        <!-- Security Notice -->
-        <div class="alert-info" style="padding: var(--space-4); border-radius: var(--radius-lg); display: flex; align-items: flex-start; gap: var(--space-2);">
-            <span style="font-size: var(--text-lg); font-weight: bold;">!</span>
-            <div style="font-size: var(--text-sm);">
-                <strong>Security Notice:</strong> This application stores sensitive medical information.
-                Please ensure you're using a secure device and connection.
-            </div>
+        <div style="text-align: center; margin-top: 2rem; opacity: 0.6;">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: text-bottom; margin-right: 0.25rem;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+             <small>Secure Connection</small>
         </div>
     </div>
 </div>
 
 <style>
-    .htmx-indicator {
-        display: none;
-    }
-    .htmx-request .htmx-indicator {
-        display: block;
-    }
-    .htmx-request .htmx-indicator-default {
-        display: none;
-    }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: flex; justify-content: center; }
+    .htmx-request .htmx-indicator-default { display: none; }
 
-    /* Center the login form on the page */
-    .min-h-screen {
-        min-height: 100vh;
-    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
 </style>
 {{ end }}

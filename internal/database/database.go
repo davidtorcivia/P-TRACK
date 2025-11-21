@@ -117,8 +117,31 @@ func (db *DB) getAppliedMigrations() (map[string]bool, error) {
 func (db *DB) readMigrationFiles() ([]migration, error) {
 	var migrations []migration
 
-	// Read migrations from migrations/ directory
-	migrationsDir := "migrations"
+	// Try multiple paths to find migrations
+	// 1. "migrations" (root execution)
+	// 2. "../../migrations" (test execution from internal/repository)
+	// 3. "../../../migrations" (just in case)
+
+	possiblePaths := []string{
+		"migrations",
+		"../../migrations",
+		"../../../migrations",
+	}
+
+	var migrationsDir string
+	found := false
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			migrationsDir = path
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("failed to find migrations directory in any of: %v", possiblePaths)
+	}
 
 	files, err := os.ReadDir(migrationsDir)
 	if err != nil {

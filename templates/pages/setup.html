@@ -1,13 +1,17 @@
 {{ define "content" }}
-<div style="max-width: 600px; margin: 2rem auto;">
-    <article class="card">
-        <hgroup>
-            <h1>Welcome to Injection Tracker</h1>
-            <p>First-run setup: Create your administrator account</p>
+<div style="max-width: 550px; margin: 2rem auto;">
+    <article class="card" style="padding: 3rem 2rem;">
+        <hgroup class="text-center">
+            <h1 style="margin-bottom: 0.5rem; font-size: 2rem; letter-spacing: -0.03em;">Welcome to P-TRACK</h1>
+            <p class="text-muted" style="font-size: 1.1rem;">Create your administrator account to get started.</p>
         </hgroup>
 
-        <div class="notice" style="background: var(--brand-primary-bg); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-6); border: 1px solid var(--brand-primary);">
-            <p class="text-brand-primary" style="margin: 0;"><strong>ℹ️ Important:</strong> This is a one-time setup. You're creating the first administrator account for this application.</p>
+        <div class="notice" style="margin-bottom: 2rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="min-width: 20px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <div>
+                <strong>One-time Setup</strong>
+                <div style="margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.9;">You're creating the first administrator account for this application.</div>
+            </div>
         </div>
 
         <form method="POST" action="/api/setup"
@@ -16,8 +20,8 @@
 
             <div id="setup-error"></div>
 
-            <label for="username">
-                Username *
+            <div style="margin-bottom: 1.5rem;">
+                <label for="username">Username *</label>
                 <input type="text"
                        id="username"
                        name="username"
@@ -27,21 +31,23 @@
                        minlength="3"
                        maxlength="50"
                        pattern="[a-zA-Z0-9_]+"
-                       title="Only letters, numbers, and underscores">
+                       title="Only letters, numbers, and underscores"
+                       style="margin-bottom: 0.5rem;">
                 <small class="text-muted">3-50 characters, letters, numbers, and underscores only</small>
-            </label>
+            </div>
 
-            <label for="email">
-                Email
+            <div style="margin-bottom: 1.5rem;">
+                <label for="email">Email</label>
                 <input type="email"
                        id="email"
                        name="email"
-                       placeholder="your@email.com">
+                       placeholder="your@email.com"
+                       style="margin-bottom: 0.5rem;">
                 <small class="text-muted">Optional: For password recovery</small>
-            </label>
+            </div>
 
-            <label for="password">
-                Password *
+            <div style="margin-bottom: 1.5rem;">
+                <label for="password">Password *</label>
                 <input type="password"
                        id="password"
                        name="password"
@@ -49,12 +55,16 @@
                        required
                        minlength="8"
                        x-model="password"
-                       @input="passwordMatch = password === confirmPassword || confirmPassword === ''; strength = password.length >= 12 ? 'Strong' : password.length >= 8 ? 'Medium' : 'Weak'">
-                <small class="text-muted">Minimum 8 characters - <span x-text="strength" :style="strength === 'Strong' ? 'color: var(--success-primary)' : strength === 'Medium' ? 'color: var(--warning-primary)' : 'color: var(--danger-primary)'"></span></small>
-            </label>
+                       @input="passwordMatch = password === confirmPassword || confirmPassword === ''; strength = password.length >= 12 ? 'Strong' : password.length >= 8 ? 'Medium' : 'Weak'"
+                       style="margin-bottom: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <small class="text-muted">Minimum 8 characters</small>
+                    <small x-show="strength" x-text="strength" :style="strength === 'Strong' ? 'color: var(--success-primary); font-weight: bold;' : strength === 'Medium' ? 'color: var(--warning-primary); font-weight: bold;' : 'color: var(--danger-primary); font-weight: bold;'"></small>
+                </div>
+            </div>
 
-            <label for="confirm_password">
-                Confirm Password *
+            <div style="margin-bottom: 2rem;">
+                <label for="confirm_password">Confirm Password *</label>
                 <input type="password"
                        id="confirm_password"
                        name="confirm_password"
@@ -62,51 +72,53 @@
                        required
                        x-model="confirmPassword"
                        @input="passwordMatch = password === confirmPassword"
-                       :aria-invalid="!passwordMatch && confirmPassword !== ''">
-                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--danger-primary);">
-                    ! Passwords do not match
-                </small>
-                <small x-show="passwordMatch && confirmPassword !== ''" style="color: var(--success-primary);">
-                    ✓ Passwords match
-                </small>
-            </label>
+                       :aria-invalid="!passwordMatch && confirmPassword !== ''"
+                       style="margin-bottom: 0.5rem;">
 
-            <div style="background: var(--color-bg-tertiary); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-4);">
-                <strong>Security Tips:</strong>
-                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; font-size: var(--text-sm); color: var(--color-text-secondary);">
-                    <li>Use a unique password you haven't used elsewhere</li>
+                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--danger-primary); display: flex; align-items: center; gap: 0.25rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Passwords do not match
+                </small>
+                <small x-show="passwordMatch && confirmPassword !== ''" style="color: var(--success-primary); display: flex; align-items: center; gap: 0.25rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Passwords match
+                </small>
+            </div>
+
+            <div style="background: var(--color-bg-tertiary); padding: 1rem; border-radius: var(--radius-lg); margin-bottom: 2rem; border: 1px solid var(--color-border);">
+                <strong style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">Security Tips</strong>
+                <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--color-text-secondary); display: grid; gap: 0.25rem;">
+                    <li>Use a unique password</li>
                     <li>Mix uppercase, lowercase, numbers, and symbols</li>
-                    <li>Consider using a password manager</li>
-                    <li>Store these credentials securely</li>
+                    <li>Store credentials securely</li>
                 </ul>
             </div>
 
-            <label for="agree" class="flex items-center gap-2">
-                <input type="checkbox" id="agree" name="agree" required style="width: 1rem; height: 1rem;">
-                <span>I understand this is for personal/family use and not HIPAA compliant</span>
+            <label for="agree" style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 2rem; cursor: pointer;">
+                <input type="checkbox" id="agree" name="agree" required style="width: 1.25rem; height: 1.25rem; margin-top: 0.15rem;">
+                <span style="font-size: 0.9rem; line-height: 1.4; color: var(--color-text-secondary);">I understand this is for personal/family use and not HIPAA compliant</span>
             </label>
 
-            <button type="submit" :disabled="!passwordMatch || password.length < 8" class="w-full btn-lg">
+            <button type="submit" :disabled="!passwordMatch || password.length < 8" class="w-full btn-lg" style="font-size: 1.1rem;">
                 Create Administrator Account
             </button>
         </form>
     </article>
 
     <!-- Privacy Notice -->
-    <article style="margin-top: var(--space-8); background: transparent; border: none; padding: 0;">
-        <small class="text-muted" style="display: block; text-align: center;">
-            <strong>Privacy & Security:</strong> Your data is stored locally in a SQLite database.
-            This application uses bcrypt password hashing, JWT authentication, CSRF protection,
-            and rate limiting. All sensitive data remains on your server.
+    <div style="margin-top: 2rem; text-align: center; padding: 0 1rem;">
+        <small class="text-muted" style="display: block; line-height: 1.5;">
+            <strong>Privacy & Security:</strong> Your data is stored locally.
+            All sensitive data remains on your server.
         </small>
-    </article>
+    </div>
 </div>
 
 <style>
     .notice {
-        animation: fadeIn 0.5s;
+        animation: slideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    @keyframes fadeIn {
+    @keyframes slideDown {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }

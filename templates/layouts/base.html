@@ -30,42 +30,43 @@
     {{ if .IsAuthenticated }}
     <!-- Navbar -->
     <nav class="container-fluid">
-        <!-- Brand -->
-        <ul>
-            <li>
+        <div class="container">
+            <!-- Brand -->
+            <div class="brand">
                 <a href="/dashboard" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.5rem; color: var(--brand-primary);">+</span>
+                    <span style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--brand-primary); color: white; border-radius: 8px; font-weight: bold; font-size: 1.25rem;">+</span>
                     <strong>P-TRACK</strong>
                 </a>
-            </li>
-        </ul>
+            </div>
 
-        <!-- Desktop Menu -->
-        <ul class="desktop-menu">
-            <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/courses">Courses</a></li>
-            <li><a href="/injections">Injections</a></li>
-            <li><a href="/symptoms">Symptoms</a></li>
-            <li><a href="/medications">Medications</a></li>
-            <li><a href="/inventory">Inventory</a></li>
-            <li>
-                <details class="dropdown">
-                    <summary role="button" class="outline">Account</summary>
-                    <ul>
-                        <li><a href="/settings">Settings</a></li>
-                        <li><a href="/reports">Reports</a></li>
-                        <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a></li>
-                    </ul>
-                </details>
-            </li>
-            <li>
-                <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" class="outline" style="border:none; padding: var(--space-2); font-size: 1.2rem;"></a>
-            </li>
-        </ul>
+            <!-- Desktop Menu -->
+            <ul class="desktop-menu">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/courses">Courses</a></li>
+                <li><a href="/injections">Injections</a></li>
+                <li><a href="/symptoms">Symptoms</a></li>
+                <li><a href="/medications">Medications</a></li>
+                <li><a href="/inventory">Inventory</a></li>
+                <li>
+                    <details class="dropdown" style="position: relative;">
+                        <summary role="button" class="outline" style="border: none; font-weight: 500;">Account</summary>
+                        <ul style="position: absolute; right: 0; top: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.5rem; box-shadow: var(--shadow-lg); min-width: 180px; display: none; flex-direction: column; gap: 0.25rem; z-index: 1000;">
+                            <li><a href="/settings" style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Settings</a></li>
+                            <li><a href="/reports" style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Reports</a></li>
+                            <li><hr style="margin: 0.25rem 0; border: 0; border-top: 1px solid var(--color-border);"></li>
+                            <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'" style="display: block; padding: 0.5rem 1rem; color: var(--danger-primary); border-radius: var(--radius-md);">Logout</a></li>
+                        </ul>
+                    </details>
+                </li>
+                <li>
+                    <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" class="outline" style="border:none; padding: var(--space-2); font-size: 1.2rem; display: flex; align-items: center;"></a>
+                </li>
+            </ul>
 
-        <!-- Mobile Menu Toggle -->
-        <div class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-            <span>☰</span>
+            <!-- Mobile Menu Toggle -->
+            <div class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </div>
         </div>
     </nav>
 
@@ -73,8 +74,10 @@
     <div id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
     <div id="mobile-menu-drawer">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
-            <strong>Menu</strong>
-            <button onclick="closeMobileMenu()" class="close" style="font-size: 1.5rem;">✕</button>
+            <strong style="font-size: 1.25rem;">Menu</strong>
+            <button onclick="closeMobileMenu()" class="close" style="background: none; border: none; padding: 0.5rem; cursor: pointer; color: var(--color-text-primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
         <ul>
             <li><a href="/dashboard" onclick="closeMobileMenu()">Dashboard</a></li>
@@ -84,17 +87,17 @@
             <li><a href="/medications" onclick="closeMobileMenu()">Medications</a></li>
             <li><a href="/inventory" onclick="closeMobileMenu()">Inventory</a></li>
             <li>
-                <a href="#" onclick="toggleMobileDropdown(event)">Account ▼</a>
-                <div class="dropdown-content">
-                    <a href="/settings" onclick="closeMobileMenu()">Settings</a>
-                    <a href="/reports" onclick="closeMobileMenu()">Reports</a>
-                    <a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'">Logout</a>
+                <a href="#" onclick="toggleMobileDropdown(event)" style="justify-content: space-between;">Account <span>▼</span></a>
+                <div class="dropdown-content" style="padding-left: 1rem; display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                    <a href="/settings" onclick="closeMobileMenu()" style="font-size: 0.9rem;">Settings</a>
+                    <a href="/reports" onclick="closeMobileMenu()" style="font-size: 0.9rem;">Reports</a>
+                    <a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'" style="font-size: 0.9rem; color: var(--danger-primary);">Logout</a>
                 </div>
             </li>
-            <!-- 3) Remove text "Switch to X mode" -->
-            <li style="margin-top: var(--space-4); border-top: 1px solid var(--color-border); padding-top: var(--space-4);">
-                 <a href="#" x-data="theme()" @click.prevent="toggle()" style="display: flex; justify-content: center; align-items: center; background: var(--color-bg-tertiary);">
-                    <span x-text="icon" style="font-size: 1.5rem;"></span>
+            <li style="margin-top: auto; padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+                 <a href="#" x-data="theme()" @click.prevent="toggle()" style="justify-content: center; background: var(--color-bg-tertiary);">
+                    <span x-text="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'" style="margin-right: 0.5rem;"></span>
+                    <span x-text="icon" style="font-size: 1.2rem;"></span>
                 </a>
             </li>
         </ul>
@@ -109,7 +112,6 @@
                 closeMobileMenu();
             } else {
                 overlay.style.display = 'block';
-                // Small timeout to allow display:block to apply before adding class for transition
                 setTimeout(() => {
                     drawer.classList.add('open');
                 }, 10);
@@ -123,30 +125,56 @@
             drawer.classList.remove('open');
             setTimeout(() => {
                 overlay.style.display = 'none';
-            }, 300); // Match transition duration
+            }, 300);
         }
 
         function toggleMobileDropdown(event) {
             event.preventDefault();
             const content = event.target.nextElementSibling;
-            content.classList.toggle('show');
-            const arrow = event.target;
-            arrow.textContent = content.classList.contains('show') ? 'Account ▲' : 'Account ▼';
+            const arrow = event.target.querySelector('span');
+
+            if (content.style.display === 'flex') {
+                content.style.display = 'none';
+                arrow.textContent = '▼';
+            } else {
+                content.style.display = 'flex';
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Dropdown fix for desktop
+        const details = document.querySelector('details.dropdown');
+        if (details) {
+            document.addEventListener('click', function(e) {
+                if (!details.contains(e.target)) {
+                    details.removeAttribute('open');
+                }
+            });
+
+            // Add hover effect for desktop only
+            if (window.matchMedia('(min-width: 769px)').matches) {
+                details.addEventListener('mouseenter', () => {
+                    details.setAttribute('open', '');
+                });
+                details.addEventListener('mouseleave', () => {
+                    details.removeAttribute('open');
+                });
+            }
         }
     </script>
     {{ end }}
 
-    <main class="container">
+    <main>
         {{ if .SuccessMessage }}
         <div class="alert-success">
-            <span>✓</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             <span>{{ .SuccessMessage }}</span>
         </div>
         {{ end }}
 
         {{ if .ErrorMessage }}
         <div class="alert-danger">
-            <span>!</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
             <span>{{ .ErrorMessage }}</span>
         </div>
         {{ end }}
@@ -154,14 +182,15 @@
         {{ template "content" . }}
     </main>
 
-    <footer class="container-fluid" style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-8) 0; margin-top: auto;">
-        <div class="container" style="text-align: center; color: var(--color-text-muted);">
-            <p style="margin-bottom: var(--space-2);"><strong>P-TRACK</strong> — Personal Injection Tracker</p>
-            <small>
-                v1.0 &bull;
-                <a href="/help" style="color: var(--color-text-secondary);">Help</a> &bull;
-                <a href="/about" style="color: var(--color-text-secondary);">About</a>
-            </small>
+    <footer style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-8) 0; margin-top: auto;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4); text-align: center; color: var(--color-text-muted);">
+            <p style="margin-bottom: var(--space-2); font-weight: 600; color: var(--color-text-primary);">P-TRACK</p>
+            <small style="display: block; margin-bottom: var(--space-4);">Personal Injection Tracker</small>
+            <div style="font-size: 0.9rem;">
+                <a href="/help" style="color: var(--color-text-secondary); margin: 0 0.5rem;">Help</a> &bull;
+                <a href="/about" style="color: var(--color-text-secondary); margin: 0 0.5rem;">About</a>
+            </div>
+            <small style="display: block; margin-top: var(--space-4); opacity: 0.7;">v1.0</small>
         </div>
     </footer>
 

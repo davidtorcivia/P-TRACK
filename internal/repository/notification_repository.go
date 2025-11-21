@@ -79,7 +79,7 @@ func (r *NotificationRepository) GetByUserID(userID int64, includeRead bool, lim
 	query := `
 		SELECT id, user_id, type, title, message, is_read, scheduled_time, created_at
 		FROM notifications
-		WHERE user_id = ? OR user_id IS NULL
+		WHERE (user_id = ? OR user_id IS NULL)
 	`
 	args := []interface{}{userID}
 

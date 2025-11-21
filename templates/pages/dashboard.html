@@ -2,40 +2,51 @@
 {{ if .ActiveCourse }}
 <!-- Dashboard Header with Quick Stats -->
 <div class="grid-2" style="align-items: stretch; margin-bottom: var(--space-6);">
-    <article class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: center;">
+    <article class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, var(--color-surface), var(--color-bg-tertiary));">
         <hgroup style="margin-bottom: var(--space-2);">
-            <h2 style="font-size: var(--text-2xl); color: var(--brand-primary);">{{ .ActiveCourse.Name }}</h2>
-            <p>{{ if .LastInjection }}Last injection {{ .LastInjection.TimeAgo }}{{ else }}No injections yet{{ end }}</p>
+            <h2 style="font-size: 2rem; color: var(--brand-primary); margin-bottom: 0.5rem;">{{ .ActiveCourse.Name }}</h2>
+            <p style="margin: 0; color: var(--color-text-secondary);">
+                {{ if .LastInjection }}
+                    <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Last injection {{ .LastInjection.TimeAgo }}
+                    </span>
+                {{ else }}
+                    No injections yet
+                {{ end }}
+            </p>
         </hgroup>
-        <div style="display: flex; gap: var(--space-4); margin-top: var(--space-4);">
+        <div style="display: flex; gap: var(--space-6); margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
             <div>
-                <small class="text-muted uppercase tracking-wide text-xs">Started</small>
-                <div style="font-weight: bold;">{{ .ActiveCourse.StartDate }}</div>
+                <small class="text-muted" style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; font-weight: 600;">Started</small>
+                <div style="font-weight: bold; font-size: 1.1rem; margin-top: 0.25rem;">{{ .ActiveCourse.StartDate }}</div>
             </div>
             {{ if .ActiveCourse.ExpectedEndDate }}
             <div>
-                <small class="text-muted uppercase tracking-wide text-xs">Ends</small>
-                <div style="font-weight: bold;">{{ .ActiveCourse.ExpectedEndDate }}</div>
+                <small class="text-muted" style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; font-weight: 600;">Ends</small>
+                <div style="font-weight: bold; font-size: 1.1rem; margin-top: 0.25rem;">{{ .ActiveCourse.ExpectedEndDate }}</div>
             </div>
             {{ end }}
         </div>
     </article>
 
-    <div class="grid-2" style="gap: var(--space-4);">
-        <article class="card stat-card" style="margin: 0; padding: var(--space-4);">
+    <div class="grid-2" style="gap: var(--space-6);">
+        <article class="card stat-card" style="margin: 0; padding: var(--space-4); position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--brand-primary);"></div>
             <div class="stat-value">{{ .Stats.TotalInjections }}</div>
-            <div class="stat-label">Injections</div>
+            <div class="stat-label">Total Injections</div>
         </article>
-        <article class="card stat-card" style="margin: 0; padding: var(--space-4);">
-            <div style="display: flex; justify-content: space-around; width: 100%; align-items: center;">
+        <article class="card stat-card" style="margin: 0; padding: var(--space-4); position: relative; overflow: hidden;">
+             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--color-text-secondary);"></div>
+            <div style="display: flex; justify-content: space-around; width: 100%; align-items: center; height: 100%;">
                 <div style="text-align: center;">
-                    <div style="font-size: var(--text-xl); font-weight: bold; color: var(--color-text-primary);">{{ .Stats.LeftCount }}</div>
-                    <small class="text-muted">Left</small>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: var(--color-text-primary); line-height: 1;">{{ .Stats.LeftCount }}</div>
+                    <small class="text-muted" style="font-weight: 600; font-size: 0.75rem;">LEFT</small>
                 </div>
-                <div style="height: 2rem; width: 1px; background: var(--color-border);"></div>
+                <div style="height: 2.5rem; width: 1px; background: var(--color-border);"></div>
                 <div style="text-align: center;">
-                    <div style="font-size: var(--text-xl); font-weight: bold; color: var(--color-text-primary);">{{ .Stats.RightCount }}</div>
-                    <small class="text-muted">Right</small>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: var(--color-text-primary); line-height: 1;">{{ .Stats.RightCount }}</div>
+                    <small class="text-muted" style="font-weight: 600; font-size: 0.75rem;">RIGHT</small>
                 </div>
             </div>
         </article>
@@ -43,69 +54,85 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="grid-3" style="margin-bottom: var(--space-6);">
-    <a href="/injections" role="button" class="btn w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
-        <span style="font-size: 1.5rem;">✚</span>
-        <span>Log Injection</span>
+<div class="grid-3" style="margin-bottom: var(--space-8);">
+    <a href="/injections" role="button" class="btn w-full" style="height: auto; padding: 1.5rem; flex-direction: column; gap: 0.75rem; transition: transform 0.2s; border: 1px solid var(--brand-primary);">
+        <div style="background: rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </div>
+        <span style="font-size: 1.1rem;">Log Injection</span>
     </a>
-    <a href="/symptoms" role="button" class="btn secondary w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
-        <span style="font-size: 1.5rem;">⚠</span>
-        <span>Log Symptoms</span>
+    <a href="/symptoms" role="button" class="btn secondary w-full" style="height: auto; padding: 1.5rem; flex-direction: column; gap: 0.75rem;">
+        <div style="background: var(--color-bg-tertiary); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--warning-primary);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <span style="font-size: 1.1rem;">Log Symptoms</span>
     </a>
-    <a href="/medications" role="button" class="btn outline w-full" style="height: auto; padding: var(--space-4); flex-direction: column; gap: var(--space-2);">
-        <span style="font-size: 1.5rem;">RX</span>
-        <span>Log Medication</span>
+    <a href="/medications" role="button" class="btn outline w-full" style="height: auto; padding: 1.5rem; flex-direction: column; gap: 0.75rem; border-style: dashed;">
+        <div style="background: var(--brand-primary-bg); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--brand-primary);">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5.2.2a.3.3 0 0 0-.4 2.1z"/><path d="M2 12h20"/><path d="M7 17v4"/><path d="M17 17v4"/><path d="M19 12v-5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v5"/><path d="M12 12v-4"/></svg>
+        </div>
+        <span style="font-size: 1.1rem;">Log Medication</span>
     </a>
 </div>
 
 <!-- Low Stock Alerts -->
 {{ if .LowStockItems }}
-<article class="card alert-danger" style="border-left: 4px solid var(--danger-primary);">
-    <header style="border: none; padding-bottom: 0; margin-bottom: var(--space-2);">
-        <strong style="color: var(--danger-primary); display: flex; align-items: center; gap: var(--space-2);">
-            <span>!</span> Low Stock Alerts
+<article class="card" style="border-left: 4px solid var(--danger-primary); background: #FEF2F2;">
+    <header style="border: none; padding-bottom: 0; margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+        <strong style="color: var(--danger-primary); display: flex; align-items: center; gap: var(--space-2); font-size: 1.1rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Low Stock Alerts
         </strong>
+        <a href="/inventory" style="font-size: 0.9rem; text-decoration: none; color: var(--danger-primary); font-weight: 600;">Manage →</a>
     </header>
     <div class="grid-2" style="gap: var(--space-4);">
         {{ range .LowStockItems }}
-        <div style="background: var(--color-surface); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--danger-light);">
+        <div style="background: #ffffff; padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--danger-light); display: flex; justify-content: space-between; align-items: center;">
             <strong>{{ .ItemType }}</strong>
-            <div style="color: var(--danger-primary);">{{ .Quantity }} {{ .Unit }} remaining</div>
+            <span class="badge" style="background: var(--danger-bg); color: var(--danger-primary);">{{ .Quantity }} {{ .Unit }}</span>
         </div>
         {{ end }}
     </div>
-    <footer style="border: none; margin-top: var(--space-3); padding-top: 0;">
-        <a href="/inventory" style="font-size: var(--text-sm); text-decoration: underline;">Manage Inventory →</a>
-    </footer>
 </article>
 {{ end }}
 
 <!-- Recent Activity -->
 <article class="card">
     <header style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="margin: 0;">Recent Activity</h3>
-        <a href="/activity" class="btn-sm outline">View All</a>
+        <h3 style="margin: 0; font-size: 1.25rem;">Recent Activity</h3>
+        <a href="/activity" class="btn-sm outline" style="border-radius: 20px;">View All</a>
     </header>
     <div id="recent-activity" hx-get="/api/dashboard/recent" hx-trigger="load">
-        <div style="padding: var(--space-4); text-align: center; color: var(--color-text-secondary);">
-            <p aria-busy="true">Loading...</p>
+        <div style="padding: var(--space-8); text-align: center; color: var(--color-text-muted);">
+            <div style="display: inline-block; animation: spin 1s linear infinite; margin-bottom: 1rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            </div>
+            <p>Loading activity...</p>
         </div>
     </div>
 </article>
 
+<style>
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+
 {{ else }}
 <!-- No Course -->
-<article class="card" style="text-align: center; padding: var(--space-12) var(--space-8);">
-    <div style="margin-bottom: var(--space-6);">
-        <span style="font-size: 3rem; background: var(--brand-primary-bg); padding: var(--space-4); border-radius: 50%; color: var(--brand-primary);">+</span>
-    </div>
-    <hgroup>
-        <h2>Welcome to Injection Tracker</h2>
-        <p>Create your first course to get started</p>
-    </hgroup>
-    <div style="margin-top: var(--space-6);">
-        <a href="/courses" role="button" class="btn btn-lg">Create Course</a>
-    </div>
-</article>
+<div style="max-width: 600px; margin: 2rem auto;">
+    <article class="card" style="text-align: center; padding: 4rem 2rem;">
+        <div style="margin-bottom: 2rem;">
+            <div style="width: 80px; height: 80px; background: var(--brand-primary-bg); color: var(--brand-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </div>
+        </div>
+        <hgroup>
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">Welcome to P-TRACK</h2>
+            <p style="font-size: 1.1rem;">Create your first course to get started tracking your injections.</p>
+        </hgroup>
+        <div style="margin-top: 2.5rem;">
+            <a href="/courses" role="button" class="btn btn-lg btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">Create Course</a>
+        </div>
+    </article>
+</div>
 {{ end }}
 {{ end }}

@@ -1,165 +1,454 @@
 {{ define "content" }}
-<article class="card" style="margin-bottom: var(--space-6);">
-    <hgroup>
-        <h1>Settings</h1>
-        <p>Manage your account and preferences</p>
-    </hgroup>
-</article>
+<div style="max-width: 1000px; margin: 0 auto;">
 
-<div class="grid desktop-grid-cols-2" style="gap: var(--space-6); align-items: start;">
-    <!-- Profile Settings -->
-    <article class="card" style="margin: 0;">
-        <header>
-            <h3>Profile</h3>
-        </header>
-
-        <form hx-post="/api/settings/profile"
-              hx-target="#profile-feedback"
-              hx-swap="innerHTML">
-
-            <div id="profile-feedback"></div>
-
-            <label for="username">
-                Username
-                <input type="text"
-                       id="username"
-                       name="username"
-                       value="{{ .User.Username }}"
-                       required
-                       minlength="3">
-            </label>
-
-            <label for="email">
-                Email
-                <input type="email"
-                       id="email"
-                       name="email"
-                       value="{{ .User.Email }}"
-                       placeholder="your@email.com">
-                <small class="text-muted">For password recovery only</small>
-            </label>
-
-            <button type="submit" class="w-full">Update Profile</button>
-        </form>
+    <article class="card" style="margin-bottom: var(--space-8);">
+        <hgroup style="margin-bottom: 0;">
+            <h1 style="margin-bottom: 0.5rem;">Settings</h1>
+            <p style="margin-bottom: 0; font-size: 1.1rem;">Manage your account and preferences</p>
+        </hgroup>
     </article>
 
-    <!-- Change Password -->
-    <article class="card" style="margin: 0;">
-        <header>
-            <h3>Change Password</h3>
-        </header>
+    <div class="grid-2" style="gap: var(--space-6); align-items: start;">
+        <!-- Profile Settings -->
+        <article class="card" style="margin: 0;">
+            <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+                <h3 style="margin: 0; font-size: 1.25rem;">Profile</h3>
+            </header>
 
-        <form hx-post="/api/settings/password"
-              hx-target="#password-feedback"
-              hx-swap="innerHTML"
-              x-data="{ newPassword: '', confirmPassword: '', passwordMatch: true }">
+            <form hx-post="/api/settings/profile"
+                  hx-target="#profile-feedback"
+                  hx-swap="innerHTML">
 
-            <div id="password-feedback"></div>
+                <div id="profile-feedback"></div>
 
-            <label for="current-password">
-                Current Password
-                <input type="password"
-                       id="current-password"
-                       name="current_password"
-                       required>
-            </label>
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="username">Username</label>
+                    <input type="text"
+                           id="username"
+                           name="username"
+                           value="{{ .User.Username }}"
+                           required
+                           minlength="3"
+                           style="margin-bottom: 0;">
+                </div>
 
-            <label for="new-password">
-                New Password
-                <input type="password"
-                       id="new-password"
-                       name="new_password"
-                       x-model="newPassword"
-                       @input="passwordMatch = newPassword === confirmPassword || confirmPassword === ''"
-                       minlength="8"
-                       required>
-                <small class="text-muted">Minimum 8 characters</small>
-            </label>
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="email">Email</label>
+                    <input type="email"
+                           id="email"
+                           name="email"
+                           value="{{ .User.Email }}"
+                           placeholder="your@email.com"
+                           style="margin-bottom: 0.5rem;">
+                    <small class="text-muted">For password recovery only</small>
+                </div>
 
-            <label for="confirm-password">
-                Confirm New Password
-                <input type="password"
-                       id="confirm-password"
-                       name="confirm_password"
-                       x-model="confirmPassword"
-                       @input="passwordMatch = newPassword === confirmPassword"
-                       :aria-invalid="!passwordMatch && confirmPassword !== ''"
-                       required>
-                <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--danger-primary);">
-                    Passwords do not match
-                </small>
-            </label>
+                <button type="submit" class="w-full">Update Profile</button>
+            </form>
+        </article>
 
-            <button type="submit" :disabled="!passwordMatch" class="w-full">
-                Change Password
-            </button>
-        </form>
-    </article>
-</div>
+        <!-- Change Password -->
+        <article class="card" style="margin: 0;">
+            <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+                <h3 style="margin: 0; font-size: 1.25rem;">Change Password</h3>
+            </header>
 
-<!-- Account & Sharing Section -->
-<article class="card" style="margin-top: var(--space-6);"
-         x-data="accountSharing()"
-         x-init="currentUserID = {{ .UserID }}; init()">
-    <header>
-        <h3>Account & Sharing</h3>
-        <p>Share your injection tracking data with your partner</p>
-    </header>
+            <form hx-post="/api/settings/password"
+                  hx-target="#password-feedback"
+                  hx-swap="innerHTML"
+                  x-data="{ newPassword: '', confirmPassword: '', passwordMatch: true }">
 
-    <!-- Account Members -->
-    <div style="margin-bottom: var(--space-6);">
-        <h4>Account Members</h4>
-        <div id="members-list" style="margin-top: var(--space-4);">
-            <p style="color: var(--color-text-muted);">Loading members...</p>
-        </div>
+                <div id="password-feedback"></div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="current-password">Current Password</label>
+                    <input type="password"
+                           id="current-password"
+                           name="current_password"
+                           required
+                           style="margin-bottom: 0;">
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="new-password">New Password</label>
+                    <input type="password"
+                           id="new-password"
+                           name="new_password"
+                           x-model="newPassword"
+                           @input="passwordMatch = newPassword === confirmPassword || confirmPassword === ''"
+                           minlength="8"
+                           required
+                           style="margin-bottom: 0.5rem;">
+                    <small class="text-muted">Minimum 8 characters</small>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="confirm-password">Confirm New Password</label>
+                    <input type="password"
+                           id="confirm-password"
+                           name="confirm_password"
+                           x-model="confirmPassword"
+                           @input="passwordMatch = newPassword === confirmPassword"
+                           :aria-invalid="!passwordMatch && confirmPassword !== ''"
+                           required
+                           style="margin-bottom: 0.5rem;">
+                    <small x-show="!passwordMatch && confirmPassword !== ''" style="color: var(--danger-primary); font-weight: bold;">
+                        Passwords do not match
+                    </small>
+                </div>
+
+                <button type="submit" :disabled="!passwordMatch" class="w-full">
+                    Change Password
+                </button>
+            </form>
+        </article>
     </div>
 
-    <!-- Invite New Member -->
-    <div style="margin-bottom: var(--space-6);">
-        <h4>Invite Partner</h4>
-        <p style="margin-bottom: var(--space-4); color: var(--color-text-secondary);">Generate a one-time invitation link to share with your partner. The link expires in 7 days.</p>
+    <!-- Account & Sharing Section -->
+    <article class="card" style="margin-top: var(--space-6);"
+             x-data="accountSharing()"
+             x-init="currentUserID = {{ .UserID }}; init()">
+        <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+            <h3 style="margin: 0; font-size: 1.25rem;">Account & Sharing</h3>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: var(--color-text-secondary);">Share your injection tracking data with your partner</p>
+        </header>
 
-        <form @submit.prevent="sendInvitation()" style="margin-top: var(--space-4);">
-            <div id="invite-feedback" x-html="inviteFeedback"></div>
+        <!-- Account Members -->
+        <div style="margin-bottom: var(--space-8);">
+            <h4 style="margin-bottom: var(--space-4);">Account Members</h4>
+            <div id="members-list">
+                <p style="color: var(--color-text-muted);">Loading members...</p>
+            </div>
+        </div>
 
-            <button type="submit" :disabled="inviting" class="w-full btn-primary">
-                <span x-show="!inviting">Generate Invitation Link</span>
-                <span x-show="inviting">Creating...</span>
-            </button>
+        <!-- Invite New Member -->
+        <div style="margin-bottom: var(--space-8);">
+            <h4 style="margin-bottom: var(--space-4);">Invite Partner</h4>
+            <div style="background: var(--color-bg-tertiary); padding: var(--space-6); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+                <p style="margin-bottom: var(--space-4);">Generate a one-time invitation link to share with your partner. The link expires in 7 days.</p>
+
+                <form @submit.prevent="sendInvitation()">
+                    <div id="invite-feedback" x-html="inviteFeedback"></div>
+
+                    <button type="submit" :disabled="inviting" class="btn-primary">
+                        <span x-show="!inviting">Generate Invitation Link</span>
+                        <span x-show="inviting">Creating...</span>
+                    </button>
+                </form>
+
+                <!-- Show invitation link after creation -->
+                <div x-show="invitationToken" style="margin-top: var(--space-6); padding: var(--space-4); background: var(--brand-primary-bg); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg);">
+                    <p><strong>Invitation Link Created!</strong></p>
+                    <p style="margin-top: var(--space-2);">Share this link with your partner:</p>
+                    <div style="display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-2);">
+                        <input type="text"
+                               x-model="invitationLink"
+                               readonly
+                               style="flex: 1; font-family: monospace; font-size: 0.85rem; margin: 0;"
+                               @click="$el.select()">
+                        <button type="button"
+                                class="btn-sm outline"
+                                @click="copyInvitationLink()"
+                                style="white-space: nowrap; margin: 0;">
+                            <span x-show="!copied">Copy Link</span>
+                            <span x-show="copied">Copied!</span>
+                        </button>
+                    </div>
+                    <small style="display: block; margin-top: var(--space-2); color: var(--color-text-muted);">
+                        Expires in 7 days - One-time use only
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invitations -->
+        <div>
+            <h4 style="margin-bottom: var(--space-4);">Invitations</h4>
+            <div id="invitations-list">
+                <p style="color: var(--color-text-muted);">Loading invitations...</p>
+            </div>
+        </div>
+    </article>
+
+    <!-- App Settings -->
+    <article class="card" style="margin-top: var(--space-6);">
+        <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+            <h3 style="margin: 0; font-size: 1.25rem;">Application Settings</h3>
+        </header>
+
+        <form x-data="{}"
+              @submit.prevent="
+                const formData = new FormData($el);
+                const data = {
+                    theme: formData.get('theme'),
+                    timezone: formData.get('timezone'),
+                    date_format: formData.get('date_format'),
+                    time_format: formData.get('time_format'),
+                    advanced_mode: formData.get('advanced_mode') === 'on'
+                };
+
+                fetch('/api/settings/app', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        if (data.theme === 'auto') {
+                            window.themeManager.setAutoTheme();
+                        } else {
+                            window.themeManager.setTheme(data.theme);
+                        }
+                        document.getElementById('app-feedback').innerHTML = '<div class=\'alert-success\'>Settings saved successfully!</div>';
+                        setTimeout(() => document.getElementById('app-feedback').innerHTML = '', 3000);
+                    } else {
+                        document.getElementById('app-feedback').innerHTML = '<div class=\'alert-danger\'>Failed to save settings</div>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('app-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
+                });
+              ">
+
+            <div id="app-feedback"></div>
+
+            <div class="grid-2" style="gap: var(--space-6); margin-bottom: var(--space-4);">
+                <div>
+                    <label for="theme">Theme</label>
+                    <select id="theme" name="theme" style="margin: 0;">
+                        <option value="light" {{ if eq .Settings.Theme "light" }}selected{{ end }}>Light</option>
+                        <option value="dark" {{ if eq .Settings.Theme "dark" }}selected{{ end }}>Dark</option>
+                        <option value="auto" {{ if eq .Settings.Theme "auto" }}selected{{ end }}>Auto (System)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="timezone">Timezone</label>
+                    <select id="timezone" name="timezone" style="margin-bottom: 0.5rem;">
+                        <option value="America/New_York" {{ if eq .Settings.Timezone "America/New_York" }}selected{{ end }}>Eastern Time (ET)</option>
+                        <option value="America/Chicago" {{ if eq .Settings.Timezone "America/Chicago" }}selected{{ end }}>Central Time (CT)</option>
+                        <option value="America/Denver" {{ if eq .Settings.Timezone "America/Denver" }}selected{{ end }}>Mountain Time (MT)</option>
+                        <option value="America/Phoenix" {{ if eq .Settings.Timezone "America/Phoenix" }}selected{{ end }}>Arizona Time (AZ)</option>
+                        <option value="America/Los_Angeles" {{ if eq .Settings.Timezone "America/Los_Angeles" }}selected{{ end }}>Pacific Time (PT)</option>
+                        <option value="America/Anchorage" {{ if eq .Settings.Timezone "America/Anchorage" }}selected{{ end }}>Alaska Time (AK)</option>
+                        <option value="Pacific/Honolulu" {{ if eq .Settings.Timezone "Pacific/Honolulu" }}selected{{ end }}>Hawaii Time (HT)</option>
+                        <option value="UTC" {{ if eq .Settings.Timezone "UTC" }}selected{{ end }}>UTC</option>
+                        <option value="Europe/London" {{ if eq .Settings.Timezone "Europe/London" }}selected{{ end }}>London (GMT/BST)</option>
+                        <option value="Europe/Paris" {{ if eq .Settings.Timezone "Europe/Paris" }}selected{{ end }}>Central Europe (CET)</option>
+                        <option value="Europe/Athens" {{ if eq .Settings.Timezone "Europe/Athens" }}selected{{ end }}>Eastern Europe (EET)</option>
+                        <option value="Asia/Dubai" {{ if eq .Settings.Timezone "Asia/Dubai" }}selected{{ end }}>Dubai (GST)</option>
+                        <option value="Asia/Kolkata" {{ if eq .Settings.Timezone "Asia/Kolkata" }}selected{{ end }}>India (IST)</option>
+                        <option value="Asia/Shanghai" {{ if eq .Settings.Timezone "Asia/Shanghai" }}selected{{ end }}>China (CST)</option>
+                        <option value="Asia/Tokyo" {{ if eq .Settings.Timezone "Asia/Tokyo" }}selected{{ end }}>Japan (JST)</option>
+                        <option value="Australia/Sydney" {{ if eq .Settings.Timezone "Australia/Sydney" }}selected{{ end }}>Sydney (AEDT)</option>
+                        <option value="Pacific/Auckland" {{ if eq .Settings.Timezone "Pacific/Auckland" }}selected{{ end }}>New Zealand (NZDT)</option>
+                    </select>
+                    <small class="text-muted">All dates and times will be shown in your timezone</small>
+                </div>
+            </div>
+
+            <div class="grid-2" style="gap: var(--space-6); margin-bottom: var(--space-6);">
+                <div>
+                    <label for="date-format">Date Format</label>
+                    <select id="date-format" name="date_format" style="margin: 0;">
+                        <option value="MM/DD/YYYY" {{ if eq .Settings.DateFormat "MM/DD/YYYY" }}selected{{ end }}>MM/DD/YYYY</option>
+                        <option value="DD/MM/YYYY" {{ if eq .Settings.DateFormat "DD/MM/YYYY" }}selected{{ end }}>DD/MM/YYYY</option>
+                        <option value="YYYY-MM-DD" {{ if eq .Settings.DateFormat "YYYY-MM-DD" }}selected{{ end }}>YYYY-MM-DD</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="time-format">Time Format</label>
+                    <select id="time-format" name="time_format" style="margin: 0;">
+                        <option value="12h" {{ if eq .Settings.TimeFormat "12h" }}selected{{ end }}>12-hour (AM/PM)</option>
+                        <option value="24h" {{ if eq .Settings.TimeFormat "24h" }}selected{{ end }}>24-hour</option>
+                    </select>
+                </div>
+            </div>
+
+            <label for="advanced-mode" style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: var(--space-6); cursor: pointer;">
+                <input type="checkbox"
+                       id="advanced-mode"
+                       name="advanced_mode"
+                       role="switch"
+                       {{ if .Settings.AdvancedMode }}checked{{ end }}
+                       style="width: 2rem; margin-top: 0.15rem;">
+                <div>
+                    <span style="font-weight: 500;">Enable Advanced Mode</span>
+                    <small class="text-muted" style="display: block; margin-top: 0.25rem;">Shows anatomical diagram for precise injection site tracking</small>
+                </div>
+            </label>
+
+            <button type="submit" class="w-full">Save Settings</button>
         </form>
+    </article>
 
-        <!-- Show invitation link after creation -->
-        <div x-show="invitationToken" style="margin-top: var(--space-4); padding: var(--space-4); background: var(--brand-primary-bg); border: 1px solid var(--brand-primary); border-radius: var(--radius-lg);">
-            <p><strong>Invitation Link Created!</strong></p>
-            <p style="margin-top: var(--space-2);">Share this link with your partner:</p>
-            <div style="display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-2);">
-                <input type="text"
-                       x-model="invitationLink"
-                       readonly
-                       style="flex: 1; font-family: monospace; font-size: 0.85rem;"
-                       @click="$el.select()">
-                <button type="button"
-                        class="btn-sm outline"
-                        @click="copyInvitationLink()"
-                        style="white-space: nowrap;">
-                    <span x-show="!copied">Copy Link</span>
-                    <span x-show="copied">Copied!</span>
+    <!-- Notification Settings -->
+    <article class="card" style="margin-top: var(--space-6);">
+        <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+            <h3 style="margin: 0; font-size: 1.25rem;">Notifications & Reminders</h3>
+        </header>
+
+        <form x-data="{}"
+              @submit.prevent="
+                const formData = new FormData($el);
+                const data = {
+                    enable_notifications: formData.get('enable_notifications') === 'on',
+                    injection_reminders: formData.get('injection_reminders') === 'on',
+                    reminder_time: formData.get('reminder_time'),
+                    low_stock_alerts: formData.get('low_stock_alerts') === 'on'
+                };
+
+                fetch('/api/settings/notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-success\'>Notification settings saved!</div>';
+                        setTimeout(() => document.getElementById('notification-feedback').innerHTML = '', 3000);
+                    } else {
+                        document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-danger\'>Failed to save settings</div>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
+                });
+              ">
+
+            <div id="notification-feedback"></div>
+
+            <label for="enable-notifications" style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: var(--space-4); cursor: pointer;">
+                <input type="checkbox"
+                       id="enable-notifications"
+                       name="enable_notifications"
+                       role="switch"
+                       {{ if .Settings.EnableNotifications }}checked{{ end }}
+                       style="width: 2rem; margin-top: 0.15rem;">
+                <div>
+                    <span style="font-weight: 500;">Enable Push Notifications</span>
+                    <small class="text-muted" style="display: block; margin-top: 0.25rem;">Receive browser notifications for reminders</small>
+                </div>
+            </label>
+
+            <label for="injection-reminders" style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: var(--space-4); cursor: pointer;">
+                <input type="checkbox"
+                       id="injection-reminders"
+                       name="injection_reminders"
+                       role="switch"
+                       {{ if .Settings.InjectionReminders }}checked{{ end }}
+                       style="width: 2rem; margin-top: 0.15rem;">
+                <div>
+                    <span style="font-weight: 500;">Injection Reminders</span>
+                    <small class="text-muted" style="display: block; margin-top: 0.25rem;">Get reminded when it's time for your next injection</small>
+                </div>
+            </label>
+
+            <div style="margin-bottom: var(--space-4);">
+                <label for="reminder-time">Default Reminder Time</label>
+                <input type="time"
+                       id="reminder-time"
+                       name="reminder_time"
+                       value="{{ .Settings.ReminderTime }}"
+                       style="margin-bottom: 0.5rem;">
+                <small class="text-muted">Default time for medication reminders</small>
+            </div>
+
+            <label for="low-stock-alerts" style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: var(--space-6); cursor: pointer;">
+                <input type="checkbox"
+                       id="low-stock-alerts"
+                       name="low_stock_alerts"
+                       role="switch"
+                       {{ if .Settings.LowStockAlerts }}checked{{ end }}
+                       style="width: 2rem; margin-top: 0.15rem;">
+                <div>
+                    <span style="font-weight: 500;">Low Stock Alerts</span>
+                    <small class="text-muted" style="display: block; margin-top: 0.25rem;">Get notified when inventory is running low</small>
+                </div>
+            </label>
+
+            <button type="submit" class="w-full">Save Notification Settings</button>
+        </form>
+    </article>
+
+    <!-- Data Management -->
+    <article class="card" style="margin-top: var(--space-6);">
+        <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+            <h3 style="margin: 0; font-size: 1.25rem;">Data Management</h3>
+        </header>
+
+        <div class="grid-2" style="gap: var(--space-6);">
+            <div>
+                <button onclick="window.location.href='/api/export/all'"
+                        class="outline w-full">
+                    Export All Data
+                </button>
+                <small class="text-muted" style="display: block; text-align: center; margin-top: 0.5rem;">Download all data as JSON</small>
+            </div>
+
+            <div>
+                <button onclick="window.location.href='/api/export/pdf?full=true'"
+                        class="outline w-full">
+                    Generate Full Report
+                </button>
+                <small class="text-muted" style="display: block; text-align: center; margin-top: 0.5rem;">Create PDF report for healthcare provider</small>
+            </div>
+        </div>
+
+        <details style="margin-top: var(--space-8); border: 1px solid var(--danger-border); border-radius: var(--radius-lg); padding: var(--space-4); background: #FEF2F2;">
+            <summary style="color: var(--danger-primary); font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Danger Zone
+            </summary>
+
+            <div style="margin-top: var(--space-4);">
+                <p style="margin-bottom: 0.5rem; color: var(--color-text-primary);"><strong>Delete All Data</strong></p>
+                <p class="text-muted" style="margin-bottom: 1rem;">This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
+                <button onclick="showDeleteAllConfirmation()"
+                        class="w-full"
+                        style="background-color: white; color: var(--danger-primary); border: 1px solid var(--danger-primary);">
+                    Delete All Data
                 </button>
             </div>
-            <small style="display: block; margin-top: var(--space-2); color: var(--color-text-muted);">
-                Expires in 7 days - One-time use only
-            </small>
-        </div>
-    </div>
+        </details>
+    </article>
 
-    <!-- Invitations -->
-    <div>
-        <h4>Invitations</h4>
-        <div id="invitations-list" style="margin-top: var(--space-4);">
-            <p style="color: var(--color-text-muted);">Loading invitations...</p>
+    <!-- About -->
+    <article class="card" style="margin-top: var(--space-6); margin-bottom: var(--space-8);">
+        <header style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6);">
+            <h3 style="margin: 0; font-size: 1.25rem;">About</h3>
+        </header>
+
+        <div class="grid-4" style="gap: var(--space-4);">
+            <div>
+                <strong class="text-sm" style="color: var(--color-text-secondary); text-transform: uppercase; font-size: 0.75rem;">Version</strong>
+                <p style="margin: 0.25rem 0 0 0; font-weight: 600;">1.0.0</p>
+            </div>
+
+            <div>
+                <strong class="text-sm" style="color: var(--color-text-secondary); text-transform: uppercase; font-size: 0.75rem;">Database Size</strong>
+                <p style="margin: 0.25rem 0 0 0; font-weight: 600;">{{ .DatabaseSize }}</p>
+            </div>
+
+            <div>
+                <strong class="text-sm" style="color: var(--color-text-secondary); text-transform: uppercase; font-size: 0.75rem;">Last Backup</strong>
+                <p style="margin: 0.25rem 0 0 0; font-weight: 600;">{{ .LastBackup }}</p>
+            </div>
+
+            <div>
+                <strong class="text-sm" style="color: var(--color-text-secondary); text-transform: uppercase; font-size: 0.75rem;">Documentation</strong>
+                <p style="margin: 0.25rem 0 0 0;"><a href="https://github.com/yourusername/injection-tracker" target="_blank" style="font-weight: 600;">View on GitHub</a></p>
+            </div>
         </div>
-    </div>
-</article>
+    </article>
+</div>
 
 <script>
 function accountSharing() {
@@ -207,8 +496,8 @@ function accountSharing() {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: var(--space-2);">
                     <div>
                         <strong>${member.Username || 'Unknown User'}</strong>
-                        ${member.Role === 'owner' ? '<span class="badge badge-primary" style="margin-left: 0.5rem;">Owner</span>' : ''}
-                        ${member.UserID === this.currentUserID ? '<span class="badge badge-secondary" style="margin-left: 0.5rem;">You</span>' : ''}
+                        ${member.Role === 'owner' ? '<span class="badge" style="margin-left: 0.5rem; background: var(--brand-primary-bg); color: var(--brand-primary); padding: 2px 8px; font-size: 0.75rem; border-radius: 999px;">Owner</span>' : ''}
+                        ${member.UserID === this.currentUserID ? '<span class="badge" style="margin-left: 0.5rem; background: var(--color-bg-tertiary); color: var(--color-text-secondary); padding: 2px 8px; font-size: 0.75rem; border-radius: 999px;">You</span>' : ''}
                     </div>
                     ${member.UserID !== this.currentUserID && this.currentUserRole === 'owner' ? `
                         <button type="button"
@@ -440,6 +729,33 @@ function copyToClipboard(text, button) {
         }, 2000);
     });
 }
+
+function showDeleteAllConfirmation() {
+    document.getElementById('delete-all-data-confirm').showModal();
+}
+
+function confirmDeleteAllData() {
+    const input = document.getElementById('delete-confirmation-input');
+    if (input.value !== 'DELETE') {
+        alert('Please type DELETE to confirm');
+        return;
+    }
+
+    fetch('/api/settings/all-data', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-Token': '{{ .CSRFToken }}'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = '/login';
+        } else {
+            console.error('Error deleting data');
+            alert('Error deleting data. Please try again.');
+        }
+    });
+}
 </script>
 
 <!-- Revoke Invitation Modal -->
@@ -486,328 +802,30 @@ function copyToClipboard(text, button) {
     </article>
 </dialog>
 
-<!-- App Settings -->
-<article class="card" style="margin-top: var(--space-6);">
-    <header>
-        <h3>Application Settings</h3>
-    </header>
-
-    <form x-data="{}"
-          @submit.prevent="
-            const formData = new FormData($el);
-            const data = {
-                theme: formData.get('theme'),
-                timezone: formData.get('timezone'),
-                date_format: formData.get('date_format'),
-                time_format: formData.get('time_format'),
-                advanced_mode: formData.get('advanced_mode') === 'on'
-            };
-
-            fetch('/api/settings/app', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Apply theme immediately
-                    if (data.theme === 'auto') {
-                        window.themeManager.setAutoTheme();
-                    } else {
-                        window.themeManager.setTheme(data.theme);
-                    }
-                    document.getElementById('app-feedback').innerHTML = '<div class=\'alert-success\'>Settings saved successfully!</div>';
-                    setTimeout(() => document.getElementById('app-feedback').innerHTML = '', 3000);
-                } else {
-                    document.getElementById('app-feedback').innerHTML = '<div class=\'alert-danger\'>Failed to save settings</div>';
-                }
-            })
-            .catch(error => {
-                document.getElementById('app-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
-            });
-          ">
-
-        <div id="app-feedback"></div>
-
-        <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
-            <label for="theme">
-                Theme
-                <select id="theme" name="theme">
-                    <option value="light" {{ if eq .Settings.Theme "light" }}selected{{ end }}>Light</option>
-                    <option value="dark" {{ if eq .Settings.Theme "dark" }}selected{{ end }}>Dark</option>
-                    <option value="auto" {{ if eq .Settings.Theme "auto" }}selected{{ end }}>Auto (System)</option>
-                </select>
-            </label>
-
-            <label for="timezone">
-                Timezone
-                <select id="timezone" name="timezone">
-                    <option value="America/New_York" {{ if eq .Settings.Timezone "America/New_York" }}selected{{ end }}>Eastern Time (ET)</option>
-                    <option value="America/Chicago" {{ if eq .Settings.Timezone "America/Chicago" }}selected{{ end }}>Central Time (CT)</option>
-                    <option value="America/Denver" {{ if eq .Settings.Timezone "America/Denver" }}selected{{ end }}>Mountain Time (MT)</option>
-                    <option value="America/Phoenix" {{ if eq .Settings.Timezone "America/Phoenix" }}selected{{ end }}>Arizona Time (AZ)</option>
-                    <option value="America/Los_Angeles" {{ if eq .Settings.Timezone "America/Los_Angeles" }}selected{{ end }}>Pacific Time (PT)</option>
-                    <option value="America/Anchorage" {{ if eq .Settings.Timezone "America/Anchorage" }}selected{{ end }}>Alaska Time (AK)</option>
-                    <option value="Pacific/Honolulu" {{ if eq .Settings.Timezone "Pacific/Honolulu" }}selected{{ end }}>Hawaii Time (HT)</option>
-                    <option value="UTC" {{ if eq .Settings.Timezone "UTC" }}selected{{ end }}>UTC</option>
-                    <option value="Europe/London" {{ if eq .Settings.Timezone "Europe/London" }}selected{{ end }}>London (GMT/BST)</option>
-                    <option value="Europe/Paris" {{ if eq .Settings.Timezone "Europe/Paris" }}selected{{ end }}>Central Europe (CET)</option>
-                    <option value="Europe/Athens" {{ if eq .Settings.Timezone "Europe/Athens" }}selected{{ end }}>Eastern Europe (EET)</option>
-                    <option value="Asia/Dubai" {{ if eq .Settings.Timezone "Asia/Dubai" }}selected{{ end }}>Dubai (GST)</option>
-                    <option value="Asia/Kolkata" {{ if eq .Settings.Timezone "Asia/Kolkata" }}selected{{ end }}>India (IST)</option>
-                    <option value="Asia/Shanghai" {{ if eq .Settings.Timezone "Asia/Shanghai" }}selected{{ end }}>China (CST)</option>
-                    <option value="Asia/Tokyo" {{ if eq .Settings.Timezone "Asia/Tokyo" }}selected{{ end }}>Japan (JST)</option>
-                    <option value="Australia/Sydney" {{ if eq .Settings.Timezone "Australia/Sydney" }}selected{{ end }}>Sydney (AEDT)</option>
-                    <option value="Pacific/Auckland" {{ if eq .Settings.Timezone "Pacific/Auckland" }}selected{{ end }}>New Zealand (NZDT)</option>
-                </select>
-                <small class="text-muted">All dates and times will be shown in your timezone</small>
-            </label>
-        </div>
-
-        <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
-            <label for="date-format">
-                Date Format
-                <select id="date-format" name="date_format">
-                    <option value="MM/DD/YYYY" {{ if eq .Settings.DateFormat "MM/DD/YYYY" }}selected{{ end }}>MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY" {{ if eq .Settings.DateFormat "DD/MM/YYYY" }}selected{{ end }}>DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD" {{ if eq .Settings.DateFormat "YYYY-MM-DD" }}selected{{ end }}>YYYY-MM-DD</option>
-                </select>
-            </label>
-
-            <label for="time-format">
-                Time Format
-                <select id="time-format" name="time_format">
-                    <option value="12h" {{ if eq .Settings.TimeFormat "12h" }}selected{{ end }}>12-hour (AM/PM)</option>
-                    <option value="24h" {{ if eq .Settings.TimeFormat "24h" }}selected{{ end }}>24-hour</option>
-                </select>
-            </label>
-        </div>
-
-        <label for="advanced-mode" class="flex items-center gap-2" style="margin-bottom: var(--space-4);">
-            <input type="checkbox"
-                   id="advanced-mode"
-                   name="advanced_mode"
-                   role="switch"
-                   {{ if .Settings.AdvancedMode }}checked{{ end }}
-                   style="width: 2rem;">
-            <span>Enable Advanced Mode</span>
-            <br><small class="text-muted">Shows anatomical diagram for precise injection site tracking</small>
-        </label>
-
-        <button type="submit" class="w-full">Save Settings</button>
-    </form>
-</article>
-
-<!-- Notification Settings -->
-<article class="card" style="margin-top: var(--space-6);">
-    <header>
-        <h3>Notifications & Reminders</h3>
-    </header>
-
-    <form x-data="{}"
-          @submit.prevent="
-            const formData = new FormData($el);
-            const data = {
-                enable_notifications: formData.get('enable_notifications') === 'on',
-                injection_reminders: formData.get('injection_reminders') === 'on',
-                reminder_time: formData.get('reminder_time'),
-                low_stock_alerts: formData.get('low_stock_alerts') === 'on'
-            };
-
-            fetch('/api/settings/notifications', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-success\'>Notification settings saved!</div>';
-                    setTimeout(() => document.getElementById('notification-feedback').innerHTML = '', 3000);
-                } else {
-                    document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-danger\'>Failed to save settings</div>';
-                }
-            })
-            .catch(error => {
-                document.getElementById('notification-feedback').innerHTML = '<div class=\'alert-danger\'>Error: ' + error.message + '</div>';
-            });
-          ">
-
-        <div id="notification-feedback"></div>
-
-        <label for="enable-notifications" class="flex items-center gap-2">
-            <input type="checkbox"
-                   id="enable-notifications"
-                   name="enable_notifications"
-                   role="switch"
-                   {{ if .Settings.EnableNotifications }}checked{{ end }}
-                   style="width: 2rem;">
-            <span>Enable Push Notifications</span>
-            <small class="text-muted" style="display: block;">Receive browser notifications for reminders</small>
-        </label>
-
-        <label for="injection-reminders" class="flex items-center gap-2" style="margin-top: var(--space-4);">
-            <input type="checkbox"
-                   id="injection-reminders"
-                   name="injection_reminders"
-                   role="switch"
-                   {{ if .Settings.InjectionReminders }}checked{{ end }}
-                   style="width: 2rem;">
-            <span>Injection Reminders</span>
-            <small class="text-muted" style="display: block;">Get reminded when it's time for your next injection</small>
-        </label>
-
-        <label for="reminder-time" style="margin-top: var(--space-4);">
-            Default Reminder Time
-            <input type="time"
-                   id="reminder-time"
-                   name="reminder_time"
-                   value="{{ .Settings.ReminderTime }}">
-            <small class="text-muted">Default time for medication reminders</small>
-        </label>
-
-        <label for="low-stock-alerts" class="flex items-center gap-2" style="margin-top: var(--space-4);">
-            <input type="checkbox"
-                   id="low-stock-alerts"
-                   name="low_stock_alerts"
-                   role="switch"
-                   {{ if .Settings.LowStockAlerts }}checked{{ end }}
-                   style="width: 2rem;">
-            <span>Low Stock Alerts</span>
-            <small class="text-muted" style="display: block;">Get notified when inventory is running low</small>
-        </label>
-
-        <button type="submit" class="w-full" style="margin-top: var(--space-4);">Save Notification Settings</button>
-    </form>
-</article>
-
-<!-- Data Management -->
-<article class="card" style="margin-top: var(--space-6);">
-    <header>
-        <h3>Data Management</h3>
-    </header>
-
-    <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
-        <div>
-            <button onclick="window.location.href='/api/export/all'"
-                    class="outline w-full">
-                Export All Data
-            </button>
-            <small class="text-muted">Download all data as JSON</small>
-        </div>
-
-        <div>
-            <button onclick="window.location.href='/api/export/pdf?full=true'"
-                    class="outline w-full">
-                Generate Full Report
-            </button>
-            <small class="text-muted">Create PDF report for healthcare provider</small>
-        </div>
-    </div>
-
-    <details style="margin-top: var(--space-6); border: 1px solid var(--danger-border); border-radius: var(--radius-lg); padding: var(--space-4);">
-        <summary style="color: var(--danger-primary); font-weight: bold; cursor: pointer;">
-            Danger Zone
-        </summary>
-
-        <div style="margin-top: var(--space-4);">
-            <p><strong>Delete All Data</strong></p>
-            <p class="text-muted">This will permanently delete all your injections, symptoms, medications, and courses. This action cannot be undone.</p>
-            <button onclick="showDeleteAllConfirmation()"
-                    class="outline w-full"
-                    style="color: var(--danger-primary); border-color: var(--danger-primary);">
-                Delete All Data
-            </button>
-        </div>
-    </details>
-</article>
-
-<!-- About -->
-<article class="card" style="margin-top: var(--space-6);">
-    <header>
-        <h3>About</h3>
-    </header>
-
-    <div class="grid desktop-grid-cols-4" style="gap: var(--space-4);">
-        <div>
-            <strong class="text-sm text-secondary">Version</strong>
-            <p>1.0.0</p>
-        </div>
-
-        <div>
-            <strong class="text-sm text-secondary">Database Size</strong>
-            <p>{{ .DatabaseSize }}</p>
-        </div>
-
-        <div>
-            <strong class="text-sm text-secondary">Last Backup</strong>
-            <p>{{ .LastBackup }}</p>
-        </div>
-
-        <div>
-            <strong class="text-sm text-secondary">Documentation</strong>
-            <p><a href="https://github.com/yourusername/injection-tracker" target="_blank">View on GitHub</a></p>
-        </div>
-    </div>
-</article>
-
 <!-- Delete All Data Confirmation Dialog -->
 <dialog id="delete-all-data-confirm">
-    <article style="max-width: 500px;">
+    <article style="max-width: 500px; margin: 0;">
         <header>
             <h3>Confirm Data Deletion</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('delete-all-data-confirm').close()"></button>
         </header>
         <p><strong>This will permanently delete ALL of your data:</strong></p>
-        <ul>
+        <ul style="padding-left: 1.5rem;">
             <li>All injection records</li>
             <li>All symptom logs</li>
             <li>All medications</li>
             <li>All courses</li>
             <li>All inventory history</li>
         </ul>
-        <p class="text-danger"><strong>This action CANNOT be undone!</strong></p>
+        <p class="text-danger" style="color: var(--danger-primary);"><strong>This action CANNOT be undone!</strong></p>
         <p>Type <strong>DELETE</strong> to confirm:</p>
-        <input type="text" id="delete-confirmation-input" placeholder="Type DELETE" style="font-family: monospace;">
+        <input type="text" id="delete-confirmation-input" placeholder="Type DELETE" style="font-family: monospace; margin-bottom: 0;">
         <footer>
-            <div class="grid-2" style="gap: var(--space-2);">
+            <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
                 <button type="button" class="secondary" onclick="document.getElementById('delete-all-data-confirm').close(); document.getElementById('delete-confirmation-input').value = '';">Cancel</button>
                 <button type="button" class="contrast" onclick="confirmDeleteAllData()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete Everything</button>
             </div>
         </footer>
     </article>
 </dialog>
-
-<script>
-function showDeleteAllConfirmation() {
-    document.getElementById('delete-all-data-confirm').showModal();
-}
-
-function confirmDeleteAllData() {
-    const input = document.getElementById('delete-confirmation-input');
-    if (input.value !== 'DELETE') {
-        alert('Please type DELETE to confirm');
-        return;
-    }
-
-    fetch('/api/settings/all-data', {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-Token': '{{ .CSRFToken }}'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            window.location.href = '/logout';
-        } else {
-            console.error('Error deleting data');
-            alert('Error deleting data. Please try again.');
-        }
-    });
-}
-</script>
 {{ end }}
