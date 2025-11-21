@@ -71,7 +71,7 @@
 <!-- Edit Modals -->
 {{ range .Injections }}
 <dialog id="edit-injection-{{ .ID }}">
-    <article style="margin: 0;">
+    <article class="modal-card" style="margin: 0;">
         <header>
             <h3>Edit Injection</h3>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-injection-{{ .ID }}').close()"></button>
@@ -167,7 +167,7 @@
 
 <!-- Log Injection Modal -->
 <dialog id="log-injection">
-    <article style="margin: 0;">
+    <article class="modal-card" style="margin: 0;">
         <header>
             <h3>Log Injection</h3>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('log-injection').close()"></button>
@@ -253,7 +253,7 @@
 
 <!-- Delete Injection Confirmation Dialog -->
 <dialog id="delete-injection-confirm">
-    <article style="max-width: 400px; margin: 0;">
+    <article class="modal-card" style="max-width: 400px; margin: 0;">
         <header>
             <h3>Confirm Deletion</h3>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('delete-injection-confirm').close()"></button>

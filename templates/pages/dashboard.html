@@ -1,5 +1,24 @@
 {{ define "content" }}
 {{ if .ActiveCourse }}
+<!-- Quick Actions -->
+<div style="margin-bottom: var(--space-8);">
+    <a href="/injections" role="button" class="btn btn-cta w-full" style="display: flex; justify-content: center; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Log Injection
+    </a>
+
+    <div class="grid-2" style="gap: var(--space-4);">
+        <a href="/symptoms" role="button" class="btn secondary w-full" style="justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: var(--space-2);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Log Symptoms
+        </a>
+        <a href="/medications" role="button" class="btn outline w-full" style="justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: var(--space-2);"><path d="M4.8 2.3A.3.3 0 1 0 5.2.2a.3.3 0 0 0-.4 2.1z"/><path d="M2 12h20"/><path d="M7 17v4"/><path d="M17 17v4"/><path d="M19 12v-5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v5"/><path d="M12 12v-4"/></svg>
+            Log Medication
+        </a>
+    </div>
+</div>
+
 <!-- Dashboard Header with Quick Stats -->
 <div class="grid-2" style="align-items: stretch; margin-bottom: var(--space-6);">
     <article class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, var(--color-surface), var(--color-bg-tertiary));">
@@ -33,8 +52,8 @@
     <div class="grid-2" style="gap: var(--space-6);">
         <article class="card stat-card" style="margin: 0; padding: var(--space-4); position: relative; overflow: hidden;">
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--brand-primary);"></div>
-            <div class="stat-value">{{ .Stats.TotalInjections }}</div>
-            <div class="stat-label">Total Injections</div>
+            <div class="stat-value" style="font-size: 2.5rem; font-weight: 800; color: var(--brand-primary); text-align: center;">{{ .Stats.TotalInjections }}</div>
+            <div class="stat-label" style="text-align: center; font-size: 0.9rem; font-weight: 600; color: var(--color-text-secondary);">Total Injections</div>
         </article>
         <article class="card stat-card" style="margin: 0; padding: var(--space-4); position: relative; overflow: hidden;">
              <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--color-text-secondary);"></div>
@@ -50,25 +69,6 @@
                 </div>
             </div>
         </article>
-    </div>
-</div>
-
-<!-- Quick Actions -->
-<div style="margin-bottom: var(--space-8);">
-    <a href="/injections" role="button" class="btn btn-cta w-full" style="display: flex; justify-content: center; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4);">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Log Injection
-    </a>
-
-    <div class="grid-2" style="gap: var(--space-4);">
-        <a href="/symptoms" role="button" class="btn secondary w-full" style="justify-content: center;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: var(--space-2);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-            Log Symptoms
-        </a>
-        <a href="/medications" role="button" class="btn outline w-full" style="justify-content: center;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: var(--space-2);"><path d="M4.8 2.3A.3.3 0 1 0 5.2.2a.3.3 0 0 0-.4 2.1z"/><path d="M2 12h20"/><path d="M7 17v4"/><path d="M17 17v4"/><path d="M19 12v-5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v5"/><path d="M12 12v-4"/></svg>
-            Log Medication
-        </a>
     </div>
 </div>
 

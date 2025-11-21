@@ -121,6 +121,18 @@ p {
     border-color: var(--brand-primary-light);
 }
 
+/* Modal Article Override */
+article.modal-card {
+    border: none !important;
+    box-shadow: none !important;
+    background-color: var(--color-surface);
+    margin-bottom: 0;
+}
+article.modal-card:hover {
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
 .card header, article header {
     margin-bottom: var(--space-6);
     padding-bottom: var(--space-4);
@@ -270,14 +282,12 @@ nav.container-fluid {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--color-border);
     padding: 0.75rem 0; /* Vertical padding only */
 }
 
 @media (min-width: 769px) {
     nav.container-fluid {
-        border-bottom: none;
-        box-shadow: var(--shadow-sm);
+        box-shadow: none;
     }
 }
 
@@ -325,6 +335,11 @@ nav ul.desktop-menu li a {
 nav ul.desktop-menu li a:hover {
     color: var(--brand-primary);
     background-color: var(--brand-primary-bg);
+}
+
+/* Dropdown Fix */
+details.dropdown[open] > ul {
+    display: flex;
 }
 
 /* Mobile Menu Toggle */

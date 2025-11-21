@@ -60,7 +60,7 @@
 
 <!-- Edit Active Course Modal -->
 <dialog id="edit-course-{{ .ActiveCourse.ID }}">
-    <article>
+    <article class="modal-card">
         <header>
             <h3>Edit Course</h3>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()"></button>
@@ -180,7 +180,7 @@
 
 <!-- Edit Past Course Modal -->
 <dialog id="edit-course-{{ .ID }}">
-    <article>
+    <article class="modal-card">
         <header>
             <h3>Edit Course</h3>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ID }}').close()"></button>
@@ -272,7 +272,7 @@
 
 <!-- New Course Modal -->
 <dialog id="new-course">
-    <article>
+    <article class="modal-card">
         <header>
             <h3>Create New Course</h3>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('new-course').close()"></button>

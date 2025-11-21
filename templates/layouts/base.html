@@ -29,7 +29,7 @@
 <body>
     {{ if .IsAuthenticated }}
     <!-- Navbar -->
-    <nav class="container-fluid">
+    <nav class="container-fluid" style="border-bottom: none; box-shadow: none;">
         <div class="container">
             <!-- Brand -->
             <div class="brand">
@@ -50,7 +50,7 @@
                 <li>
                     <details class="dropdown" style="position: relative;">
                         <summary role="button" class="outline" style="border: none; font-weight: 500; cursor: pointer; list-style: none;">Account</summary>
-                        <ul style="position: absolute; right: 0; top: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.5rem; box-shadow: var(--shadow-lg); min-width: 180px; display: none; flex-direction: column; gap: 0.25rem; z-index: 1000; margin-top: 0.5rem;">
+                        <ul style="position: absolute; right: 0; top: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.5rem; box-shadow: var(--shadow-lg); min-width: 180px; flex-direction: column; gap: 0.25rem; z-index: 1000; margin-top: 0.5rem;">
                             <li><a href="/settings" style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Settings</a></li>
                             <li><a href="/reports" style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Reports</a></li>
                             <li><hr style="margin: 0.25rem 0; border: 0; border-top: 1px solid var(--color-border);"></li>
@@ -175,15 +175,15 @@
         {{ template "content" . }}
     </main>
 
-    <footer style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-8) 0; margin-top: auto;">
+    <footer style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-4) 0; margin-top: auto;">
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4); text-align: center; color: var(--color-text-muted);">
             <p style="margin-bottom: var(--space-2); font-weight: 600; color: var(--color-text-primary);">P-TRACK</p>
-            <small style="display: block; margin-bottom: var(--space-4);">Personal Injection Tracker</small>
+            <small style="display: block; margin-bottom: var(--space-2);">Personal Injection Tracker</small>
             <div style="font-size: 0.9rem;">
                 <a href="/help" style="color: var(--color-text-secondary); margin: 0 0.5rem;">Help</a> &bull;
                 <a href="/about" style="color: var(--color-text-secondary); margin: 0 0.5rem;">About</a>
             </div>
-            <small style="display: block; margin-top: var(--space-4); opacity: 0.7;">v1.0</small>
+            <small style="display: block; margin-top: var(--space-2); opacity: 0.7;">v1.0</small>
         </div>
     </footer>
 
