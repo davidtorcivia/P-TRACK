@@ -651,7 +651,7 @@ func HandleRefreshToken(db *database.DB, jwtManager *auth.JWTManager) http.Handl
 		// Attempt to refresh the token (this works even if token is expired)
 		newToken, err := jwtManager.RefreshToken(token)
 		if err != nil {
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Valid: false},
 				"token_refresh_failed",
 				"token",
@@ -710,7 +710,7 @@ func HandleRefreshToken(db *database.DB, jwtManager *auth.JWTManager) http.Handl
 		})
 
 		// Log token refresh
-		auditRepo.LogWithDetails(
+		_ = auditRepo.LogWithDetails(
 			sql.NullInt64{Int64: user.ID, Valid: true},
 			"token_refreshed",
 			"token",
@@ -911,7 +911,7 @@ func HandleSetup(db *database.DB) http.HandlerFunc {
 		// Log the setup
 		ipAddress := r.RemoteAddr
 		userAgent := r.UserAgent()
-		auditRepo.LogWithDetails(
+		_ = auditRepo.LogWithDetails(
 			sql.NullInt64{Int64: user.ID, Valid: true},
 			"first_run_setup",
 			"user",

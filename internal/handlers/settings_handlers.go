@@ -584,6 +584,6 @@ func HandleUpdateNotificationSettings(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "Notification settings updated successfully"}`))
+		_, _ = w.Write([]byte(`{"message": "Notification settings updated successfully"}`))
 	}
 }

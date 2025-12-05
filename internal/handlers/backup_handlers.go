@@ -107,7 +107,7 @@ func HandleListBackups(db *database.DB) http.HandlerFunc {
 		})
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(backups)
+		_ = json.NewEncoder(w).Encode(backups)
 	}
 }
 
@@ -127,7 +127,7 @@ func HandleCreateBackup(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "Backup created successfully",
 			"backup":  backup,
 		})
@@ -262,7 +262,7 @@ func HandleDeleteBackup(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "Backup deleted successfully",
 			"success": true,
 		})

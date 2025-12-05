@@ -464,7 +464,7 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 		// Return empty state HTML if no symptoms
 		if len(symptoms) == 0 {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`
+			_, _ = w.Write([]byte(`
 				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
 					<p>No symptoms logged yet.</p>
 					<small>Use the form above to log your first symptom.</small>
@@ -553,7 +553,7 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 		}
 
 		html += `</div>`
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 	}
 }
 
