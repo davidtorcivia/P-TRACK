@@ -394,7 +394,9 @@ func serveServiceWorker(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 	w.Header().Set("Service-Worker-Allowed", "/") // Allow service worker to control entire origin
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		log.Printf("Failed to write service worker data: %v", err)
+	}
 }
 
 // requireSetupComplete is middleware that redirects to setup if no users exist
