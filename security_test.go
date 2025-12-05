@@ -199,7 +199,7 @@ func TestSecurity_CSRFProtection(t *testing.T) {
 
 	handler := csrf.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+		_, _ = w.Write([]byte("success"))
 	}))
 
 	t.Run("POST without CSRF token fails", func(t *testing.T) {

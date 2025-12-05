@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -70,7 +71,9 @@ func HandleGetCourses(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(courses)
+		if err := json.NewEncoder(w).Encode(courses); err != nil {
+			log.Printf("Failed to encode courses response: %v", err)
+		}
 	}
 }
 
@@ -163,7 +166,9 @@ func HandleCreateCourse(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(course)
+		if err := json.NewEncoder(w).Encode(course); err != nil {
+			log.Printf("Failed to encode course response: %v", err)
+		}
 	}
 }
 
@@ -189,7 +194,9 @@ func HandleGetActiveCourse(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(course)
+		if err := json.NewEncoder(w).Encode(course); err != nil {
+			log.Printf("Failed to encode course response: %v", err)
+		}
 	}
 }
 

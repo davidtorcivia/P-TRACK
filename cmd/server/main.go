@@ -86,7 +86,7 @@ func main() {
 		// Health check
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		// Setup routes (always available)
@@ -373,7 +373,9 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/manifest+json")
 	w.Header().Set("Cache-Control", "public, max-age=3600") // Cache for 1 hour
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		log.Printf("Failed to write manifest data: %v", err)
+	}
 }
 
 // serveServiceWorker serves the service worker JavaScript file
