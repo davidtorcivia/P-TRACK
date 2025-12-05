@@ -114,7 +114,7 @@ func (r *InventoryRepository) AdjustQuantity(itemType string, accountID int64, d
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Get current quantity
 	var currentQuantity float64
@@ -166,7 +166,7 @@ func (r *InventoryRepository) DecrementForInjection(injectionID int64, accountID
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Define items to decrement
 	decrements := map[string]float64{

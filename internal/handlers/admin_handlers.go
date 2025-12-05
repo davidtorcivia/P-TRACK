@@ -183,7 +183,7 @@ func HandleUpdateSMTPSettings(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		now := time.Now()
 
@@ -270,7 +270,7 @@ func HandleTestSMTP(db *database.DB) http.HandlerFunc {
 
 		// Get password for sending
 		var password string
-		db.QueryRow("SELECT value FROM settings WHERE key = 'smtp_password'").Scan(&password)
+		_ = db.QueryRow("SELECT value FROM settings WHERE key = 'smtp_password'").Scan(&password)
 
 		// Send test email
 		err := sendTestEmail(smtp, password, req.Email)
@@ -360,7 +360,7 @@ func HandleUpdateSiteSettings(db *database.DB) http.HandlerFunc {
 
 		// Handle site_url specially - delete if empty to revert to default
 		if req.SiteURL == "" {
-			db.Exec(`DELETE FROM settings WHERE key = 'site_url'`)
+			_, _ = db.Exec(`DELETE FROM settings WHERE key = 'site_url'`)
 		} else {
 			_, err := db.Exec(`
 				INSERT INTO settings (key, value, updated_at, updated_by)
@@ -525,7 +525,7 @@ func HandleDeleteAccount(db *database.DB) http.HandlerFunc {
 
 		// Get admin's account to prevent self-deletion
 		var adminAccountID int64
-		db.QueryRow("SELECT account_id FROM account_members WHERE user_id = ?", userID).Scan(&adminAccountID)
+		_ = db.QueryRow("SELECT account_id FROM account_members WHERE user_id = ?", userID).Scan(&adminAccountID)
 		if req.AccountID == adminAccountID {
 			http.Error(w, "Cannot delete your own account", http.StatusBadRequest)
 			return
@@ -537,16 +537,16 @@ func HandleDeleteAccount(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Delete in order due to foreign keys
-		tx.Exec("DELETE FROM symptom_logs WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", req.AccountID)
-		tx.Exec("DELETE FROM injections WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", req.AccountID)
-		tx.Exec("DELETE FROM courses WHERE account_id = ?", req.AccountID)
-		tx.Exec("DELETE FROM medications WHERE account_id = ?", req.AccountID)
-		tx.Exec("DELETE FROM account_invitations WHERE account_id = ?", req.AccountID)
-		tx.Exec("DELETE FROM account_members WHERE account_id = ?", req.AccountID)
-		tx.Exec("DELETE FROM accounts WHERE id = ?", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM symptom_logs WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM injections WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM courses WHERE account_id = ?", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM medications WHERE account_id = ?", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM account_invitations WHERE account_id = ?", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM account_members WHERE account_id = ?", req.AccountID)
+		_, _ = tx.Exec("DELETE FROM accounts WHERE id = ?", req.AccountID)
 
 		if err := tx.Commit(); err != nil {
 			http.Error(w, "Failed to delete account", http.StatusInternalServerError)
@@ -652,34 +652,34 @@ func HandleDeleteUser(db *database.DB) http.HandlerFunc {
 		}
 
 		// Count members in this account
-		db.QueryRow("SELECT COUNT(*) FROM account_members WHERE account_id = ?", accountID).Scan(&memberCount)
+		_ = db.QueryRow("SELECT COUNT(*) FROM account_members WHERE account_id = ?", accountID).Scan(&memberCount)
 
 		tx, err := db.BeginTx()
 		if err != nil {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		if memberCount == 1 {
 			// Sole member - delete entire account and all data
-			tx.Exec("DELETE FROM symptom_logs WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", accountID)
-			tx.Exec("DELETE FROM injections WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", accountID)
-			tx.Exec("DELETE FROM courses WHERE account_id = ?", accountID)
-			tx.Exec("DELETE FROM medications WHERE account_id = ?", accountID)
-			tx.Exec("DELETE FROM account_invitations WHERE account_id = ?", accountID)
-			tx.Exec("DELETE FROM account_members WHERE account_id = ?", accountID)
-			tx.Exec("DELETE FROM accounts WHERE id = ?", accountID)
+			_, _ = tx.Exec("DELETE FROM symptom_logs WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", accountID)
+			_, _ = tx.Exec("DELETE FROM injections WHERE course_id IN (SELECT id FROM courses WHERE account_id = ?)", accountID)
+			_, _ = tx.Exec("DELETE FROM courses WHERE account_id = ?", accountID)
+			_, _ = tx.Exec("DELETE FROM medications WHERE account_id = ?", accountID)
+			_, _ = tx.Exec("DELETE FROM account_invitations WHERE account_id = ?", accountID)
+			_, _ = tx.Exec("DELETE FROM account_members WHERE account_id = ?", accountID)
+			_, _ = tx.Exec("DELETE FROM accounts WHERE id = ?", accountID)
 		} else {
 			// Multiple members - just remove user from account, keep data
-			tx.Exec("DELETE FROM account_members WHERE user_id = ?", req.TargetUserID)
+			_, _ = tx.Exec("DELETE FROM account_members WHERE user_id = ?", req.TargetUserID)
 		}
 
 		// Delete the user
-		tx.Exec("DELETE FROM session_tokens WHERE user_id = ?", req.TargetUserID)
-		tx.Exec("DELETE FROM password_reset_tokens WHERE user_id = ?", req.TargetUserID)
-		tx.Exec("DELETE FROM notifications WHERE user_id = ?", req.TargetUserID)
-		tx.Exec("DELETE FROM users WHERE id = ?", req.TargetUserID)
+		_, _ = tx.Exec("DELETE FROM session_tokens WHERE user_id = ?", req.TargetUserID)
+		_, _ = tx.Exec("DELETE FROM password_reset_tokens WHERE user_id = ?", req.TargetUserID)
+		_, _ = tx.Exec("DELETE FROM notifications WHERE user_id = ?", req.TargetUserID)
+		_, _ = tx.Exec("DELETE FROM users WHERE id = ?", req.TargetUserID)
 
 		if err := tx.Commit(); err != nil {
 			http.Error(w, "Failed to delete user", http.StatusInternalServerError)

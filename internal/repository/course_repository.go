@@ -147,7 +147,7 @@ func (r *CourseRepository) Activate(id int64, accountID int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Deactivate all courses in this account
 	query := `UPDATE courses SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE account_id = ?`
@@ -207,7 +207,7 @@ func (r *CourseRepository) Reopen(id int64, accountID int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Deactivate all courses in this account
 	query := `UPDATE courses SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE account_id = ?`

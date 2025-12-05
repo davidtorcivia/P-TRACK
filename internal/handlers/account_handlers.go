@@ -29,14 +29,14 @@ type CreateInvitationRequest struct {
 }
 
 type InvitationResponse struct {
-	ID          int64     `json:"id"`
-	Email       string    `json:"email"`
-	Token       string    `json:"token,omitempty"` // Only included on creation
-	InvitedBy   int64     `json:"invited_by"`
-	Role        string    `json:"role"`
-	CreatedAt   time.Time `json:"created_at"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	AcceptedAt  *time.Time `json:"accepted_at,omitempty"`
+	ID         int64      `json:"id"`
+	Email      string     `json:"email"`
+	Token      string     `json:"token,omitempty"` // Only included on creation
+	InvitedBy  int64      `json:"invited_by"`
+	Role       string     `json:"role"`
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  time.Time  `json:"expires_at"`
+	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
 }
 
 type AcceptInvitationRequest struct {
@@ -73,7 +73,7 @@ func HandleGetAccount(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(account)
+		_ = json.NewEncoder(w).Encode(account)
 	}
 }
 
@@ -112,7 +112,7 @@ func HandleUpdateAccount(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(account)
+		_ = json.NewEncoder(w).Encode(account)
 	}
 }
 
@@ -134,7 +134,7 @@ func HandleGetAccountMembers(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(members)
+		_ = json.NewEncoder(w).Encode(members)
 	}
 }
 
