@@ -558,7 +558,7 @@ func HandleGetTodaySchedule(db *database.DB) http.HandlerFunc {
 		// Return empty state HTML if no medications
 		if len(medications) == 0 {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`
+			_, _ = w.Write([]byte(`
 				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
 					<p>No medications scheduled for today.</p>
 				</div>
@@ -609,7 +609,7 @@ func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 		activeMeds, err := medicationRepo.ListActive(accountID)
 		if err != nil || len(activeMeds) == 0 {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`
+			_, _ = w.Write([]byte(`
 				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
 					<p>No active medications.</p>
 				</div>
@@ -664,6 +664,6 @@ func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 		html += `</div>`
 
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 	}
 }

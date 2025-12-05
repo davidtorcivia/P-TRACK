@@ -444,7 +444,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 
 			accountID = invitation.AccountID
 
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
 				"registration_success",
 				"user",
@@ -460,7 +460,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			if err != nil {
 				// Rollback: Delete the user if account creation fails
 				_ = userRepo.Delete(user.ID)
-				auditRepo.LogWithDetails(
+				_ = auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"registration_failed",
 					"user",
@@ -473,7 +473,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 				return
 			}
 
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
 				"registration_success",
 				"user",

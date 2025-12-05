@@ -920,7 +920,7 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 					<div>
 						<strong>%s</strong> <small style="color: %s;">%s</small>
 						<br><small style="color: var(--pico-muted-color);">%s</small>`,
-					medName, statusColor, strings.Title(status), activity["TimeAgo"])
+					medName, statusColor, cases.Title(language.English).String(status), activity["TimeAgo"])
 			}
 
 			if notes, ok := activity["Notes"].(string); ok && notes != "" {

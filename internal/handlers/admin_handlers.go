@@ -497,7 +497,7 @@ func HandleGetAllAccounts(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(accounts)
+		_ = json.NewEncoder(w).Encode(accounts)
 	}
 }
 
@@ -554,7 +554,7 @@ func HandleDeleteAccount(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "Account deleted successfully",
 			"success": true,
 		})
@@ -596,7 +596,7 @@ func HandleDeactivateUser(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": fmt.Sprintf("User %s successfully", action),
 			"success": true,
 		})
