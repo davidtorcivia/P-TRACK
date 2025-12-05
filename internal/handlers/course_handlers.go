@@ -514,6 +514,8 @@ func HandleCloseCourse(db *database.DB) http.HandlerFunc {
 		// Return updated course
 		course, _ = courseRepo.GetByID(id, accountID)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(course)
+		if err := json.NewEncoder(w).Encode(course); err != nil {
+			log.Printf("Failed to encode course response: %v", err)
+		}
 	}
 }

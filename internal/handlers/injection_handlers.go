@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -268,7 +269,9 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 		// Return success response
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(injection)
+		if err := json.NewEncoder(w).Encode(injection); err != nil {
+			log.Printf("Failed to encode injection response: %v", err)
+		}
 	}
 }
 
@@ -364,7 +367,9 @@ func HandleGetInjections(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(injections)
+		if err := json.NewEncoder(w).Encode(injections); err != nil {
+			log.Printf("Failed to encode injections response: %v", err)
+		}
 	}
 }
 
