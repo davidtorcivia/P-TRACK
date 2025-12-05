@@ -394,7 +394,9 @@ func HandleGetInjection(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(injection)
+		if err := json.NewEncoder(w).Encode(injection); err != nil {
+			log.Printf("Failed to encode injection response: %v", err)
+		}
 	}
 }
 
@@ -512,7 +514,9 @@ func HandleUpdateInjection(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(injection)
+		if err := json.NewEncoder(w).Encode(injection); err != nil {
+			log.Printf("Failed to encode injection response: %v", err)
+		}
 	}
 }
 
@@ -726,7 +730,9 @@ func HandleGetRecentInjections(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(injections)
+		if err := json.NewEncoder(w).Encode(injections); err != nil {
+			log.Printf("Failed to encode injections response: %v", err)
+		}
 	}
 }
 
