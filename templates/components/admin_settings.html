@@ -1,0 +1,293 @@
+{{ define "admin_settings" }}
+{{ if .IsAdmin }}
+<!-- Admin Settings -->
+<article class="card" style="margin-top: var(--space-6); border: 2px solid var(--brand-primary);"
+    x-data="adminSettings()" x-init="loadSettings()">
+    <header
+        style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-6); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3 style="margin: 0; font-size: 1.25rem;">Site Administration</h3>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: var(--color-text-secondary);">Manage site
+                settings, users, and backups</p>
+        </div>
+        <span
+            style="background: var(--brand-primary); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">ADMIN</span>
+    </header>
+
+    <!-- SMTP Configuration -->
+    <div style="margin-bottom: var(--space-8);">
+        <h4 style="margin-bottom: var(--space-4);">Email Configuration (SMTP)</h4>
+        <div id="smtp-feedback" x-html="feedback"></div>
+        <form @submit.prevent="saveSmtpSettings()">
+            <div class="grid-2" style="gap: var(--space-4); margin-bottom: var(--space-4);">
+                <div><label for="smtp-host">SMTP Host</label><input type="text" id="smtp-host" x-model="smtp.host"
+                        placeholder="smtp.example.com" style="margin: 0;"></div>
+                <div><label for="smtp-port">Port</label><input type="number" id="smtp-port" x-model="smtp.port"
+                        placeholder="587" style="margin: 0;"></div>
+            </div>
+            <div class="grid-2" style="gap: var(--space-4); margin-bottom: var(--space-4);">
+                <div><label for="smtp-username">Username</label><input type="text" id="smtp-username"
+                        x-model="smtp.username" placeholder="user@example.com" style="margin: 0;"></div>
+                <div><label for="smtp-password">Password</label><input type="password" id="smtp-password"
+                        x-model="smtp.password" placeholder="••••••••" style="margin: 0;"></div>
+            </div>
+            <div class="grid-2" style="gap: var(--space-4); margin-bottom: var(--space-4);">
+                <div><label for="smtp-from-name">From Name</label><input type="text" id="smtp-from-name"
+                        x-model="smtp.from_name" placeholder="P-TRACK" style="margin: 0;"></div>
+                <div><label for="smtp-from-email">From Email</label><input type="email" id="smtp-from-email"
+                        x-model="smtp.from_email" placeholder="noreply@example.com" style="margin: 0;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4);"><label
+                    style="display: flex; align-items: center; gap: 0.5rem; margin: 0;"><input type="checkbox"
+                        x-model="smtp.enabled"> Enable SMTP</label></div>
+            <div style="display: flex; gap: var(--space-2);">
+                <button type="submit" x-bind:disabled="saving"
+                    x-text="saving ? 'Saving...' : 'Save SMTP Settings'"></button>
+                <button type="button" class="outline" @click="testSmtp()" x-bind:disabled="testing"
+                    x-text="testing ? 'Testing...' : 'Test Connection'"></button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Site Configuration -->
+    <div style="margin-bottom: var(--space-8);">
+        <h4 style="margin-bottom: var(--space-4);">Site Configuration</h4>
+        <div id="site-feedback" x-html="siteFeedback"></div>
+        <form @submit.prevent="saveSiteSettings()">
+            <div class="grid-2" style="gap: var(--space-4); margin-bottom: var(--space-4);">
+                <div><label for="site-url">Site URL</label><input type="url" id="site-url" x-model="site.site_url"
+                        placeholder="https://ptrack.example.com" style="margin: 0;"><small
+                        style="color: var(--color-text-muted);">Used for email links</small></div>
+                <div><label for="site-title">Site Title</label><input type="text" id="site-title"
+                        x-model="site.site_title" placeholder="P-TRACK" style="margin: 0;"><small
+                        style="color: var(--color-text-muted);">Shown in header</small></div>
+            </div>
+            <div style="margin-bottom: var(--space-4);"><label for="site-description">Site Description</label><input
+                    type="text" id="site-description" x-model="site.site_description"
+                    placeholder="Injection Tracking System" style="margin: 0;"></div>
+            <button type="submit" x-bind:disabled="savingSite"
+                x-text="savingSite ? 'Saving...' : 'Save Site Settings'"></button>
+        </form>
+    </div>
+
+    <!-- Site Statistics -->
+    <div style="margin-bottom: var(--space-8);">
+        <h4 style="margin-bottom: var(--space-4);">Site Statistics</h4>
+        <div class="grid-3" style="gap: var(--space-4);">
+            <div
+                style="padding: var(--space-4); background: var(--color-bg-tertiary); border-radius: var(--radius-lg); text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: var(--brand-primary);"
+                    x-text="stats.total_users || '0'">0</div>
+                <div style="font-size: 0.9rem; color: var(--color-text-muted);">Total Users</div>
+            </div>
+            <div
+                style="padding: var(--space-4); background: var(--color-bg-tertiary); border-radius: var(--radius-lg); text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: var(--brand-primary);"
+                    x-text="stats.total_accounts || '0'">0</div>
+                <div style="font-size: 0.9rem; color: var(--color-text-muted);">Total Accounts</div>
+            </div>
+            <div
+                style="padding: var(--space-4); background: var(--color-bg-tertiary); border-radius: var(--radius-lg); text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: var(--brand-primary);"
+                    x-text="stats.total_injections || '0'">0</div>
+                <div style="font-size: 0.9rem; color: var(--color-text-muted);">Total Injections</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management -->
+    <div style="margin-bottom: var(--space-8);">
+        <h4 style="margin-bottom: var(--space-4);">User Management</h4>
+        <div id="users-feedback" x-html="usersFeedback"></div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--color-border);">
+                        <th style="text-align: left; padding: 0.5rem;">Username</th>
+                        <th style="text-align: left; padding: 0.5rem;">Email</th>
+                        <th style="text-align: left; padding: 0.5rem;">Account</th>
+                        <th style="text-align: left; padding: 0.5rem;">Status</th>
+                        <th style="text-align: right; padding: 0.5rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="user in users" :key="user.id">
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 0.5rem;" x-text="user.username"></td>
+                            <td style="padding: 0.5rem;" x-text="user.email || '-'"></td>
+                            <td style="padding: 0.5rem;" x-text="'#' + user.account_id"></td>
+                            <td style="padding: 0.5rem;"><span x-show="user.is_active"
+                                    style="color: var(--success-primary);">Active</span><span x-show="!user.is_active"
+                                    style="color: var(--danger-primary);">Inactive</span></td>
+                            <td style="padding: 0.5rem; text-align: right;">
+                                <button type="button" class="btn-sm outline" @click="toggleUserStatus(user)"
+                                    x-bind:disabled="user.id === 1" style="margin: 0 0.25rem 0 0;"
+                                    x-text="user.is_active ? 'Deactivate' : 'Activate'"></button>
+                                <button type="button" class="btn-sm outline"
+                                    style="color: var(--danger-primary); border-color: var(--danger-primary); margin: 0;"
+                                    @click="deleteUser(user)" x-bind:disabled="user.id === 1">Delete</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Backup Management -->
+    <div style="margin-bottom: var(--space-8);">
+        <h4 style="margin-bottom: var(--space-4);">Database Backups</h4>
+        <div id="backup-feedback" x-html="backupFeedback"></div>
+        <div
+            style="background: var(--color-bg-tertiary); padding: var(--space-4); border-radius: var(--radius-lg); margin-bottom: var(--space-4);">
+            <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin: 0;"><input type="checkbox"
+                        x-model="autoBackup.enabled" @change="saveAutoBackupSettings()"> Auto-backup</label>
+                <select x-model="autoBackup.frequency" @change="saveAutoBackupSettings()"
+                    x-bind:disabled="!autoBackup.enabled" style="margin: 0; width: auto;">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">Keep last <input
+                        type="number" x-model="autoBackup.keep_count" @change="saveAutoBackupSettings()"
+                        x-bind:disabled="!autoBackup.enabled" min="1" max="100" style="width: 60px; margin: 0;">
+                    backups</label>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap;">
+            <button type="button" @click="createBackup()" x-bind:disabled="creatingBackup"
+                x-text="creatingBackup ? 'Creating...' : 'Create Backup'"></button>
+            <button type="button" class="outline" @click="loadBackups()">Refresh</button>
+            <label class="outline"
+                style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); padding: 0.75rem 1.5rem; border: 1px solid var(--brand-primary); border-radius: var(--radius-lg); font-weight: 600; font-size: 0.95rem; color: var(--brand-primary); background: transparent;">Upload
+                Backup <input type="file" accept=".db" @change="uploadBackup($event)" style="display: none;"></label>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--color-border);">
+                        <th style="text-align: left; padding: 0.5rem;">Filename</th>
+                        <th style="text-align: left; padding: 0.5rem;">Size</th>
+                        <th style="text-align: left; padding: 0.5rem;">Created</th>
+                        <th style="text-align: right; padding: 0.5rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="backups.length === 0">
+                        <tr>
+                            <td colspan="4" style="padding: 1rem; text-align: center; color: var(--color-text-muted);">
+                                No backups yet</td>
+                        </tr>
+                    </template>
+                    <template x-for="backup in backups" :key="backup.filename">
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 0.5rem;" x-text="backup.filename"></td>
+                            <td style="padding: 0.5rem;" x-text="backup.size_human"></td>
+                            <td style="padding: 0.5rem;" x-text="backup.created_at"></td>
+                            <td style="padding: 0.5rem; text-align: right;">
+                                <a x-bind:href="'/api/admin/backups/download?file=' + backup.filename"
+                                    class="btn-sm outline" style="margin-right: 0.25rem;">Download</a>
+                                <button type="button" class="btn-sm outline" style="margin-right: 0.25rem;"
+                                    @click="restoreBackup(backup)">Restore</button>
+                                <button type="button" class="btn-sm outline"
+                                    style="color: var(--danger-primary); border-color: var(--danger-primary);"
+                                    @click="deleteBackup(backup)">Delete</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Account Management -->
+    <div>
+        <h4 style="margin-bottom: var(--space-4);">Account Management</h4>
+        <div id="accounts-feedback" x-html="accountsFeedback"></div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--color-border);">
+                        <th style="text-align: left; padding: 0.5rem;">Account</th>
+                        <th style="text-align: left; padding: 0.5rem;">Owner</th>
+                        <th style="text-align: left; padding: 0.5rem;">Members</th>
+                        <th style="text-align: left; padding: 0.5rem;">Created</th>
+                        <th style="text-align: right; padding: 0.5rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="account in accounts" :key="account.id">
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <td style="padding: 0.5rem;" x-text="account.name"></td>
+                            <td style="padding: 0.5rem;" x-text="account.owner_name"></td>
+                            <td style="padding: 0.5rem;" x-text="account.member_count"></td>
+                            <td style="padding: 0.5rem;" x-text="account.created_at"></td>
+                            <td style="padding: 0.5rem; text-align: right;">
+                                <button type="button" class="btn-sm outline"
+                                    style="margin: 0; color: var(--danger-primary); border-color: var(--danger-primary);"
+                                    @click="deleteAccount(account)"
+                                    x-bind:disabled="account.id === myAccountId">Delete</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Confirmation Modal -->
+    <dialog id="admin-confirm-modal" x-ref="confirmModal">
+        <article class="modal-card" style="max-width: 500px; margin: 0;">
+            <header
+                style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-4);">
+                <h3 id="admin-modal-title" style="margin: 0; font-size: 1.25rem;">Confirm Action</h3>
+                <button aria-label="Close" rel="prev" class="close" @click="closeConfirmModal()"
+                    style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; padding: 0.25rem;"></button>
+            </header>
+            <div id="admin-modal-body" style="margin-bottom: var(--space-6);">
+                <p id="admin-modal-message" style="margin-bottom: 0;"></p>
+            </div>
+            <footer style="border-top: 1px solid var(--color-border); padding-top: var(--space-4); margin-top: 0;">
+                <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
+                    <button type="button" class="secondary" @click="closeConfirmModal()">
+                        Cancel
+                    </button>
+                    <button type="button" id="admin-modal-confirm-btn" class="contrast"
+                        style="background-color: var(--danger-primary); border-color: var(--danger-primary);"
+                        @click="executeConfirmAction()">
+                        Confirm
+                    </button>
+                </div>
+            </footer>
+        </article>
+    </dialog>
+
+    <!-- SMTP Test Email Input Modal -->
+    <dialog id="smtp-test-modal" x-ref="smtpTestModal">
+        <article class="modal-card" style="max-width: 500px; margin: 0;">
+            <header
+                style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-4);">
+                <h3 style="margin: 0; font-size: 1.25rem;">Test SMTP Connection</h3>
+                <button aria-label="Close" rel="prev" class="close" @click="$refs.smtpTestModal.close()"
+                    style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; padding: 0.25rem;"></button>
+            </header>
+            <div style="margin-bottom: var(--space-6);">
+                <label for="smtp-test-email">Enter email address to send test email to:</label>
+                <input type="email" id="smtp-test-email" x-model="testEmail" placeholder="test@example.com"
+                    style="margin-top: var(--space-2); margin-bottom: 0;">
+            </div>
+            <footer style="border-top: 1px solid var(--color-border); padding-top: var(--space-4); margin-top: 0;">
+                <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
+                    <button type="button" class="secondary" @click="$refs.smtpTestModal.close()">
+                        Cancel
+                    </button>
+                    <button type="button" @click="sendTestEmail()">
+                        Send Test Email
+                    </button>
+                </div>
+            </footer>
+        </article>
+    </dialog>
+</article>
+{{ end }}
+{{ end }}

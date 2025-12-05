@@ -27,10 +27,10 @@ func SecurityHeaders(cspEnabled, hstsEnabled bool) func(http.Handler) http.Handl
 
 				csp := fmt.Sprintf(
 					"default-src 'self'; "+
-						"script-src 'self' 'nonce-%s' https://unpkg.com https://cdn.jsdelivr.net; "+
-						"style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; "+
+						"script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-%s' https://unpkg.com https://cdn.jsdelivr.net; "+
+						"style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com; "+
 						"img-src 'self' data: https:; "+
-						"font-src 'self' data:; "+
+						"font-src 'self' data: https://fonts.gstatic.com; "+
 						"connect-src 'self'; "+
 						"frame-ancestors 'none'; "+
 						"base-uri 'self'; "+
@@ -139,8 +139,7 @@ func (c *CSRFProtection) ValidateToken(token string) bool {
 		return false
 	}
 
-	// Token is valid - delete it to enforce one-time use
-	c.tokens.Delete(token)
+	// Token is valid - keep it for reuse within expiration window (SPA-friendly)
 	return true
 }
 

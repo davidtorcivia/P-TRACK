@@ -34,7 +34,7 @@ A secure, mobile-first web application for tracking progesterone injections, med
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/davidtorcivia/P-TRACK.git
 cd P-TRACK
 
 # Run setup script
@@ -82,7 +82,7 @@ All configuration is done via environment variables. See `.env.example` for avai
 
 ## Security
 
-### Best Practices Implemented
+### Best Practices
 1. **Password Requirements**: Minimum 8 characters
 2. **Rate Limiting**: Login attempts limited to 5 per 15 minutes
 3. **Session Management**: Tokens expire after 2 weeks
@@ -108,7 +108,7 @@ For production deployment:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   Browser/PWA                    │
+│                   Browser/PWA                   │
 │  ┌────────────┐  ┌──────────┐  ┌──────────────┐ │
 │  │HTMX+Alpine │  │ Service  │  │ IndexedDB    │ │
 │  │  (~30kb)   │  │ Worker   │  │ (offline)    │ │
@@ -116,7 +116,7 @@ For production deployment:
 └─────────────────────────────────────────────────┘
                       ↓ HTTPS/JWT
 ┌─────────────────────────────────────────────────┐
-│              Docker Container                    │
+│              Docker Container                   │
 │  ┌────────────────────────────────────────────┐ │
 │  │         Nginx (Reverse Proxy)              │ │
 │  │  - Rate Limiting                           │ │
@@ -216,15 +216,3 @@ make backup
 ```bash
 cp backups/tracker-YYYYMMDD-HHMMSS.db data/tracker.db
 ```
-
-## API Documentation
-
-See `CLAUDE.md` for complete API documentation including all endpoints and request/response formats.
-
-## License
-
-Private use only - not licensed for public distribution.
-
-## Support
-
-For issues or questions, refer to the design document in `CLAUDE.md`.

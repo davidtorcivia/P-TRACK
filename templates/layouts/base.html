@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ .CSRFToken }}">
-    <title>{{ if .Title }}{{ .Title }} - {{ end }}P-TRACK</title>
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}{{ if .SiteTitle }}{{ .SiteTitle }}{{ else }}P-TRACK{{ end }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,10 +23,16 @@
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#FAFAF9">
     <style>
-        [x-cloak] { display: none !important; }
-        body { font-family: 'Inter', sans-serif; }
+        [x-cloak] {
+            display: none !important;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
     </style>
 </head>
+
 <body>
     {{ if .IsAuthenticated }}
     <!-- Navbar -->
@@ -33,9 +40,11 @@
         <div class="container">
             <!-- Brand -->
             <div class="brand">
-                <a href="/dashboard" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--brand-primary); color: white; border-radius: 8px; font-weight: bold; font-size: 1.25rem;">+</span>
-                    <strong>P-TRACK</strong>
+                <a href="{{ if .SiteURL }}{{ .SiteURL }}{{ else }}/dashboard{{ end }}"
+                    style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
+                    <span
+                        style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--brand-primary); color: white; border-radius: 8px; font-weight: bold; font-size: 1.25rem;">+</span>
+                    <strong>{{ if .SiteTitle }}{{ .SiteTitle }}{{ else }}P-TRACK{{ end }}</strong>
                 </a>
             </div>
 
@@ -49,23 +58,41 @@
                 <li><a href="/inventory">Inventory</a></li>
                 <li>
                     <details class="dropdown" style="position: relative;">
-                        <summary role="button" class="outline" style="border: none; font-weight: 500; cursor: pointer; list-style: none;">Account</summary>
-                        <ul style="position: absolute; right: 0; top: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.5rem; box-shadow: var(--shadow-lg); min-width: 180px; flex-direction: column; gap: 0.25rem; z-index: 1000; margin-top: 0.5rem;">
-                            <li><a href="/settings" style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Settings</a></li>
-                            <li><a href="/reports" style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Reports</a></li>
-                            <li><hr style="margin: 0.25rem 0; border: 0; border-top: 1px solid var(--color-border);"></li>
-                            <li><a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'" style="display: block; padding: 0.5rem 1rem; color: var(--danger-primary); border-radius: var(--radius-md);">Logout</a></li>
+                        <summary role="button" class="outline"
+                            style="border: none; font-weight: 500; cursor: pointer; list-style: none;">Account</summary>
+                        <ul
+                            style="position: absolute; right: 0; top: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.5rem; box-shadow: var(--shadow-lg); min-width: 180px; flex-direction: column; gap: 0.25rem; z-index: 1000; margin-top: 0.5rem;">
+                            <li><a href="/settings"
+                                    style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Settings</a>
+                            </li>
+                            <li><a href="/reports"
+                                    style="display: block; padding: 0.5rem 1rem; color: var(--color-text-primary); border-radius: var(--radius-md);">Reports</a>
+                            </li>
+                            <li>
+                                <hr style="margin: 0.25rem 0; border: 0; border-top: 1px solid var(--color-border);">
+                            </li>
+                            <li><a href="#" hx-post="/api/auth/logout" hx-swap="none"
+                                    hx-on::after-request="window.location.href='/login'"
+                                    style="display: block; padding: 0.5rem 1rem; color: var(--danger-primary); border-radius: var(--radius-md);">Logout</a>
+                            </li>
                         </ul>
                     </details>
                 </li>
                 <li>
-                    <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label" class="outline" style="border:none; padding: var(--space-2); font-size: 1.2rem; display: flex; align-items: center;"></a>
+                    <a href="#" x-data="theme()" @click.prevent="toggle()" x-text="icon" :aria-label="label"
+                        class="outline"
+                        style="border:none; padding: var(--space-2); font-size: 1.2rem; display: flex; align-items: center;"></a>
                 </li>
             </ul>
 
             <!-- Mobile Menu Toggle -->
             <div class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
             </div>
         </div>
     </nav>
@@ -75,8 +102,13 @@
     <div id="mobile-menu-drawer">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
             <strong style="font-size: 1.25rem;">Menu</strong>
-            <button onclick="closeMobileMenu()" class="close" style="background: none; border: none; padding: 0.5rem; cursor: pointer; color: var(--color-text-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <button onclick="closeMobileMenu()" class="close"
+                style="background: none; border: none; padding: 0.5rem; cursor: pointer; color: var(--color-text-primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
         <ul>
@@ -87,15 +119,20 @@
             <li><a href="/medications" onclick="closeMobileMenu()">Medications</a></li>
             <li><a href="/inventory" onclick="closeMobileMenu()">Inventory</a></li>
             <li>
-                <a href="#" onclick="toggleMobileDropdown(event)" style="justify-content: space-between;">Account <span>▼</span></a>
-                <div class="dropdown-content" style="padding-left: 1rem; display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                <a href="#" onclick="toggleMobileDropdown(event)" style="justify-content: space-between;">Account
+                    <span>▼</span></a>
+                <div class="dropdown-content"
+                    style="padding-left: 1rem; display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
                     <a href="/settings" onclick="closeMobileMenu()" style="font-size: 0.9rem;">Settings</a>
                     <a href="/reports" onclick="closeMobileMenu()" style="font-size: 0.9rem;">Reports</a>
-                    <a href="#" hx-post="/api/auth/logout" hx-swap="none" hx-on::after-request="window.location.href='/login'" style="font-size: 0.9rem; color: var(--danger-primary);">Logout</a>
+                    <a href="#" hx-post="/api/auth/logout" hx-swap="none"
+                        hx-on::after-request="window.location.href='/login'"
+                        style="font-size: 0.9rem; color: var(--danger-primary);">Logout</a>
                 </div>
             </li>
             <li style="margin-top: auto; padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
-                 <a href="#" x-data="theme()" @click.prevent="toggle()" style="justify-content: center; background: var(--color-bg-tertiary);">
+                <a href="#" x-data="theme()" @click.prevent="toggle()"
+                    style="justify-content: center; background: var(--color-bg-tertiary);">
                     <span x-text="icon" style="font-size: 1.5rem;"></span>
                 </a>
             </li>
@@ -145,7 +182,7 @@
         const details = document.querySelector('details.dropdown');
         if (details) {
             // Click outside to close
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', function (e) {
                 if (!details.contains(e.target)) {
                     details.removeAttribute('open');
                 }
@@ -160,14 +197,23 @@
     <main>
         {{ if .SuccessMessage }}
         <div class="alert-success">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
             <span>{{ .SuccessMessage }}</span>
         </div>
         {{ end }}
 
         {{ if .ErrorMessage }}
         <div class="alert-danger">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
             <span>{{ .ErrorMessage }}</span>
         </div>
         {{ end }}
@@ -175,10 +221,14 @@
         {{ template "content" . }}
     </main>
 
-    <footer style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-2) 0; margin-top: auto;">
-        <div style="max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4); text-align: center; color: var(--color-text-muted);">
-            <p style="margin-bottom: 0.25rem; font-weight: 600; color: var(--color-text-primary);">P-TRACK</p>
-            <small style="display: block; margin-bottom: 0.5rem;">Personal Injection Tracker</small>
+    <footer
+        style="background-color: var(--color-bg-tertiary); border-top: 1px solid var(--color-border); padding: var(--space-2) 0; margin-top: auto;">
+        <div
+            style="max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4); text-align: center; color: var(--color-text-muted);">
+            <p style="margin-bottom: 0.25rem; font-weight: 600; color: var(--color-text-primary);">{{ if .SiteTitle }}{{
+                .SiteTitle }}{{ else }}P-TRACK{{ end }}</p>
+            <small style="display: block; margin-bottom: 0.5rem;">{{ if .SiteDescription }}{{ .SiteDescription }}{{ else
+                }}Personal Injection Tracker{{ end }}</small>
             <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">
                 <a href="/help" style="color: var(--color-text-secondary); margin: 0 0.5rem;">Help</a> &bull;
                 <a href="/about" style="color: var(--color-text-secondary); margin: 0 0.5rem;">About</a>
@@ -202,4 +252,5 @@
 
     <script src="/static/js/app.js"></script>
 </body>
+
 </html>

@@ -19,7 +19,7 @@ func TestSecurityHeaders(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	tests := []struct {
-		header string
+		header   string
 		contains string
 	}{
 		{"Content-Security-Policy", "default-src 'self'"},
@@ -204,7 +204,7 @@ func TestCSRFProtection_TokenExpiration(t *testing.T) {
 	}
 }
 
-func TestCSRFProtection_TokenOneTimeUse(t *testing.T) {
+func TestCSRFProtection_TokenReusable(t *testing.T) {
 	csrf := NewCSRFProtection("test-secret")
 
 	token := csrf.GenerateToken()
@@ -223,14 +223,14 @@ func TestCSRFProtection_TokenOneTimeUse(t *testing.T) {
 		t.Errorf("Expected status 200 on first use, got %d", w1.Code)
 	}
 
-	// Second use should fail (token already consumed)
+	// Second use should also succeed (tokens are reusable until expiry for SPA support)
 	req2 := httptest.NewRequest(http.MethodPost, "/", nil)
 	req2.Header.Set("X-CSRF-Token", token)
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 
-	if w2.Code != http.StatusForbidden {
-		t.Errorf("Expected status 403 on second use (one-time token), got %d", w2.Code)
+	if w2.Code != http.StatusOK {
+		t.Errorf("Expected status 200 on second use (reusable token), got %d", w2.Code)
 	}
 }
 
@@ -345,11 +345,11 @@ func TestRateLimiter_XForwardedFor(t *testing.T) {
 
 func TestGetIP(t *testing.T) {
 	tests := []struct {
-		name           string
-		remoteAddr     string
-		xForwardedFor  string
-		xRealIP        string
-		expectedIP     string
+		name          string
+		remoteAddr    string
+		xForwardedFor string
+		xRealIP       string
+		expectedIP    string
 	}{
 		{
 			name:       "RemoteAddr only",

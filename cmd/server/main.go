@@ -43,6 +43,9 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
+	// Start auto-backup scheduler
+	handlers.StartAutoBackupScheduler(db)
+
 	// Initialize security components
 	jwtManager := auth.NewJWTManager(cfg.Security.JWTSecret, cfg.Security.SessionDuration)
 	csrfProtection := middleware.NewCSRFProtection(cfg.Security.CSRFSecret)
@@ -222,6 +225,35 @@ func main() {
 			r.Put("/notifications/{id}/read", handlers.HandleMarkNotificationRead(db))
 			r.Post("/notifications/mark-all-read", handlers.HandleMarkAllNotificationsRead(db))
 			r.Delete("/notifications/{id}", handlers.HandleDeleteNotification(db))
+
+			// Admin routes (first user only)
+			r.Route("/admin", func(r chi.Router) {
+				r.Use(handlers.RequireAdmin(db))
+				r.Get("/settings", handlers.HandleGetAdminSettings(db))
+				r.Put("/smtp", handlers.HandleUpdateSMTPSettings(db))
+				r.Post("/smtp/test", handlers.HandleTestSMTP(db))
+				r.Get("/stats", handlers.HandleGetSiteStats(db))
+				// Site settings
+				r.Get("/site", handlers.HandleGetSiteSettings(db))
+				r.Put("/site", handlers.HandleUpdateSiteSettings(db))
+				// User management
+				r.Get("/users", handlers.HandleGetAllUsers(db))
+				r.Put("/users/status", handlers.HandleDeactivateUser(db))
+				r.Delete("/users", handlers.HandleDeleteUser(db))
+				// Account management
+				r.Get("/accounts", handlers.HandleGetAllAccounts(db))
+				r.Delete("/accounts", handlers.HandleDeleteAccount(db))
+				// Backup management
+				r.Get("/backups", handlers.HandleListBackups(db))
+				r.Post("/backups", handlers.HandleCreateBackup(db))
+				r.Get("/backups/download", handlers.HandleDownloadBackup(db))
+				r.Delete("/backups", handlers.HandleDeleteBackup(db))
+				r.Post("/backups/upload", handlers.HandleUploadBackup(db))
+				r.Post("/backups/restore", handlers.HandleRestoreBackup(db))
+				r.Get("/backups/auto", handlers.HandleGetAutoBackupSettings(db))
+				r.Put("/backups/auto", handlers.HandleUpdateAutoBackupSettings(db))
+			})
+			r.Get("/me/admin", handlers.HandleCheckAdmin(db))
 		})
 
 		// Protected web pages (HTML responses)
@@ -328,7 +360,6 @@ func handleGetCSRFToken(csrf *middleware.CSRFProtection) http.HandlerFunc {
 		fmt.Fprintf(w, `{"csrf_token":"%s"}`, token)
 	}
 }
-
 
 // serveManifest serves the PWA manifest.json file
 func serveManifest(w http.ResponseWriter, r *http.Request) {

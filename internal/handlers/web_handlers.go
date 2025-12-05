@@ -18,13 +18,13 @@ import (
 )
 
 // getBasePageData returns common data for all authenticated pages
-func getBasePageData(r *http.Request, csrf *middleware.CSRFProtection) map[string]interface{} {
+func getBasePageData(db *database.DB, r *http.Request, csrf *middleware.CSRFProtection) map[string]interface{} {
 	userID := middleware.GetUserID(r.Context())
 	accountID := middleware.GetAccountID(r.Context())
 
 	data := map[string]interface{}{
 		"IsAuthenticated": true,
-		"AccountID":        accountID,
+		"AccountID":       accountID,
 		"UserID":          userID,
 	}
 
@@ -32,6 +32,12 @@ func getBasePageData(r *http.Request, csrf *middleware.CSRFProtection) map[strin
 	if csrf != nil {
 		data["CSRFToken"] = csrf.GenerateToken()
 	}
+
+	// Inject site settings
+	site := getSiteSettings(db)
+	data["SiteTitle"] = site.SiteTitle
+	data["SiteURL"] = site.SiteURL
+	data["SiteDescription"] = site.SiteDescription
 
 	return data
 }
@@ -70,11 +76,11 @@ func HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	// Render login.html - the Render function will execute base.html with the login content block
 	if err := web.Render(w, "login.html", data); err != nil {
 		http.Error(w, "Failed to render template: "+err.Error(), http.StatusInternalServerError)
-	// Redirect to dashboard if already logged in
-	if userCtx := middleware.GetUserContext(r); userCtx != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
-		return
-	}
+		// Redirect to dashboard if already logged in
+		if userCtx := middleware.GetUserContext(r); userCtx != nil {
+			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			return
+		}
 
 		return
 	}
@@ -83,7 +89,7 @@ func HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 // HandleRegisterPage renders the registration page
 func HandleRegisterPage(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"Title": "Register",
+		"Title":           "Register",
 		"IsAuthenticated": false,
 	}
 
@@ -97,7 +103,7 @@ func HandleRegisterPage(w http.ResponseWriter, r *http.Request) {
 // HandleForgotPasswordPage renders the forgot password page
 func HandleForgotPasswordPage(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"Title": "Forgot Password",
+		"Title":           "Forgot Password",
 		"IsAuthenticated": false,
 	}
 
@@ -120,7 +126,7 @@ func HandleSetupPage(db *database.DB) http.HandlerFunc {
 		}
 
 		data := map[string]interface{}{
-			"Title": "First-Run Setup",
+			"Title":           "First-Run Setup",
 			"IsAuthenticated": false,
 		}
 
@@ -135,7 +141,7 @@ func HandleSetupPage(db *database.DB) http.HandlerFunc {
 // HandleDashboard renders the dashboard page
 func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Dashboard"
 
 		// Get user's timezone preference
@@ -259,7 +265,7 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 // HandleInjectionsPage renders the injections history page
 func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Injections"
 
 		// Get user's timezone preference
@@ -303,7 +309,7 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 							"Date":      convertedTime.Format("Jan 2, 2006"),
 							"Time":      timeStr,
 							"Side":      strings.Title(side),
-							"SideLower": side,  // Add lowercase version for radio buttons
+							"SideLower": side, // Add lowercase version for radio buttons
 							"PainLevel": painLevel.Int64,
 							"Notes":     notes.String,
 						})
@@ -324,7 +330,7 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 // HandleSymptomsPage renders the symptoms page
 func HandleSymptomsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Symptoms"
 		accountID := middleware.GetAccountID(r.Context())
 
@@ -349,7 +355,7 @@ func HandleSymptomsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 // HandleMedicationsPage renders the medications page
 func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Medications - Injection Tracker"
 		data["Action"] = r.URL.Query().Get("action")
 
@@ -398,7 +404,7 @@ func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 // HandleInventoryPage renders the inventory page
 func HandleInventoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Inventory - Injection Tracker"
 
 		// Fetch inventory items
@@ -526,7 +532,7 @@ func getInventoryIcon(itemType string) string {
 // HandleCoursesPage renders the courses page
 func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Courses"
 		accountID := middleware.GetAccountID(r.Context())
 
@@ -535,11 +541,11 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 		activeCourse, err := courseRepo.GetActiveCourse(accountID)
 		if err == nil && activeCourse != nil {
 			activeData := map[string]interface{}{
-				"ID":            activeCourse.ID,
-				"Name":          activeCourse.Name,
-				"StartDate":     activeCourse.StartDate.Format("Jan 2, 2006"),
-				"StartDateISO":  activeCourse.StartDate.Format("2006-01-02"),
-				"Notes":         "",
+				"ID":           activeCourse.ID,
+				"Name":         activeCourse.Name,
+				"StartDate":    activeCourse.StartDate.Format("Jan 2, 2006"),
+				"StartDateISO": activeCourse.StartDate.Format("2006-01-02"),
+				"Notes":        "",
 			}
 			if activeCourse.ExpectedEndDate.Valid {
 				activeData["ExpectedEndDate"] = activeCourse.ExpectedEndDate.Time.Format("Jan 2, 2006")
@@ -593,7 +599,7 @@ func HandleCoursesPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 // HandleCalendarPage renders the calendar page
 func HandleCalendarPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Calendar - Injection Tracker"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -607,7 +613,7 @@ func HandleCalendarPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 // HandleReportsPage renders the reports page
 func HandleReportsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Reports - Injection Tracker"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -621,22 +627,22 @@ func HandleReportsPage(db *database.DB, csrf *middleware.CSRFProtection) http.Ha
 // HandleSettingsPage renders the settings page
 func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Settings"
 
 		userID := middleware.GetUserID(r.Context())
 
 		// Get user-specific settings
 		settings := map[string]interface{}{
-			"Theme":                "auto",
-			"Timezone":             "America/New_York",
-			"DateFormat":           "MM/DD/YYYY",
-			"TimeFormat":           "12h",
-			"AdvancedMode":         false,
-			"EnableNotifications":  false,
-			"InjectionReminders":   false,
-			"ReminderTime":         "19:00",
-			"LowStockAlerts":       true,
+			"Theme":               "auto",
+			"Timezone":            "America/New_York",
+			"DateFormat":          "MM/DD/YYYY",
+			"TimeFormat":          "12h",
+			"AdvancedMode":        false,
+			"EnableNotifications": false,
+			"InjectionReminders":  false,
+			"ReminderTime":        "19:00",
+			"LowStockAlerts":      true,
 		}
 
 		// Query user settings
@@ -678,6 +684,9 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 			"Email":    "",
 		}
 		data["DatabaseSize"] = "N/A"
+
+		// Check if user is admin (first user)
+		data["IsAdmin"] = IsAdmin(db, userID)
 		data["LastBackup"] = "N/A"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -706,7 +715,7 @@ func HandleLogSymptomPage(db *database.DB) http.HandlerFunc {
 // HandleEditSymptomPage renders the edit symptom page
 func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Edit Symptom - Injection Tracker"
 		accountID := middleware.GetAccountID(r.Context())
 
@@ -746,7 +755,7 @@ func HandleEditSymptomPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 // HandleSymptomsHistoryPage renders the symptoms history page
 func HandleSymptomsHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Symptom History - Injection Tracker"
 		accountID := middleware.GetAccountID(r.Context())
 
@@ -930,7 +939,7 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 // HandleActivityPage renders the full activity history page
 func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Activity History - Injection Tracker"
 
 		// Get user's timezone preference
@@ -971,14 +980,14 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 				convertedTime := ConvertToUserTZ(timestamp, userTimezone)
 				formattedDateTime := FormatDateTimeForUser(db, userID, timestamp)
 				activities = append(activities, map[string]interface{}{
-					"Type":      actType,
-					"Detail1":   detail1,
-					"Detail2":   detail2,
-					"Notes":     notes.String,
-					"Timestamp": convertedTime,
-					"TimeAgo":   formatTimeAgoWeb(convertedTime),
+					"Type":          actType,
+					"Detail1":       detail1,
+					"Detail2":       detail2,
+					"Notes":         notes.String,
+					"Timestamp":     convertedTime,
+					"TimeAgo":       formatTimeAgoWeb(convertedTime),
 					"FormattedDate": formattedDateTime,
-					"ID":        id,
+					"ID":            id,
 				})
 			}
 		}
@@ -996,7 +1005,7 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 // HandleInventoryHistoryPage renders the full inventory history page
 func HandleInventoryHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Inventory History - Injection Tracker"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -1010,25 +1019,25 @@ func HandleInventoryHistoryPage(db *database.DB, csrf *middleware.CSRFProtection
 // HandleInventoryItemHistoryPage renders the inventory history for a specific item type
 func HandleInventoryItemHistoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		itemType := chi.URLParam(r, "itemType")
-		
+
 		// Display names for item types
 		displayNames := map[string]string{
-			"progesterone":      "Progesterone",
-			"draw_needle":       "Draw Needles",
-			"injection_needle":  "Injection Needles",
+			"progesterone":     "Progesterone",
+			"draw_needle":      "Draw Needles",
+			"injection_needle": "Injection Needles",
 			"syringe":          "Syringes",
 			"swab":             "Alcohol Swabs",
 			"gauze":            "Gauze Pads",
 		}
-		
+
 		displayName, ok := displayNames[itemType]
 		if !ok {
 			http.Error(w, "Invalid item type", http.StatusBadRequest)
 			return
 		}
-		
+
 		data["ItemType"] = itemType
 		data["DisplayName"] = displayName
 		data["Title"] = displayName + " History - Injection Tracker"

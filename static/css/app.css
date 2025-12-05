@@ -509,3 +509,52 @@ td {
 #mobile-menu-drawer a:hover {
     background-color: var(--color-bg-tertiary);
 }
+
+/* ===== SIMPLIFIED UI - Remove visual effects ===== */
+/* No box shadows except admin border */
+*:not(.admin-border) {
+    box-shadow: none !important;
+}
+
+/* No hover transforms */
+button:hover,
+[role="button"]:hover,
+.btn-cta:hover,
+.btn-primary:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* No card hover effects */
+.card:hover, article:hover {
+    box-shadow: none !important;
+    border-color: var(--color-border) !important;
+}
+
+/* No focus rings/outlines (except for accessibility) */
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Keep keyboard focus visible for accessibility */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--brand-primary) !important;
+    outline-offset: 2px !important;
+}
+
+/* No transitions/animations for transforms */
+* {
+    transform: none !important;
+}
+
+/* Remove transition bounce */
+#mobile-menu-drawer {
+    transition: right 0.2s ease !important;
+}

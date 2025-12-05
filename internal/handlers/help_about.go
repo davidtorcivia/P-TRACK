@@ -11,7 +11,7 @@ import (
 // HandleHelpPage renders the help page
 func HandleHelpPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Help & Support"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -25,7 +25,7 @@ func HandleHelpPage(db *database.DB, csrf *middleware.CSRFProtection) http.Handl
 // HandleAboutPage renders the about page
 func HandleAboutPage(db *database.DB, csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := getBasePageData(r, csrf)
+		data := getBasePageData(db, r, csrf)
 		data["Title"] = "About"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
