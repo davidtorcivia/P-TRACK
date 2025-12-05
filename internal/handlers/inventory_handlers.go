@@ -17,17 +17,17 @@ import (
 
 // InventoryItemResponse represents the API response for inventory items
 type InventoryItemResponse struct {
-	ID                 int64      `json:"id"`
-	ItemType           string     `json:"item_type"`
-	Quantity           float64    `json:"quantity"`
-	Unit               string     `json:"unit"`
-	ExpirationDate     *time.Time `json:"expiration_date,omitempty"`
-	LotNumber          *string    `json:"lot_number,omitempty"`
-	LowStockThreshold  *float64   `json:"low_stock_threshold,omitempty"`
-	Notes              *string    `json:"notes,omitempty"`
-	IsLowStock         bool       `json:"is_low_stock"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	ID                int64      `json:"id"`
+	ItemType          string     `json:"item_type"`
+	Quantity          float64    `json:"quantity"`
+	Unit              string     `json:"unit"`
+	ExpirationDate    *time.Time `json:"expiration_date,omitempty"`
+	LotNumber         *string    `json:"lot_number,omitempty"`
+	LowStockThreshold *float64   `json:"low_stock_threshold,omitempty"`
+	Notes             *string    `json:"notes,omitempty"`
+	IsLowStock        bool       `json:"is_low_stock"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 // UpdateInventoryRequest represents the request to update an inventory item
@@ -73,27 +73,27 @@ func (fd *FlexibleDate) UnmarshalJSON(b []byte) error {
 
 // AdjustInventoryRequest represents a manual inventory adjustment
 type AdjustInventoryRequest struct {
-	ChangeAmount       float64       `json:"change_amount"`
-	Reason             string        `json:"reason"`
-	Notes              *string       `json:"notes,omitempty"`
-	ExpirationDate     *FlexibleDate `json:"expiration_date,omitempty"`
-	LotNumber          *string       `json:"lot_number,omitempty"`
-	LowStockThreshold  *float64      `json:"low_stock_threshold,omitempty"`
+	ChangeAmount      float64       `json:"change_amount"`
+	Reason            string        `json:"reason"`
+	Notes             *string       `json:"notes,omitempty"`
+	ExpirationDate    *FlexibleDate `json:"expiration_date,omitempty"`
+	LotNumber         *string       `json:"lot_number,omitempty"`
+	LowStockThreshold *float64      `json:"low_stock_threshold,omitempty"`
 }
 
 // InventoryHistoryResponse represents an inventory history entry
 type InventoryHistoryResponse struct {
-	ID             int64      `json:"id"`
-	ItemType       string     `json:"item_type"`
-	ChangeAmount   float64    `json:"change_amount"`
-	QuantityBefore float64    `json:"quantity_before"`
-	QuantityAfter  float64    `json:"quantity_after"`
-	Reason         string     `json:"reason"`
-	ReferenceID    *int64     `json:"reference_id,omitempty"`
-	ReferenceType  *string    `json:"reference_type,omitempty"`
-	PerformedBy    *int64     `json:"performed_by,omitempty"`
-	Timestamp      time.Time  `json:"timestamp"`
-	Notes          *string    `json:"notes,omitempty"`
+	ID             int64     `json:"id"`
+	ItemType       string    `json:"item_type"`
+	ChangeAmount   float64   `json:"change_amount"`
+	QuantityBefore float64   `json:"quantity_before"`
+	QuantityAfter  float64   `json:"quantity_after"`
+	Reason         string    `json:"reason"`
+	ReferenceID    *int64    `json:"reference_id,omitempty"`
+	ReferenceType  *string   `json:"reference_type,omitempty"`
+	PerformedBy    *int64    `json:"performed_by,omitempty"`
+	Timestamp      time.Time `json:"timestamp"`
+	Notes          *string   `json:"notes,omitempty"`
 }
 
 // InventoryAlertResponse represents a low stock or expiration alert
@@ -102,7 +102,7 @@ type InventoryAlertResponse struct {
 	Quantity          float64    `json:"quantity"`
 	LowStockThreshold float64    `json:"low_stock_threshold,omitempty"`
 	Unit              string     `json:"unit"`
-	Severity          string     `json:"severity"` // "warning", "critical"
+	Severity          string     `json:"severity"`   // "warning", "critical"
 	AlertType         string     `json:"alert_type"` // "low_stock", "expiring", "expired"
 	ExpirationDate    *time.Time `json:"expiration_date,omitempty"`
 	DaysUntilExpiry   *int       `json:"days_until_expiry,omitempty"`
@@ -396,12 +396,12 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 
 		// Valid reasons for manual adjustment
 		validReasons := map[string]bool{
-			"restock":            true,
-			"manual_adjustment":  true,
-			"correction":         true,
-			"expired":            true,
-			"damaged":            true,
-			"initial_setup":      true,
+			"restock":           true,
+			"manual_adjustment": true,
+			"correction":        true,
+			"expired":           true,
+			"damaged":           true,
+			"initial_setup":     true,
 		}
 		if !validReasons[req.Reason] {
 			http.Error(w, "Invalid reason. Must be one of: restock, manual_adjustment, correction, expired, damaged, initial_setup", http.StatusBadRequest)
@@ -414,7 +414,7 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Get current quantity (or create item if doesn't exist)
 		var currentQty float64
@@ -699,12 +699,12 @@ func HandleGetInventoryAlerts(db *database.DB) http.HandlerFunc {
 
 func isValidItemType(itemType string) bool {
 	validTypes := map[string]bool{
-		"progesterone":      true,
-		"draw_needle":       true,
-		"injection_needle":  true,
-		"syringe":           true,
-		"swab":              true,
-		"gauze":             true,
+		"progesterone":     true,
+		"draw_needle":      true,
+		"injection_needle": true,
+		"syringe":          true,
+		"swab":             true,
+		"gauze":            true,
 	}
 	return validTypes[itemType]
 }

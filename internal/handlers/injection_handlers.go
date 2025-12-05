@@ -17,16 +17,16 @@ import (
 
 // CreateInjectionRequest represents the request body for creating an injection
 type CreateInjectionRequest struct {
-	CourseID       int64   `json:"course_id"`
-	Side           string  `json:"side"`
-	Timestamp      *string `json:"timestamp,omitempty"`
+	CourseID       int64    `json:"course_id"`
+	Side           string   `json:"side"`
+	Timestamp      *string  `json:"timestamp,omitempty"`
 	SiteX          *float64 `json:"site_x,omitempty"`
 	SiteY          *float64 `json:"site_y,omitempty"`
-	PainLevel      *int    `json:"pain_level,omitempty"`
-	HasKnots       bool    `json:"has_knots"`
-	SiteReaction   *string `json:"site_reaction,omitempty"`
-	Notes          *string `json:"notes,omitempty"`
-	AdministeredBy *int64  `json:"administered_by,omitempty"`
+	PainLevel      *int     `json:"pain_level,omitempty"`
+	HasKnots       bool     `json:"has_knots"`
+	SiteReaction   *string  `json:"site_reaction,omitempty"`
+	Notes          *string  `json:"notes,omitempty"`
+	AdministeredBy *int64   `json:"administered_by,omitempty"`
 }
 
 // UpdateInjectionRequest represents the request body for updating an injection
@@ -43,13 +43,13 @@ type UpdateInjectionRequest struct {
 
 // InjectionStatsResponse represents injection statistics
 type InjectionStatsResponse struct {
-	TotalInjections int                       `json:"total_injections"`
-	LeftCount       int                       `json:"left_count"`
-	RightCount      int                       `json:"right_count"`
-	AvgPainLevel    float64                   `json:"avg_pain_level"`
-	LastInjection   *models.Injection         `json:"last_injection,omitempty"`
-	FrequencyByDay  map[string]int            `json:"frequency_by_day"`
-	PainTrend       []PainTrendPoint          `json:"pain_trend"`
+	TotalInjections int               `json:"total_injections"`
+	LeftCount       int               `json:"left_count"`
+	RightCount      int               `json:"right_count"`
+	AvgPainLevel    float64           `json:"avg_pain_level"`
+	LastInjection   *models.Injection `json:"last_injection,omitempty"`
+	FrequencyByDay  map[string]int    `json:"frequency_by_day"`
+	PainTrend       []PainTrendPoint  `json:"pain_trend"`
 }
 
 // PainTrendPoint represents a point in the pain trend graph
@@ -122,7 +122,7 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Insert injection
 		result, err := tx.Exec(`
@@ -533,7 +533,7 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Get inventory changes for this injection
 		rows, err := tx.Query(`
@@ -547,8 +547,8 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 		}
 
 		type inventoryRollback struct {
-			itemType string
-			amount   float64
+			itemType  string
+			amount    float64
 			qtyBefore float64
 		}
 		rollbacks := []inventoryRollback{}
@@ -687,7 +687,7 @@ func HandleGetRecentInjections(db *database.DB) http.HandlerFunc {
 		if r.Header.Get("HX-Request") == "true" {
 			w.Header().Set("Content-Type", "text/html")
 			if len(injections) == 0 {
-				w.Write([]byte(`<p style="text-align: center; color: var(--pico-muted-color);">No injections recorded yet.</p>`))
+				_, _ = w.Write([]byte(`<p style="text-align: center; color: var(--pico-muted-color);">No injections recorded yet.</p>`))
 				return
 			}
 

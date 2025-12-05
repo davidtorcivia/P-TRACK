@@ -150,7 +150,7 @@ func HandleGetAdminSettings(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}
 }
 
@@ -232,7 +232,7 @@ func HandleUpdateSMTPSettings(db *database.DB) http.HandlerFunc {
 		// Return updated settings (without password)
 		smtp := getSMTPSettings(db)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "SMTP settings updated successfully",
 			"smtp":    smtp,
 		})
@@ -276,7 +276,7 @@ func HandleTestSMTP(db *database.DB) http.HandlerFunc {
 		err := sendTestEmail(smtp, password, req.Email)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"message": fmt.Sprintf("Failed to send test email: %v", err),
 				"success": false,
 			})

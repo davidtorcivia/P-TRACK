@@ -194,13 +194,13 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 
 			// Total injections
 			var totalInjections int
-			db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ?", activeCourse.ID).Scan(&totalInjections)
+			_ = db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ?", activeCourse.ID).Scan(&totalInjections)
 			stats["TotalInjections"] = totalInjections
 
 			// Side counts
 			var leftCount, rightCount int
-			db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ? AND side = 'left'", activeCourse.ID).Scan(&leftCount)
-			db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ? AND side = 'right'", activeCourse.ID).Scan(&rightCount)
+			_ = db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ? AND side = 'left'", activeCourse.ID).Scan(&leftCount)
+			_ = db.QueryRow("SELECT COUNT(*) FROM injections WHERE course_id = ? AND side = 'right'", activeCourse.ID).Scan(&rightCount)
 			stats["LeftCount"] = leftCount
 			stats["RightCount"] = rightCount
 

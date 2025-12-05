@@ -14,25 +14,25 @@ import (
 
 // ExportData represents the data structure for exports
 type ExportData struct {
-	Injections []ExportInjection
-	Symptoms   []ExportSymptom
+	Injections  []ExportInjection
+	Symptoms    []ExportSymptom
 	Medications []ExportMedication
-	StartDate  time.Time
-	EndDate    time.Time
-	CourseID   int64
-	CourseName string
+	StartDate   time.Time
+	EndDate     time.Time
+	CourseID    int64
+	CourseName  string
 }
 
 // ExportInjection represents an injection for export
 type ExportInjection struct {
-	ID              int64
-	Timestamp       time.Time
-	Side            string
-	PainLevel       int
-	HasKnots        bool
-	SiteReaction    string
-	Notes           string
-	AdministeredBy  string
+	ID             int64
+	Timestamp      time.Time
+	Side           string
+	PainLevel      int
+	HasKnots       bool
+	SiteReaction   string
+	Notes          string
+	AdministeredBy string
 }
 
 // ExportSymptom represents a symptom for export
@@ -116,7 +116,7 @@ func HandleExportPDF(db *database.DB) http.HandlerFunc {
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
 
 		// Write PDF to response
-		w.Write(pdfBytes)
+		_, _ = w.Write(pdfBytes)
 	}
 }
 
@@ -202,7 +202,7 @@ func HandleExportCSV(db *database.DB) http.HandlerFunc {
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", csvBuffer.Len()))
 
 		// Write CSV to response
-		w.Write(csvBuffer.Bytes())
+		_, _ = w.Write(csvBuffer.Bytes())
 	}
 }
 

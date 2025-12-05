@@ -24,7 +24,7 @@ type CreateMedicationRequest struct {
 	StartDate         *string `json:"start_date,omitempty"`
 	EndDate           *string `json:"end_date,omitempty"`
 	Notes             *string `json:"notes,omitempty"`
-	ScheduledTime     *string `json:"scheduled_time,omitempty"`     // HH:MM format
+	ScheduledTime     *string `json:"scheduled_time,omitempty"`      // HH:MM format
 	TimeWindowMinutes *int64  `json:"time_window_minutes,omitempty"` // Optional time window
 	ReminderEnabled   *bool   `json:"reminder_enabled,omitempty"`
 	IsActive          *bool   `json:"is_active,omitempty"`
@@ -151,7 +151,7 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 			ScheduledTime:     nullString(req.ScheduledTime),
 			TimeWindowMinutes: nullInt64(req.TimeWindowMinutes),
 			ReminderEnabled:   reminderEnabled,
-		AccountID:         accountID,
+			AccountID:         accountID,
 		}
 
 		medicationRepo := repository.NewMedicationRepository(db)
@@ -620,7 +620,7 @@ func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 		// Check which medications were taken today
 		for _, med := range activeMeds {
 			var count int
-			db.QueryRow(`
+			_ = db.QueryRow(`
 				SELECT COUNT(*) FROM medication_logs
 				WHERE medication_id = ?
 				AND DATE(timestamp) = DATE('now')

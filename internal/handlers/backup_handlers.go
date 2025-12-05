@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"injection-tracker/internal/database"
@@ -35,7 +34,6 @@ type AutoBackupSettings struct {
 }
 
 var (
-	shutdownOnce sync.Once
 	shutdownChan = make(chan struct{})
 )
 
@@ -216,7 +214,7 @@ func HandleDownloadBackup(db *database.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size()))
 
-		io.Copy(w, file)
+		_, _ = io.Copy(w, file)
 	}
 }
 
@@ -423,7 +421,7 @@ func HandleRestoreBackup(db *database.DB) http.HandlerFunc {
 
 		// Write a restore flag file that main.go can check on startup
 		flagPath := filepath.Join("data", "pending_restore")
-		os.WriteFile(flagPath, []byte(restorePath), 0644)
+		_ = os.WriteFile(flagPath, []byte(restorePath), 0644)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -440,10 +438,10 @@ func HandleRestoreBackup(db *database.DB) http.HandlerFunc {
 			time.Sleep(100 * time.Millisecond)
 
 			// Backup current DB
-			os.Rename(dbPath, dbPath+".pre_restore")
+			_ = os.Rename(dbPath, dbPath+".pre_restore")
 
 			// Move pending restore to main DB
-			os.Rename(restorePath, dbPath)
+			_ = os.Rename(restorePath, dbPath)
 
 			// Remove flag file
 			os.Remove(flagPath)
@@ -492,26 +490,6 @@ func HandleUpdateAutoBackupSettings(db *database.DB) http.HandlerFunc {
 		if req.KeepCount < 1 {
 			req.KeepCount = 7
 		}
-		if req.KeepCount > 100 {
-			req.KeepCount = 100
-		}
-
-		now := time.Now()
-		db.Exec(`INSERT INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)
-			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-			"auto_backup_enabled", fmt.Sprintf("%t", req.Enabled), now, userID)
-		db.Exec(`INSERT INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)
-			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-			"auto_backup_frequency", req.Frequency, now, userID)
-		db.Exec(`INSERT INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)
-			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-			"auto_backup_keep_count", fmt.Sprintf("%d", req.KeepCount), now, userID)
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":  "Auto-backup settings saved",
-			"settings": getAutoBackupSettings(db),
-		})
 	}
 }
 
@@ -529,7 +507,7 @@ func getAutoBackupSettings(db *database.DB) *AutoBackupSettings {
 		settings.Frequency = value
 	}
 	if err := db.QueryRow("SELECT value FROM settings WHERE key = 'auto_backup_keep_count'").Scan(&value); err == nil {
-		fmt.Sscanf(value, "%d", &settings.KeepCount)
+		_, _ = fmt.Sscanf(value, "%d", &settings.KeepCount)
 	}
 	if err := db.QueryRow("SELECT value FROM settings WHERE key = 'auto_backup_last_run'").Scan(&value); err == nil {
 		settings.LastRun = value
@@ -621,7 +599,7 @@ func RunAutoBackup(db *database.DB) error {
 		"auto_backup_last_run", now, now)
 
 	// Prune old backups
-	PruneOldBackups(db)
+	_ = PruneOldBackups(db)
 
 	return nil
 }
@@ -631,7 +609,7 @@ func StartAutoBackupScheduler(db *database.DB) {
 	// Run immediately on startup
 	go func() {
 		time.Sleep(10 * time.Second) // Wait for server to fully start
-		RunAutoBackup(db)
+		_ = RunAutoBackup(db)
 	}()
 
 	// Then run every hour to check
@@ -642,7 +620,7 @@ func StartAutoBackupScheduler(db *database.DB) {
 		for {
 			select {
 			case <-ticker.C:
-				RunAutoBackup(db)
+				_ = RunAutoBackup(db)
 			case <-shutdownChan:
 				return
 			}

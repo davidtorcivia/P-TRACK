@@ -165,7 +165,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 					fmt.Printf("Error locking account: %v\n", err)
 				}
 
-				auditRepo.LogWithDetails(
+				_ = auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"account_locked",
 					"user",
@@ -179,7 +179,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 				return
 			}
 
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
 				"login_failed",
 				"user",
@@ -207,7 +207,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 		accountRepo := repository.NewAccountRepository(db.DB)
 		account, err := accountRepo.GetUserAccount(user.ID)
 		if err != nil {
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
 				"login_failed",
 				"user",
@@ -398,7 +398,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			invitation, err := accountRepo.GetInvitationByToken(req.InviteToken)
 			if err != nil {
 				// Rollback: Delete the user if invitation is invalid
-				userRepo.Delete(user.ID)
+				_ = userRepo.Delete(user.ID)
 				auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"registration_failed",
@@ -414,14 +414,14 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 
 			// Check if invitation is expired
 			if time.Now().After(invitation.ExpiresAt) {
-				userRepo.Delete(user.ID)
+				_ = userRepo.Delete(user.ID)
 				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invitation has expired")
 				return
 			}
 
 			// Check if already accepted
 			if invitation.AcceptedAt.Valid {
-				userRepo.Delete(user.ID)
+				_ = userRepo.Delete(user.ID)
 				respondErrorWithRequest(w, r, http.StatusBadRequest, "Invitation has already been used")
 				return
 			}
