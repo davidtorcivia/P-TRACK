@@ -223,12 +223,12 @@ func TestInventoryRepository_AdjustQuantity(t *testing.T) {
 	repo := NewInventoryRepository(db)
 
 	tests := []struct {
-		name           string
-		itemType       string
-		delta          float64
-		reason         string
-		expectError    bool
-		expectedFinal  float64
+		name          string
+		itemType      string
+		delta         float64
+		reason        string
+		expectError   bool
+		expectedFinal float64
 	}{
 		{
 			name:          "Positive adjustment (restock)",
@@ -534,10 +534,10 @@ func TestInventoryRepository_ListLowStock(t *testing.T) {
 		quantity  float64
 		threshold float64
 	}{
-		{"progesterone", 1.0, 2.0},        // Below threshold
-		{"draw_needle", 3.0, 5.0},         // Below threshold
-		{"injection_needle", 10.0, 5.0},   // Above threshold
-		{"syringe", 20.0, 5.0},            // Above threshold
+		{"progesterone", 1.0, 2.0},      // Below threshold
+		{"draw_needle", 3.0, 5.0},       // Below threshold
+		{"injection_needle", 10.0, 5.0}, // Above threshold
+		{"syringe", 20.0, 5.0},          // Above threshold
 	}
 
 	for _, item := range items {
@@ -578,7 +578,7 @@ func TestInventoryRepository_GetHistory(t *testing.T) {
 
 	// Make several adjustments
 	for i := 0; i < 5; i++ {
-		repo.AdjustQuantity(
+		_ = repo.AdjustQuantity(
 			"progesterone",
 			1,
 			-0.5,
@@ -685,19 +685,19 @@ func BenchmarkInventoryRepository_DecrementForInjection(b *testing.B) {
 	db, _ := database.Open(dbPath)
 	defer db.Close()
 
-	db.Exec("CREATE TABLE inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT UNIQUE NOT NULL CHECK(item_type IN ('progesterone', 'draw_needle', 'injection_needle', 'syringe', 'swab', 'gauze')), quantity REAL NOT NULL, unit TEXT NOT NULL, expiration_date TIMESTAMP, lot_number TEXT, low_stock_threshold REAL, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
-	db.Exec("CREATE TABLE inventory_history (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT NOT NULL, change_amount REAL NOT NULL, quantity_before REAL NOT NULL, quantity_after REAL NOT NULL, reason TEXT NOT NULL, reference_id INTEGER, reference_type TEXT, performed_by INTEGER, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT);")
+	_, _ = db.Exec("CREATE TABLE inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT UNIQUE NOT NULL CHECK(item_type IN ('progesterone', 'draw_needle', 'injection_needle', 'syringe', 'swab', 'gauze')), quantity REAL NOT NULL, unit TEXT NOT NULL, expiration_date TIMESTAMP, lot_number TEXT, low_stock_threshold REAL, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
+	_, _ = db.Exec("CREATE TABLE inventory_history (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT NOT NULL, change_amount REAL NOT NULL, quantity_before REAL NOT NULL, quantity_after REAL NOT NULL, reason TEXT NOT NULL, reference_id INTEGER, reference_type TEXT, performed_by INTEGER, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, notes TEXT);")
 
 	// Create items with large quantities for benchmarking
 	items := []string{"progesterone", "draw_needle", "injection_needle", "syringe", "swab"}
 	for _, itemType := range items {
-		db.Exec("INSERT INTO inventory_items (item_type, quantity, unit) VALUES (?, ?, ?)", itemType, 10000.0, "count")
+		_, _ = db.Exec("INSERT INTO inventory_items (item_type, quantity, unit) VALUES (?, ?, ?)", itemType, 10000.0, "count")
 	}
 
 	repo := NewInventoryRepository(db)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		repo.DecrementForInjection(int64(i), 1, 1, 1.0)
+		_ = repo.DecrementForInjection(int64(i), 1, 1, 1.0)
 	}
 }

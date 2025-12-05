@@ -524,8 +524,8 @@ func BenchmarkInjectionRepository_Create(b *testing.B) {
 	db, _ := database.Open(dbPath)
 	defer db.Close()
 
-	db.Exec("CREATE TABLE courses (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, start_date DATE NOT NULL, expected_end_date DATE, actual_end_date DATE, is_active BOOLEAN DEFAULT 1, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, created_by INTEGER);")
-	db.Exec("CREATE TABLE injections (id INTEGER PRIMARY KEY AUTOINCREMENT, course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE, administered_by INTEGER, timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, side TEXT NOT NULL CHECK(side IN ('left', 'right')), site_x REAL, site_y REAL, pain_level INTEGER CHECK(pain_level BETWEEN 1 AND 10), has_knots BOOLEAN DEFAULT 0, site_reaction TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
+	_, _ = db.Exec("CREATE TABLE courses (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, start_date DATE NOT NULL, expected_end_date DATE, actual_end_date DATE, is_active BOOLEAN DEFAULT 1, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, created_by INTEGER);")
+	_, _ = db.Exec("CREATE TABLE injections (id INTEGER PRIMARY KEY AUTOINCREMENT, course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE, administered_by INTEGER, timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, side TEXT NOT NULL CHECK(side IN ('left', 'right')), site_x REAL, site_y REAL, pain_level INTEGER CHECK(pain_level BETWEEN 1 AND 10), has_knots BOOLEAN DEFAULT 0, site_reaction TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
 
 	result, _ := db.Exec("INSERT INTO courses (name, start_date, is_active) VALUES (?, ?, ?)", "Test Course", time.Now(), true)
 	courseID, _ := result.LastInsertId()
@@ -539,6 +539,6 @@ func BenchmarkInjectionRepository_Create(b *testing.B) {
 			Timestamp: time.Now(),
 			Side:      "left",
 		}
-		repo.Create(injection)
+		_ = repo.Create(injection)
 	}
 }

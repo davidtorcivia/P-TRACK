@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master, main ]
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -35,10 +39,11 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.out
           fail_ci_if_error: false
+        continue-on-error: true
 
   lint:
     runs-on: ubuntu-latest
@@ -58,13 +63,16 @@ jobs:
           sudo apt-get install -y gcc sqlite3 libsqlite3-dev
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=5m
 
   security:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,9 +86,11 @@ jobs:
         uses: securego/gosec@master
         with:
           args: '-no-fail -fmt sarif -out results.sarif ./...'
+        continue-on-error: true
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
         if: always()
+        continue-on-error: true

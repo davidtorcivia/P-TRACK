@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrAccountNotFound    = errors.New("account not found")
-	ErrInvitationNotFound = errors.New("invitation not found")
-	ErrInvitationExpired  = errors.New("invitation has expired")
-	ErrInvitationUsed     = errors.New("invitation already used")
+	ErrAccountNotFound      = errors.New("account not found")
+	ErrInvitationNotFound   = errors.New("invitation not found")
+	ErrInvitationExpired    = errors.New("invitation has expired")
+	ErrInvitationUsed       = errors.New("invitation already used")
 	ErrUserAlreadyInAccount = errors.New("user already belongs to an account")
 )
 
@@ -38,7 +38,7 @@ func (r *AccountRepository) Create(name *string, ownerUserID int64) (int64, erro
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Create account
 	var accountID int64
@@ -500,7 +500,7 @@ func (r *AccountRepository) AcceptInvitation(invitationID, userID int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update the invitation to mark it as accepted
 	_, err = tx.Exec(`

@@ -594,7 +594,7 @@ func BenchmarkUserRepository_Create(b *testing.B) {
 	defer db.Close()
 
 	schema := `CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, email TEXT, is_active BOOLEAN DEFAULT 1, failed_login_attempts INTEGER DEFAULT 0, locked_until TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_login TIMESTAMP);`
-	db.Exec(schema)
+	_, _ = db.Exec(schema)
 
 	repo := NewUserRepository(db)
 	b.ResetTimer()
@@ -605,7 +605,7 @@ func BenchmarkUserRepository_Create(b *testing.B) {
 			PasswordHash: "hash",
 			IsActive:     true,
 		}
-		repo.Create(user)
+		_ = repo.Create(user)
 	}
 }
 
@@ -616,14 +616,14 @@ func BenchmarkUserRepository_GetByID(b *testing.B) {
 	defer db.Close()
 
 	schema := `CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, email TEXT, is_active BOOLEAN DEFAULT 1, failed_login_attempts INTEGER DEFAULT 0, locked_until TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_login TIMESTAMP);`
-	db.Exec(schema)
+	_, _ = db.Exec(schema)
 
 	repo := NewUserRepository(db)
 	user := &models.User{Username: "testuser", PasswordHash: "hash", IsActive: true}
-	repo.Create(user)
+	_ = repo.Create(user)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		repo.GetByID(user.ID)
+		_, _ = repo.GetByID(user.ID)
 	}
 }
