@@ -485,7 +485,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		}
 
 		// Log successful registration
-		auditRepo.LogWithDetails(
+		_ = auditRepo.LogWithDetails(
 			sql.NullInt64{Int64: user.ID, Valid: true},
 			"registration_success",
 			"user",
@@ -496,7 +496,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		)
 
 		// Continue with original audit log
-		auditRepo.LogWithDetails(
+		_ = auditRepo.LogWithDetails(
 			sql.NullInt64{Int64: user.ID, Valid: true},
 			"registration_success",
 			"user",
@@ -564,7 +564,7 @@ func HandleLogout(db *database.DB) http.HandlerFunc {
 
 		// Log logout
 		if userCtx != nil {
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: userCtx.UserID, Valid: true},
 				"logout",
 				"user",

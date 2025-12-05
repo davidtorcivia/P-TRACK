@@ -411,7 +411,7 @@ func HandleUpdateProfile(db *database.DB) http.HandlerFunc {
 		// TODO: Implement profile update
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "Profile updated successfully"}`))
+		_, _ = w.Write([]byte(`{"message": "Profile updated successfully"}`))
 	}
 }
 
@@ -428,7 +428,7 @@ func HandleChangePassword(db *database.DB) http.HandlerFunc {
 		// TODO: Implement password change with current password verification
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "Password changed successfully"}`))
+		_, _ = w.Write([]byte(`{"message": "Password changed successfully"}`))
 	}
 }
 
@@ -520,7 +520,7 @@ func HandleUpdateAppSettings(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "Settings updated successfully"}`))
+		_, _ = w.Write([]byte(`{"message": "Settings updated successfully"}`))
 	}
 }
 

@@ -78,7 +78,7 @@ func HandleListBackups(db *database.DB) http.HandlerFunc {
 		entries, err := os.ReadDir(backupDir)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode([]BackupInfo{})
+			_ = json.NewEncoder(w).Encode([]BackupInfo{})
 			return
 		}
 

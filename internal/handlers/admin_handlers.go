@@ -644,7 +644,7 @@ func HandleDeleteUser(db *database.DB) http.HandlerFunc {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"message": "User deleted successfully",
 				"success": true,
 			})
@@ -692,7 +692,7 @@ func HandleDeleteUser(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": message,
 			"success": true,
 		})
