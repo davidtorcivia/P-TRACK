@@ -824,7 +824,7 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 		`)
 		if err != nil {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`<p>Error loading inventory changes</p>`))
+			_, _ = w.Write([]byte(`<p>Error loading inventory changes</p>`))
 			return
 		}
 		defer rows.Close()
@@ -847,7 +847,7 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 
 		if len(changes) == 0 {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`
+			_, _ = w.Write([]byte(`
 				<div style="text-align: center; padding: 2rem; color: var(--pico-muted-color);">
 					<p>No recent changes.</p>
 				</div>
@@ -897,7 +897,7 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 		}
 
 		html += `</div>`
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 	}
 }
 

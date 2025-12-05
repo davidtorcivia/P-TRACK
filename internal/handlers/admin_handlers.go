@@ -337,7 +337,7 @@ func HandleGetSiteSettings(db *database.DB) http.HandlerFunc {
 
 		settings := getSiteSettings(db)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(settings)
+		_ = json.NewEncoder(w).Encode(settings)
 	}
 }
 
@@ -400,7 +400,7 @@ func HandleUpdateSiteSettings(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message":  "Site settings updated successfully",
 			"settings": getSiteSettings(db),
 		})
@@ -454,7 +454,7 @@ func HandleGetAllUsers(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(users)
+		_ = json.NewEncoder(w).Encode(users)
 	}
 }
 

@@ -334,7 +334,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		// Check if username already exists
 		existingUser, err := userRepo.GetByUsername(req.Username)
 		if err == nil && existingUser != nil {
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Valid: false},
 				"registration_failed",
 				"user",
@@ -399,7 +399,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			if err != nil {
 				// Rollback: Delete the user if invitation is invalid
 				_ = userRepo.Delete(user.ID)
-				auditRepo.LogWithDetails(
+				_ = auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"registration_failed",
 					"user",
@@ -429,7 +429,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			// Accept the invitation
 			if err := accountRepo.AcceptInvitation(invitation.ID, user.ID); err != nil {
 				_ = userRepo.Delete(user.ID)
-				auditRepo.LogWithDetails(
+				_ = auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"registration_failed",
 					"user",

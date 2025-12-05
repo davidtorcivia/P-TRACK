@@ -891,7 +891,7 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 				painLevel := activity["Detail2"].(string)
 				html += fmt.Sprintf(`<div style="display: flex; justify-content: space-between; align-items: start;">
 					<div>
-						<strong>Injection (%s)</strong>`, strings.Title(side))
+						<strong>Injection (%s)</strong>`, cases.Title(language.English).String(side))
 				if painLevel != "" && painLevel != "0" {
 					html += fmt.Sprintf(` <small>Pain: %s/10</small>`, painLevel)
 				}
