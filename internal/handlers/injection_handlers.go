@@ -867,7 +867,9 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(stats)
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			log.Printf("Failed to encode stats response: %v", err)
+		}
 	}
 }
 

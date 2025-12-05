@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -173,7 +174,9 @@ func HandleGetInventory(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(items)
+		if err := json.NewEncoder(w).Encode(items); err != nil {
+			log.Printf("Failed to encode inventory items response: %v", err)
+		}
 	}
 }
 
@@ -273,7 +276,9 @@ func HandleUpdateInventory(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(inventoryItemToResponse(item))
+		if err := json.NewEncoder(w).Encode(inventoryItemToResponse(item)); err != nil {
+			log.Printf("Failed to encode inventory item response: %v", err)
+		}
 	}
 }
 
