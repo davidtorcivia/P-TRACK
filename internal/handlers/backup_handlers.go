@@ -334,7 +334,7 @@ func HandleUploadBackup(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message":      "Backup uploaded and validated. Ready to restore.",
 			"staging_file": "restore_staging.db",
 			"success":      true,
@@ -424,7 +424,7 @@ func HandleRestoreBackup(db *database.DB) http.HandlerFunc {
 		_ = os.WriteFile(flagPath, []byte(restorePath), 0644)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "Restore prepared. Server will restart now. Please wait and refresh the page.",
 			"success": true,
 		})
@@ -463,7 +463,7 @@ func HandleGetAutoBackupSettings(db *database.DB) http.HandlerFunc {
 
 		settings := getAutoBackupSettings(db)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(settings)
+		_ = json.NewEncoder(w).Encode(settings)
 	}
 }
 
