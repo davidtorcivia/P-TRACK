@@ -594,7 +594,7 @@ func RunAutoBackup(db *database.DB) error {
 
 	// Update last run time
 	now := time.Now().Format("2006-01-02 15:04:05")
-	db.Exec(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+	_, _ = db.Exec(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
 		ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
 		"auto_backup_last_run", now, now)
 

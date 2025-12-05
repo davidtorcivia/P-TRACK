@@ -15,6 +15,8 @@ import (
 	"injection-tracker/internal/repository"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // CreateSymptomRequest represents the request body for creating a symptom log
@@ -83,6 +85,10 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 				return
 			}
 			symptoms, err = symptomRepo.ListByCourse(cid, accountID, limit, offset)
+			if err != nil {
+				http.Error(w, "Failed to retrieve symptom logs", http.StatusInternalServerError)
+				return
+			}
 		} else if startDate != "" && endDate != "" {
 			start, err1 := time.Parse("2006-01-02", startDate)
 			end, err2 := time.Parse("2006-01-02", endDate)
@@ -518,7 +524,7 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 						}
 						// Format symptom names nicely
 						formattedSymptom := strings.ReplaceAll(symptom, "_", " ")
-						formattedSymptom = strings.Title(formattedSymptom)
+						formattedSymptom = cases.Title(language.English).String(formattedSymptom)
 						html += formattedSymptom
 					}
 					html += `</div>`
@@ -598,7 +604,6 @@ func formatTimeAgo(t time.Time) string {
 		return fmt.Sprintf("%d days ago", days)
 	}
 }
-
 
 // HandleGetSymptomTrends returns symptom trend data for charts
 func HandleGetSymptomTrends(db *database.DB) http.HandlerFunc {

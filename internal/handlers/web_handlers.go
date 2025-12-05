@@ -15,6 +15,8 @@ import (
 	"injection-tracker/internal/web"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // getBasePageData returns common data for all authenticated pages
@@ -212,7 +214,7 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 				nextSide = "Left"
 			}
 			stats["NextInjectionSite"] = nextSide
-			stats["LastInjectionSide"] = strings.Title(lastSide)
+			stats["LastInjectionSide"] = cases.Title(language.English).String(lastSide)
 			if lastSide == "" {
 				stats["LastInjectionSide"] = "None"
 			}
@@ -308,7 +310,7 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 							"ID":        id,
 							"Date":      convertedTime.Format("Jan 2, 2006"),
 							"Time":      timeStr,
-							"Side":      strings.Title(side),
+							"Side":      cases.Title(language.English).String(side),
 							"SideLower": side, // Add lowercase version for radio buttons
 							"PainLevel": painLevel.Int64,
 							"Notes":     notes.String,
@@ -368,7 +370,7 @@ func HandleMedicationsPage(db *database.DB, csrf *middleware.CSRFProtection) htt
 			for _, med := range activeMeds {
 				// Query if there's a log entry for today
 				var count int
-				db.QueryRow(`
+				_ = db.QueryRow(`
 					SELECT COUNT(*) FROM medication_logs
 					WHERE medication_id = ?
 					AND DATE(timestamp) = DATE('now')

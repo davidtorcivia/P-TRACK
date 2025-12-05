@@ -246,7 +246,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 		})
 
 		// Log successful login
-		auditRepo.LogWithDetails(
+		_ = auditRepo.LogWithDetails(
 			sql.NullInt64{Int64: user.ID, Valid: true},
 			"login_success",
 			"user",
@@ -372,7 +372,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		if err := userRepo.Create(user); err != nil {
 			// Check if it's a unique constraint violation (duplicate username)
 			if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "unique") {
-				auditRepo.LogWithDetails(
+				_ = auditRepo.LogWithDetails(
 					sql.NullInt64{Valid: false},
 					"registration_failed",
 					"user",
@@ -428,7 +428,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 
 			// Accept the invitation
 			if err := accountRepo.AcceptInvitation(invitation.ID, user.ID); err != nil {
-				userRepo.Delete(user.ID)
+				_ = userRepo.Delete(user.ID)
 				auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"registration_failed",
@@ -459,7 +459,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			accountID, err = accountRepo.Create(nil, user.ID) // nil = no custom account name
 			if err != nil {
 				// Rollback: Delete the user if account creation fails
-				userRepo.Delete(user.ID)
+				_ = userRepo.Delete(user.ID)
 				auditRepo.LogWithDetails(
 					sql.NullInt64{Int64: user.ID, Valid: true},
 					"registration_failed",
@@ -903,7 +903,7 @@ func HandleSetup(db *database.DB) http.HandlerFunc {
 		accountID, err := accountRepo.Create(nil, user.ID) // nil = no custom account name
 		if err != nil {
 			// Rollback: Delete the user if account creation fails
-			userRepo.Delete(user.ID)
+			_ = userRepo.Delete(user.ID)
 			http.Error(w, "Failed to create account: "+err.Error(), http.StatusInternalServerError)
 			return
 		}

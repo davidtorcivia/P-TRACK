@@ -284,7 +284,7 @@ func HandleTestSMTP(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": fmt.Sprintf("Test email sent successfully to %s", req.Email),
 			"success": true,
 		})
@@ -302,7 +302,7 @@ func HandleGetSiteStats(db *database.DB) http.HandlerFunc {
 
 		stats := getSiteStats(db)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(stats)
+		_ = json.NewEncoder(w).Encode(stats)
 	}
 }
 
@@ -316,7 +316,7 @@ func HandleCheckAdmin(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]bool{
+		_ = json.NewEncoder(w).Encode(map[string]bool{
 			"is_admin": IsAdmin(db, userID),
 		})
 	}

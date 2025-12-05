@@ -13,6 +13,8 @@ import (
 	"injection-tracker/internal/models"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // InventoryItemResponse represents the API response for inventory items
@@ -800,7 +802,7 @@ func HandleUpdateInventorySettings(db *database.DB) http.HandlerFunc {
 		// For now, just return success
 		// TODO: Implement settings storage in database
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "Settings updated successfully"}`))
+		_, _ = w.Write([]byte(`{"message": "Settings updated successfully"}`))
 	}
 }
 
@@ -883,7 +885,7 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 			html += `<div style="display: flex; justify-content: space-between; align-items: start;">`
 			html += `<div><strong>` + itemName + `</strong> `
 			html += `<span style="color: ` + color + `;">` + sign + fmt.Sprintf("%.1f", change.ChangeAmount) + `</span>`
-			html += `<br><small style="color: var(--pico-muted-color);">` + strings.Title(strings.ReplaceAll(change.Reason, "_", " ")) + `</small>`
+			html += `<br><small style="color: var(--pico-muted-color);">` + cases.Title(language.English).String(strings.ReplaceAll(change.Reason, "_", " ")) + `</small>`
 
 			if change.Notes.Valid && change.Notes.String != "" {
 				html += `<br><small>` + change.Notes.String + `</small>`

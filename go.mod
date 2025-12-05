@@ -1,6 +1,8 @@
 module injection-tracker
 
-go 1.21
+go 1.24.0
+
+toolchain go1.24.11
 
 require (
 	github.com/go-chi/chi/v5 v5.0.11
@@ -11,4 +13,7 @@ require (
 	golang.org/x/time v0.5.0
 )
 
-require github.com/jung-kurt/gofpdf/v2 v2.17.3 // indirect
+require (
+	github.com/jung-kurt/gofpdf/v2 v2.17.3 // indirect
+	golang.org/x/text v0.31.0 // indirect
+)

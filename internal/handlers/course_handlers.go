@@ -138,11 +138,8 @@ func HandleCreateCourse(db *database.DB) http.HandlerFunc {
 		courseRepo := repository.NewCourseRepository(db)
 
 		// If creating an active course, deactivate others first
-		if isActive {
-			// Note: Activate with ID 0 will fail - this logic may need review
-			// For now, skip the pre-deactivation as Create doesn't auto-activate others
-			// The Activate method should be called separately if needed
-		}
+		// Note: When creating an active course, the Create method handles setting is_active.
+		// Pre-deactivation of other courses is handled by the Activate method if needed.
 
 		if err := courseRepo.Create(course); err != nil {
 			http.Error(w, fmt.Sprintf("Failed to create course: %v", err), http.StatusInternalServerError)
@@ -481,7 +478,7 @@ func HandleCloseCourse(db *database.DB) http.HandlerFunc {
 		}
 
 		// Close course
-		if err := courseRepo.Close(id, accountID, endDate); err != nil{
+		if err := courseRepo.Close(id, accountID, endDate); err != nil {
 			http.Error(w, "Failed to close course", http.StatusInternalServerError)
 			return
 		}

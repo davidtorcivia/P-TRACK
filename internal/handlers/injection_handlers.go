@@ -716,7 +716,7 @@ func HandleGetRecentInjections(db *database.DB) http.HandlerFunc {
 			}
 
 			html += `</tbody></table></div>`
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 			return
 		}
 
@@ -851,7 +851,7 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 					</div>
 				</div>
 			`, stats.TotalInjections, stats.LeftCount, stats.RightCount, stats.AvgPainLevel)
-			w.Write([]byte(html))
+			_, _ = w.Write([]byte(html))
 			return
 		}
 

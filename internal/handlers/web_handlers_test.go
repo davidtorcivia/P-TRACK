@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"injection-tracker/internal/auth"
 	"injection-tracker/internal/database"
 	"injection-tracker/internal/middleware"
 	"injection-tracker/internal/models"
@@ -122,7 +121,7 @@ func setupTestDB(t *testing.T) *database.DB {
 func initTestTemplates(t *testing.T) {
 	// Create minimal mock templates for testing
 	// This bypasses the need for actual template files
-	web.InitTestTemplates()
+	_ = web.InitTestTemplates()
 }
 
 func createTestTables(t *testing.T, db *database.DB) {
@@ -410,13 +409,6 @@ func addTestAuthContext(req *http.Request, userID int64, accountID int64) *http.
 	return req.WithContext(ctx)
 }
 
-func createRealTestJWT(userID int64, accountID int64) string {
-	// Create a real JWT token for testing
-	jwtManager := auth.NewJWTManager("test-secret-key-for-testing", 24*time.Hour)
-	token, _ := jwtManager.GenerateToken(userID, "testuser", accountID, "owner")
-	return token
-}
-
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && findSubstring(s, substr) >= 0
 }
@@ -429,4 +421,3 @@ func findSubstring(s, substr string) int {
 	}
 	return -1
 }
-

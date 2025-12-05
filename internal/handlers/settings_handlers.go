@@ -14,12 +14,12 @@ import (
 
 // SettingsResponse represents the settings API response
 type SettingsResponse struct {
-	AdvancedModeEnabled bool   `json:"advanced_mode_enabled"`
-	HeatMapDays         int    `json:"heat_map_days"`
-	LowStockAlerts      bool   `json:"low_stock_alerts"`
-	InjectionReminders  bool   `json:"injection_reminders"`
-	ReminderTime        string `json:"reminder_time"` // HH:MM format
-	ReminderFrequency   int    `json:"reminder_frequency"` // Hours between injections
+	AdvancedModeEnabled bool      `json:"advanced_mode_enabled"`
+	HeatMapDays         int       `json:"heat_map_days"`
+	LowStockAlerts      bool      `json:"low_stock_alerts"`
+	InjectionReminders  bool      `json:"injection_reminders"`
+	ReminderTime        string    `json:"reminder_time"`      // HH:MM format
+	ReminderFrequency   int       `json:"reminder_frequency"` // Hours between injections
 	UpdatedAt           time.Time `json:"updated_at"`
 }
 
@@ -35,12 +35,12 @@ type UpdateSettingsRequest struct {
 
 // Default settings values
 const (
-	DefaultAdvancedMode      = false
-	DefaultHeatMapDays       = 14
-	DefaultLowStockAlerts    = true
+	DefaultAdvancedMode       = false
+	DefaultHeatMapDays        = 14
+	DefaultLowStockAlerts     = true
 	DefaultInjectionReminders = false
-	DefaultReminderTime      = "19:00"
-	DefaultReminderFrequency = 24
+	DefaultReminderTime       = "19:00"
+	DefaultReminderFrequency  = 24
 )
 
 // HandleGetSettings returns all application settings
@@ -135,7 +135,7 @@ func HandleUpdateSettings(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		now := time.Now()
 
@@ -398,7 +398,6 @@ func FormatDateTimeForUser(db *database.DB, userID int64, t time.Time) string {
 	return fmt.Sprintf("%s %s", t.Format(goDateFormat), timeStr)
 }
 
-
 // HandleUpdateProfile updates user profile information
 func HandleUpdateProfile(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -476,7 +475,7 @@ func HandleUpdateAppSettings(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		now := time.Now()
 
@@ -552,7 +551,7 @@ func HandleUpdateNotificationSettings(db *database.DB) http.HandlerFunc {
 			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		now := time.Now()
 

@@ -510,7 +510,7 @@ func TestSecurity_SessionManagement(t *testing.T) {
 		AccountID:    1,
 		Role:         "owner",
 	}
-	userRepo.Create(user)
+	_ = userRepo.Create(user)
 
 	// Add user to account_members table (required for login)
 	_, err := db.Exec(`
@@ -616,7 +616,7 @@ func TestSecurity_NoInformationLeakage(t *testing.T) {
 		// Create user and try wrong password
 		hashedPassword, _ := auth.HashPassword("correctpassword")
 		userRepo := repository.NewUserRepository(db)
-		userRepo.Create(&models.User{
+		_ = userRepo.Create(&models.User{
 			Username:     "existinguser",
 			PasswordHash: hashedPassword,
 			IsActive:     true,
