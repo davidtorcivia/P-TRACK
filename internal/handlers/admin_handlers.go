@@ -711,7 +711,7 @@ func getSMTPSettings(db *database.DB) SMTPSettings {
 		smtp.Host = value
 	}
 	if err := db.QueryRow("SELECT value FROM settings WHERE key = 'smtp_port'").Scan(&value); err == nil {
-		fmt.Sscanf(value, "%d", &smtp.Port)
+		_, _ = fmt.Sscanf(value, "%d", &smtp.Port)
 	}
 	if err := db.QueryRow("SELECT value FROM settings WHERE key = 'smtp_username'").Scan(&value); err == nil {
 		smtp.Username = value
@@ -752,9 +752,9 @@ func getSiteSettings(db *database.DB) *SiteSettings {
 func getSiteStats(db *database.DB) *SiteStats {
 	stats := &SiteStats{}
 
-	db.QueryRow("SELECT COUNT(*) FROM users").Scan(&stats.TotalUsers)
-	db.QueryRow("SELECT COUNT(*) FROM accounts").Scan(&stats.TotalAccounts)
-	db.QueryRow("SELECT COUNT(*) FROM injections").Scan(&stats.TotalInjections)
+	_ = db.QueryRow("SELECT COUNT(*) FROM users").Scan(&stats.TotalUsers)
+	_ = db.QueryRow("SELECT COUNT(*) FROM accounts").Scan(&stats.TotalAccounts)
+	_ = db.QueryRow("SELECT COUNT(*) FROM injections").Scan(&stats.TotalInjections)
 
 	return stats
 }

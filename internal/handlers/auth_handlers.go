@@ -39,10 +39,10 @@ type RegisterRequest struct {
 
 // AuthResponse represents the authentication response
 type AuthResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
+	Success bool          `json:"success"`
+	Message string        `json:"message,omitempty"`
 	User    *UserResponse `json:"user,omitempty"`
-	Token   string `json:"token,omitempty"`
+	Token   string        `json:"token,omitempty"`
 }
 
 // UserResponse represents user data in responses
@@ -97,7 +97,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 		user, err := userRepo.GetByUsername(req.Username)
 		if err == repository.ErrNotFound {
 			// Don't reveal that user doesn't exist - use same error as invalid password
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Valid: false},
 				"login_failed",
 				"user",
@@ -116,7 +116,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 
 		// Check if account is active
 		if !user.IsActive {
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
 				"login_failed",
 				"user",
@@ -136,7 +136,7 @@ func HandleLogin(db *database.DB, jwtManager *auth.JWTManager) http.HandlerFunc 
 			return
 		}
 		if isLocked {
-			auditRepo.LogWithDetails(
+			_ = auditRepo.LogWithDetails(
 				sql.NullInt64{Int64: user.ID, Valid: true},
 				"login_failed",
 				"user",
@@ -508,10 +508,10 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 
 		// Respond with success
 		if r.Header.Get("HX-Request") == "true" {
-		// HTMX request - show success message then redirect
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		successHTML := `
+			// HTMX request - show success message then redirect
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusOK)
+			successHTML := `
 <div role="alert" style="
 	background-color: #d4edda;
 	border: 2px solid #28a745;
@@ -535,7 +535,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 		window.location.href = "/login?registered=true";
 	}, 1500);
 </script>`
-		fmt.Fprint(w, successHTML)
+			fmt.Fprint(w, successHTML)
 		} else {
 			// Standard JSON API response
 			respondJSON(w, http.StatusCreated, AuthResponse{
