@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -80,7 +81,9 @@ func HandleGetMedications(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(medications)
+		if err := json.NewEncoder(w).Encode(medications); err != nil {
+			log.Printf("Failed to encode medications response: %v", err)
+		}
 	}
 }
 
@@ -177,7 +180,9 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(medication)
+		if err := json.NewEncoder(w).Encode(medication); err != nil {
+			log.Printf("Failed to encode medication response: %v", err)
+		}
 	}
 }
 
@@ -210,7 +215,9 @@ func HandleGetMedication(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(medication)
+		if err := json.NewEncoder(w).Encode(medication); err != nil {
+			log.Printf("Failed to encode medication response: %v", err)
+		}
 	}
 }
 
@@ -323,7 +330,9 @@ func HandleUpdateMedication(db *database.DB) http.HandlerFunc {
 		)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(medication)
+		if err := json.NewEncoder(w).Encode(medication); err != nil {
+			log.Printf("Failed to encode medication response: %v", err)
+		}
 	}
 }
 
@@ -428,7 +437,7 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 		}
 
 		// Create medication log
-		log := &models.MedicationLog{
+		medLog := &models.MedicationLog{
 			MedicationID: medicationID,
 			LoggedBy:     sql.NullInt64{Int64: userID, Valid: true},
 			Timestamp:    timestamp,
@@ -436,7 +445,7 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 			Notes:        nullString(req.Notes),
 		}
 
-		if err := medicationRepo.CreateLog(log); err != nil {
+		if err := medicationRepo.CreateLog(medLog); err != nil {
 			http.Error(w, fmt.Sprintf("Failed to create medication log: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -447,7 +456,7 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 			sql.NullInt64{Int64: userID, Valid: true},
 			"log_medication",
 			"medication_log",
-			sql.NullInt64{Int64: log.ID, Valid: true},
+			sql.NullInt64{Int64: medLog.ID, Valid: true},
 			map[string]interface{}{
 				"medication_id":   medicationID,
 				"medication_name": medication.Name,
@@ -459,7 +468,9 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(log)
+		if err := json.NewEncoder(w).Encode(medLog); err != nil {
+			log.Printf("Failed to encode medication log response: %v", err)
+		}
 	}
 }
 
@@ -534,7 +545,9 @@ func HandleGetMedicationLogs(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(logs)
+		if err := json.NewEncoder(w).Encode(logs); err != nil {
+			log.Printf("Failed to encode medication logs response: %v", err)
+		}
 	}
 }
 
@@ -568,7 +581,9 @@ func HandleGetTodaySchedule(db *database.DB) http.HandlerFunc {
 
 		// Return as JSON for now
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(medications)
+		if err := json.NewEncoder(w).Encode(medications); err != nil {
+			log.Printf("Failed to encode medications response: %v", err)
+		}
 	}
 }
 
@@ -591,7 +606,9 @@ func HandleGetAdherence(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode adherence response: %v", err)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -91,7 +92,9 @@ func HandleGetNotifications(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode notifications response: %v", err)
+		}
 	}
 }
 
@@ -191,7 +194,9 @@ func HandleGetUnreadCount(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]int64{"count": count})
+		if err := json.NewEncoder(w).Encode(map[string]int64{"count": count}); err != nil {
+			log.Printf("Failed to encode count response: %v", err)
+		}
 	}
 }
 
@@ -213,4 +218,3 @@ func notificationToResponse(n *models.Notification) *NotificationResponse {
 		TimeAgo:       formatTimeAgo(n.CreatedAt),
 	}
 }
-

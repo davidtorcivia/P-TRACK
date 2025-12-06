@@ -365,7 +365,9 @@ func HandleGetInventoryHistory(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(history)
+		if err := json.NewEncoder(w).Encode(history); err != nil {
+			log.Printf("Failed to encode inventory history: %v", err)
+		}
 	}
 }
 
@@ -552,7 +554,9 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inventoryItemToResponse(item))
+		if err := json.NewEncoder(w).Encode(inventoryItemToResponse(item)); err != nil {
+			log.Printf("Failed to encode inventory item: %v", err)
+		}
 	}
 }
 
@@ -695,10 +699,12 @@ func HandleGetInventoryAlerts(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"alerts": alerts,
 			"count":  len(alerts),
-		})
+		}); err != nil {
+			log.Printf("Failed to encode alerts: %v", err)
+		}
 	}
 }
 
@@ -962,7 +968,9 @@ func HandleGetAllInventoryHistory(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(history)
+		if err := json.NewEncoder(w).Encode(history); err != nil {
+			log.Printf("Failed to encode inventory history: %v", err)
+		}
 	}
 }
 

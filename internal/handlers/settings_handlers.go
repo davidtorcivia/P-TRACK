@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -91,7 +92,9 @@ func HandleGetSettings(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode settings response: %v", err)
+		}
 	}
 }
 
@@ -202,7 +205,9 @@ func HandleUpdateSettings(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(settings)
+		if err := json.NewEncoder(w).Encode(settings); err != nil {
+			log.Printf("Failed to encode settings response: %v", err)
+		}
 	}
 }
 

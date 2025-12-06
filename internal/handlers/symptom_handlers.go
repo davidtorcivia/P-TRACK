@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -133,7 +134,9 @@ func HandleGetSymptoms(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode symptoms response: %v", err)
+		}
 	}
 }
 
@@ -224,7 +227,9 @@ func HandleCreateSymptom(db *database.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(symptom)
+		if err := json.NewEncoder(w).Encode(symptom); err != nil {
+			log.Printf("Failed to encode symptom response: %v", err)
+		}
 	}
 }
 
@@ -272,7 +277,9 @@ func HandleGetSymptom(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode symptom response: %v", err)
+		}
 	}
 }
 
@@ -387,7 +394,9 @@ func HandleUpdateSymptom(db *database.DB) http.HandlerFunc {
 		)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(symptom)
+		if err := json.NewEncoder(w).Encode(symptom); err != nil {
+			log.Printf("Failed to encode symptom response: %v", err)
+		}
 	}
 }
 
@@ -651,7 +660,9 @@ func HandleGetSymptomTrends(db *database.DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode symptom trends response: %v", err)
+		}
 	}
 }
 
