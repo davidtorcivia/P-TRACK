@@ -6,63 +6,73 @@
 
 {{ if .ActiveCourse }}
 <div class="grid-2" style="margin-bottom: var(--space-6);">
-    <button onclick="document.getElementById('log-injection').showModal()" class="w-full">Log New Injection</button>
+    <button data-action="log-injection" class="w-full">Log New Injection</button>
     <a href="/courses" role="button" class="btn outline w-full" style="text-align:center">Manage Courses</a>
 </div>
 
 <!-- Injections Grid (Responsive) -->
 <article class="card" style="padding: 0; background: transparent; border: none; box-shadow: none;">
-    <header style="padding: var(--space-4); margin-bottom: var(--space-4); border-bottom: none; background: transparent; padding-left: 0;">
+    <header
+        style="padding: var(--space-4); margin-bottom: var(--space-4); border-bottom: none; background: transparent; padding-left: 0;">
         <h3 style="margin: 0; font-size: var(--text-lg);">All Injections</h3>
     </header>
 
     <div id="injections-grid" class="grid desktop-grid-cols-3 mobile-grid-cols-1" style="gap: var(--space-4);">
         {{ if .Injections }}
-            {{ range .Injections }}
-            <div class="card" style="margin: 0; padding: var(--space-4); border: 1px solid var(--color-border); display: flex; flex-direction: column; height: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3);">
-                    <div>
-                        <div style="font-weight: bold; font-size: var(--text-base);">{{ .Date }}</div>
-                        <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">{{ .Time }}</div>
-                    </div>
-                    <span class="badge {{ if eq .Side "Left" }}badge-primary{{ else }}badge-secondary{{ end }}">
-                        {{ .Side }}
-                    </span>
+        {{ range .Injections }}
+        <div class="card"
+            style="margin: 0; padding: var(--space-4); border: 1px solid var(--color-border); display: flex; flex-direction: column; height: 100%;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3);">
+                <div>
+                    <div style="font-weight: bold; font-size: var(--text-base);">{{ .Date }}</div>
+                    <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">{{ .Time }}</div>
                 </div>
+                <span class="badge {{ if eq .Side " Left" }}badge-primary{{ else }}badge-secondary{{ end }}">
+                    {{ .Side }}
+                </span>
+            </div>
 
-                <div style="margin-bottom: var(--space-3); flex-grow: 1;">
-                    <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2);">
-                        <span style="font-size: var(--text-sm); color: var(--color-text-secondary); font-weight: 500;">Pain Level:</span>
-                        {{ if .PainLevel }}
-                            <span class="badge {{ if gt .PainLevel 7 }}badge-danger{{ else if gt .PainLevel 4 }}badge-warning{{ else }}badge-success{{ end }}">
-                                {{ .PainLevel }}/10
-                            </span>
-                        {{ else }}
-                            <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">-</span>
-                        {{ end }}
-                    </div>
-
-                    {{ if .Notes }}
-                    <div style="font-size: var(--text-sm); color: var(--color-text-primary); background-color: var(--color-bg-tertiary); padding: var(--space-2); border-radius: var(--radius-sm); font-style: italic;">
-                        "{{ .Notes }}"
-                    </div>
+            <div style="margin-bottom: var(--space-3); flex-grow: 1;">
+                <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2);">
+                    <span style="font-size: var(--text-sm); color: var(--color-text-secondary); font-weight: 500;">Pain
+                        Level:</span>
+                    {{ if .PainLevel }}
+                    <span
+                        class="badge {{ if gt .PainLevel 7 }}badge-danger{{ else if gt .PainLevel 4 }}badge-warning{{ else }}badge-success{{ end }}">
+                        {{ .PainLevel }}/10
+                    </span>
                     {{ else }}
-                    <div style="font-size: var(--text-sm); color: var(--color-text-muted); font-style: italic;">
-                        No notes
-                    </div>
+                    <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">-</span>
                     {{ end }}
                 </div>
 
-                <div style="display: flex; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); margin-top: auto;">
-                    <button onclick="document.getElementById('edit-injection-{{ .ID }}').showModal()" class="btn-sm outline w-full">Edit</button>
-                    <button onclick="showDeleteInjectionConfirmation('{{ .ID }}', '{{ .Side }}', '{{ .Date }}')" class="btn-sm outline secondary w-full" style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+                {{ if .Notes }}
+                <div
+                    style="font-size: var(--text-sm); color: var(--color-text-primary); background-color: var(--color-bg-tertiary); padding: var(--space-2); border-radius: var(--radius-sm); font-style: italic;">
+                    "{{ .Notes }}"
                 </div>
+                {{ else }}
+                <div style="font-size: var(--text-sm); color: var(--color-text-muted); font-style: italic;">
+                    No notes
+                </div>
+                {{ end }}
             </div>
-            {{ end }}
+
+            <div
+                style="display: flex; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); margin-top: auto;">
+                <button data-action="edit-injection" data-id="{{ .ID }}" class="btn-sm outline w-full">Edit</button>
+                <button data-action="delete-injection" data-id="{{ .ID }}" data-side="{{ .Side }}"
+                    data-date="{{ .Date }}" class="btn-sm outline secondary w-full"
+                    style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+            </div>
+        </div>
+        {{ end }}
         {{ else }}
-        <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-8); color: var(--color-text-secondary); background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+        <div
+            style="grid-column: 1 / -1; text-align: center; padding: var(--space-8); color: var(--color-text-secondary); background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
             <p>No injections recorded yet.</p>
-            <button onclick="document.getElementById('log-injection').showModal()" class="outline">Record Your First Injection</button>
+            <button data-action="log-injection" class="outline">Record Your First Injection</button>
         </div>
         {{ end }}
     </div>
@@ -74,66 +84,34 @@
     <article class="modal-card" style="margin: 0;">
         <header>
             <h3>Edit Injection</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-injection-{{ .ID }}').close()"></button>
+            <button aria-label="Close" rel="prev" data-action="close-edit-injection" data-id="{{ .ID }}"></button>
         </header>
-        <form x-data="{
-            side: '{{ .SideLower }}',
-            painLevel: {{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end }},
-            notes: '{{ .Notes }}'
-        }" @submit.prevent="
-            const btn = $el.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/injections/{{ .ID }}', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ $.CSRFToken }}'
-                },
-                body: JSON.stringify({
-                    side: side,
-                    pain_level: parseInt(painLevel),
-                    notes: notes
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    response.text().then(text => {
-                        console.error('Error:', text);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                        window.location.reload();
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error.message);
-                btn.disabled = false;
-                btn.removeAttribute('aria-busy');
-                window.location.reload();
-            });
-        ">
+        <form data-form="edit-injection" data-id="{{ .ID }}">
             <fieldset>
                 <legend>Which side?</legend>
                 <div class="grid-2">
-                    <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'left' }">
-                        <input type="radio" x-model="side" value="left" name="side-{{ .ID }}" style="margin:0;">
+                    <label
+                        style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <input type="radio" value="left" name="side-{{ .ID }}" {{ if eq .SideLower "left" }}checked{{
+                            end }} style="margin:0;">
                         <span>Left</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'right' }">
-                        <input type="radio" x-model="side" value="right" name="side-{{ .ID }}" style="margin:0;">
+                    <label
+                        style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <input type="radio" value="right" name="side-{{ .ID }}" {{ if eq .SideLower "right" }}checked{{
+                            end }} style="margin:0;">
                         <span>Right</span>
                     </label>
                 </div>
             </fieldset>
 
             <label>
-                Pain Level: <span x-text="painLevel"></span>/10
-                <input type="range" x-model="painLevel" min="1" max="10" style="width: 100%;">
-                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-secondary);">
+                Pain Level: <span data-output="pain-level">{{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end
+                    }}</span>/10
+                <input type="range" name="pain_level" min="1" max="10"
+                    value="{{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end }}" style="width: 100%;">
+                <div
+                    style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-secondary);">
                     <span>No Pain</span>
                     <span>Severe Pain</span>
                 </div>
@@ -141,12 +119,13 @@
 
             <label>
                 Notes
-                <textarea x-model="notes" rows="2"></textarea>
+                <textarea name="notes" rows="2">{{ .Notes }}</textarea>
             </label>
 
             <footer>
                 <div class="grid-2">
-                    <button type="button" class="secondary" onclick="document.getElementById('edit-injection-{{ .ID }}').close()">Cancel</button>
+                    <button type="button" class="secondary" data-action="close-edit-injection"
+                        data-id="{{ .ID }}">Cancel</button>
                     <button type="submit">Save Changes</button>
                 </div>
             </footer>
@@ -170,67 +149,30 @@
     <article class="modal-card" style="margin: 0;">
         <header>
             <h3>Log Injection</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('log-injection').close()"></button>
+            <button aria-label="Close" rel="prev" data-action="close-log-injection"></button>
         </header>
-        <form x-data="{
-            side: 'left',
-            painLevel: 5,
-            notes: ''
-        }" @submit.prevent="
-            const btn = $el.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/injections', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content
-                },
-                body: JSON.stringify({
-                    course_id: {{ .ActiveCourse.ID }},
-                    side: side,
-                    pain_level: parseInt(painLevel),
-                    notes: notes
-                })
-            })
-            .then(response => {
-                btn.disabled = false;
-                btn.removeAttribute('aria-busy');
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    response.text().then(text => {
-                        console.error('Error:', text);
-                        window.location.reload();
-                    });
-                }
-            })
-            .catch(error => {
-                btn.disabled = false;
-                btn.removeAttribute('aria-busy');
-                console.error('Error:', error.message);
-                window.location.reload();
-            });
-        ">
+        <form id="log-injection-form" data-course-id="{{ .ActiveCourse.ID }}">
             <fieldset>
                 <legend>Which side?</legend>
                 <div class="grid-2">
-                    <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'left' }">
-                        <input type="radio" x-model="side" value="left" name="side" style="margin:0;">
+                    <label
+                        style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <input type="radio" value="left" name="side" checked style="margin:0;">
                         <span>Left</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;" :class="{ 'bg-brand-primary-bg border-brand-primary': side === 'right' }">
-                        <input type="radio" x-model="side" value="right" name="side" style="margin:0;">
+                    <label
+                        style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <input type="radio" value="right" name="side" style="margin:0;">
                         <span>Right</span>
                     </label>
                 </div>
             </fieldset>
 
             <label>
-                Pain Level: <span x-text="painLevel"></span>/10
-                <input type="range" x-model="painLevel" min="1" max="10" style="width: 100%;">
-                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-secondary);">
+                Pain Level: <span data-output="pain-level">5</span>/10
+                <input type="range" name="pain_level" min="1" max="10" value="5" style="width: 100%;">
+                <div
+                    style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-secondary);">
                     <span>No Pain</span>
                     <span>Severe Pain</span>
                 </div>
@@ -238,12 +180,12 @@
 
             <label>
                 Notes
-                <textarea x-model="notes" rows="2" placeholder="Optional notes about this injection"></textarea>
+                <textarea name="notes" rows="2" placeholder="Optional notes about this injection"></textarea>
             </label>
 
             <footer>
                 <div class="grid-2">
-                    <button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button>
+                    <button type="button" class="secondary" data-action="close-log-injection">Cancel</button>
                     <button type="submit">Log Injection</button>
                 </div>
             </footer>
@@ -256,44 +198,20 @@
     <article class="modal-card" style="max-width: 400px; margin: 0;">
         <header>
             <h3>Confirm Deletion</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('delete-injection-confirm').close()"></button>
+            <button aria-label="Close" rel="prev" data-action="close-delete-confirm"></button>
         </header>
         <p>Delete injection on <strong id="delete-injection-info"></strong>?</p>
         <p><small class="text-danger">This action cannot be undone.</small></p>
         <footer>
             <div class="grid-2">
-                <button type="button" class="secondary" onclick="document.getElementById('delete-injection-confirm').close()">Cancel</button>
-                <button type="button" class="contrast" onclick="confirmDeleteInjection()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+                <button type="button" class="secondary" data-action="close-delete-confirm">Cancel</button>
+                <button type="button" class="contrast" data-action="confirm-delete"
+                    style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
             </div>
         </footer>
     </article>
 </dialog>
 
-<script>
-let currentInjectionId = null;
-
-function showDeleteInjectionConfirmation(injectionId, side, date) {
-    currentInjectionId = injectionId;
-    document.getElementById('delete-injection-info').textContent = side + ' side on ' + date;
-    document.getElementById('delete-injection-confirm').showModal();
-}
-
-function confirmDeleteInjection() {
-    if (!currentInjectionId) return;
-
-    fetch('/api/injections/' + currentInjectionId, {
-        method: 'DELETE',
-        headers: {'X-CSRF-Token': '{{ .CSRFToken }}'}
-    }).then(response => {
-        if (response.ok) {
-            window.location.reload();
-        } else {
-            console.error('Error deleting injection');
-            window.location.reload();
-        }
-    });
-
-    document.getElementById('delete-injection-confirm').close();
-}
-</script>
+<!-- Include injections JavaScript -->
+<script src="/static/js/injections.js"></script>
 {{ end }}
