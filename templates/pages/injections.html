@@ -105,6 +105,17 @@
                 </div>
             </fieldset>
 
+            <div class="grid-2">
+                <label>
+                    Date
+                    <input type="date" name="date" value="{{ .DateStr }}" required>
+                </label>
+                <label>
+                    Time
+                    <input type="time" name="time" value="{{ .TimeStr }}" required>
+                </label>
+            </div>
+
             <label>
                 Pain Level: <span data-output="pain-level">{{ if .PainLevel }}{{ .PainLevel }}{{ else }}5{{ end
                     }}</span>/10
@@ -167,6 +178,17 @@
                     </label>
                 </div>
             </fieldset>
+
+            <div class="grid-2">
+                <label>
+                    Date
+                    <input type="date" name="date" required>
+                </label>
+                <label>
+                    Time
+                    <input type="time" name="time" required>
+                </label>
+            </div>
 
             <label>
                 Pain Level: <span data-output="pain-level">5</span>/10

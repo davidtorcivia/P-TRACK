@@ -93,10 +93,89 @@ document.addEventListener('DOMContentLoaded', () => {
     enhanceForms();
 
     // Initialize existing app functionality
+    // Initialize existing app functionality
     initTheme();
     checkOfflineStatus();
     initPWA();
+    initMobileMenu();
 });
+
+// Mobile Menu Logic
+function initMobileMenu() {
+    const toggleBtn = document.querySelector('.mobile-menu-toggle');
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const closeBtn = document.querySelector('#mobile-menu-drawer .close');
+    const drawer = document.getElementById('mobile-menu-drawer');
+    const accountDropdown = document.querySelector('#mobile-menu-drawer a[onclick*="toggleMobileDropdown"]');
+    // ^ Note: We'll change the HTML selector logic below, for now let's targeting generic first
+    // Better to target class after HTML update.
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleMobileMenu);
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeMobileMenu);
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeMobileMenu);
+    }
+
+    // Close menu when clicking links
+    if (drawer) {
+        const links = drawer.querySelectorAll('a:not(.dropdown-toggle)');
+        links.forEach(link => {
+            link.addEventListener('click', closeMobileMenu);
+        });
+
+        // Mobile dropdown toggle
+        const dropdownToggle = drawer.querySelector('.mobile-dropdown-toggle');
+        if (dropdownToggle) {
+            dropdownToggle.addEventListener('click', toggleMobileDropdown);
+        }
+    }
+}
+
+function toggleMobileMenu() {
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const drawer = document.getElementById('mobile-menu-drawer');
+
+    if (drawer.classList.contains('open')) {
+        closeMobileMenu();
+    } else {
+        if (overlay) overlay.style.display = 'block';
+        // Small delay to allow display:block to apply before adding class for transition
+        setTimeout(() => {
+            if (drawer) drawer.classList.add('open');
+        }, 10);
+    }
+}
+
+function closeMobileMenu() {
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const drawer = document.getElementById('mobile-menu-drawer');
+
+    if (drawer) drawer.classList.remove('open');
+    setTimeout(() => {
+        if (overlay) overlay.style.display = 'none';
+    }, 300);
+}
+
+function toggleMobileDropdown(event) {
+    event.preventDefault();
+    // The content is the next sibling
+    const content = event.currentTarget.nextElementSibling;
+    const arrow = event.currentTarget.querySelector('span');
+
+    if (content.style.display === 'flex') {
+        content.style.display = 'none';
+        if (arrow) arrow.textContent = '▼';
+    } else {
+        content.style.display = 'flex';
+        if (arrow) arrow.textContent = '▲';
+    }
+}
 
 // Tooltip system
 function initializeTooltips() {

@@ -23,63 +23,15 @@
 </div>
 
 <!-- Add New Item -->
-<article class="card" style="margin-bottom: var(--space-6);" x-data="{ itemType: 'progesterone', amount: 10, vialSize: 10, reason: 'restock', lotNumber: '', expirationDate: '', lowStockThreshold: '' }">
+<article class="card" style="margin-bottom: var(--space-6);">
     <header>
         <h3>Add Inventory</h3>
     </header>
-    <form @submit.prevent="
-        const btn = $el.querySelector('button[type=submit]');
-        btn.disabled = true;
-        btn.textContent = 'Adding...';
-
-        let changeAmount;
-        if (itemType === 'progesterone') {
-            changeAmount = parseFloat(vialSize) * parseFloat(amount);
-        } else {
-            changeAmount = parseInt(amount);
-        }
-
-        const data = {
-            change_amount: changeAmount,
-            reason: reason,
-            notes: 'Added inventory'
-        };
-
-        if (lotNumber) data.lot_number = lotNumber;
-        if (expirationDate) data.expiration_date = expirationDate;
-        if (lowStockThreshold) data.low_stock_threshold = parseFloat(lowStockThreshold);
-
-        fetch('/api/inventory/' + itemType + '/adjust', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': '{{ .CSRFToken }}'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                return response.text().then(text => {
-                    btn.disabled = false;
-                    btn.textContent = 'Add to Inventory';
-                    console.error('Error:', text);
-                    window.location.reload();
-                });
-            }
-        })
-        .catch(error => {
-            btn.disabled = false;
-            btn.textContent = 'Add to Inventory';
-            console.error('Error:', error.message);
-            window.location.reload();
-        });
-    ">
+    <form id="add-inventory-form">
         <div class="grid-3">
             <label>
                 Item Type
-                <select x-model="itemType" required>
+                <select id="add-item-type" name="item_type" required>
                     <option value="progesterone">Progesterone (vials)</option>
                     <option value="draw_needle">Draw Needles</option>
                     <option value="injection_needle">Injection Needles</option>
@@ -88,27 +40,28 @@
                     <option value="gauze">Gauze Pads</option>
                 </select>
             </label>
-            <label x-show="itemType === 'progesterone'">
+            <label id="add-vial-size-container">
                 Vial Size (mL)
-                <input type="number" x-model="vialSize" step="0.1" min="0.1">
+                <input type="number" name="vial_size" step="0.1" min="0.1" value="10">
             </label>
             <label>
-                <span x-text="itemType === 'progesterone' ? 'Number of Vials' : 'Quantity'"></span>
-                <input type="number" x-model="amount" :step="itemType === 'progesterone' ? '1' : '1'" min="1" required>
+                <span id="add-amount-label">Quantity</span>
+                <input type="number" id="add-amount-input" name="amount" min="1" value="1" required>
             </label>
         </div>
         <div class="grid-3">
             <label>
                 Lot Number (optional)
-                <input type="text" x-model="lotNumber" placeholder="Lot/batch number">
+                <input type="text" name="lot_number" placeholder="Lot/batch number">
             </label>
             <label>
                 Expiration Date (optional)
-                <input type="date" x-model="expirationDate">
+                <input type="date" name="expiration_date">
             </label>
             <label>
                 Low Stock Alert Threshold (optional)
-                <input type="number" x-model="lowStockThreshold" :step="itemType === 'progesterone' ? '0.1' : '1'" min="0" placeholder="Alert when quantity is below...">
+                <input type="number" id="add-low-stock-input" name="low_stock_threshold" min="0"
+                    placeholder="Alert when quantity is below...">
                 <small class="text-muted">Get alerts when stock falls below this amount</small>
             </label>
         </div>
@@ -122,50 +75,53 @@
         <h3>Current Stock</h3>
     </header>
     <div id="inventory-items" class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
-    {{ range .InventoryItems }}
-    <div class="card" style="border: 1px solid var(--color-border); padding: var(--space-4); margin: 0;" x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '', lowStockThreshold: {{ if .LowStockThreshold }}{{ .LowStockThreshold }}{{ else }}0{{ end }} }">
-        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <h3 style="margin: 0; font-size: var(--text-lg);">
-                        {{ .Icon }} {{ .DisplayName }}
-                    </h3>
-                    <div style="margin-top: var(--space-2);">
-                        <strong style="font-size: var(--text-2xl); color: var(--brand-primary);">{{ .Quantity }} <span style="font-size: var(--text-base);">{{ .Unit }}</span></strong>
+        {{ range .InventoryItems }}
+        <div class="card" style="border: 1px solid var(--color-border); padding: var(--space-4); margin: 0;"
+            x-data="{ showAdjust: false, adjustAmount: 0, adjustReason: '', adjustNotes: '', lowStockThreshold: {{ if .LowStockThreshold }}{{ .LowStockThreshold }}{{ else }}0{{ end }} }">
+            <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="margin: 0; font-size: var(--text-lg);">
+                            {{ .Icon }} {{ .DisplayName }}
+                        </h3>
+                        <div style="margin-top: var(--space-2);">
+                            <strong style="font-size: var(--text-2xl); color: var(--brand-primary);">{{ .Quantity }}
+                                <span style="font-size: var(--text-base);">{{ .Unit }}</span></strong>
+                        </div>
+                        {{ if .LowStock }}
+                        <span class="badge badge-warning" style="margin-top: var(--space-1);">Low Stock</span>
+                        {{ end }}
                     </div>
-                    {{ if .LowStock }}
-                    <span class="badge badge-warning" style="margin-top: var(--space-1);">Low Stock</span>
-                    {{ end }}
-                </div>
-                <div style="text-align: right; display: flex; flex-direction: column; gap: var(--space-2);">
-                    <button @click="showAdjust = !showAdjust" class="btn-sm outline">
-                        <span x-text="showAdjust ? 'Cancel' : 'Adjust'"></span>
-                    </button>
-                    <button onclick="window.location.href='/inventory/{{ .ItemType }}/history'"
+                    <div style="text-align: right; display: flex; flex-direction: column; gap: var(--space-2);">
+                        <button @click="showAdjust = !showAdjust" class="btn-sm outline">
+                            <span x-text="showAdjust ? 'Cancel' : 'Adjust'"></span>
+                        </button>
+                        <button onclick="window.location.href='/inventory/{{ .ItemType }}/history'"
                             class="btn-sm outline secondary">
-                        History
-                    </button>
+                            History
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">
-                {{ if .ExpirationDate }}
-                <div>
-                    Expires: {{ .FormattedExpiration }}
-                    {{ if .ExpiringSoon }}
-                    <span style="color: var(--danger-primary); font-weight: bold;">Expiring soon!</span>
+                <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                    {{ if .ExpirationDate }}
+                    <div>
+                        Expires: {{ .FormattedExpiration }}
+                        {{ if .ExpiringSoon }}
+                        <span style="color: var(--danger-primary); font-weight: bold;">Expiring soon!</span>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                    {{ if .LotNumber }}
+                    <div>Lot #: {{ .LotNumber }}</div>
                     {{ end }}
                 </div>
-                {{ end }}
-                {{ if .LotNumber }}
-                <div>Lot #: {{ .LotNumber }}</div>
-                {{ end }}
             </div>
-        </div>
 
-        <!-- Adjustment Form -->
-        <div x-show="showAdjust" style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
-            <form @submit.prevent="
+            <!-- Adjustment Form -->
+            <div x-show="showAdjust"
+                style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+                <form @submit.prevent="
                 const btn = $el.querySelector('button[type=submit]');
                 btn.disabled = true;
                 btn.setAttribute('aria-busy', 'true');
@@ -215,93 +171,78 @@
                 });
             ">
 
-                <div class="grid-2">
-                    <label for="adjust-amount-{{ .ItemType }}">
-                        Amount
-                        <input type="number"
-                               id="adjust-amount-{{ .ItemType }}"
-                               name="amount"
-                               step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
-                               x-model="adjustAmount"
-                               placeholder="Use - for decrease"
-                               required>
-                        <small class="text-muted">Positive to add, negative to remove</small>
-                    </label>
-
-                    <label for="adjust-reason-{{ .ItemType }}">
-                        Reason
-                        <select id="adjust-reason-{{ .ItemType }}"
-                                name="reason"
-                                x-model="adjustReason"
-                                required>
-                            <option value="">Select reason...</option>
-                            <option value="restock">Restock</option>
-                            <option value="manual_adjustment">Manual Adjustment</option>
-                            <option value="expired">Expired/Discarded</option>
-                            <option value="damaged">Damaged</option>
-                            <option value="correction">Correction</option>
-                        </select>
-                    </label>
-                </div>
-
-                <label for="adjust-notes-{{ .ItemType }}">
-                    Notes (optional)
-                    <textarea id="adjust-notes-{{ .ItemType }}"
-                              name="notes"
-                              x-model="adjustNotes"
-                              rows="2"
-                              placeholder="Additional details..."></textarea>
-                </label>
-
-                <label for="low-stock-threshold-{{ .ItemType }}">
-                    Low Stock Alert Threshold (optional)
-                    <input type="number"
-                           id="low-stock-threshold-{{ .ItemType }}"
-                           name="low_stock_threshold"
-                           x-model="lowStockThreshold"
-                           step="{{ if eq .Unit "mL" }}0.1{{ else }}1{{ end }}"
-                           min="0"
-                           placeholder="Alert when quantity is below...">
-                    <small class="text-muted">Get alerts when stock falls below this amount</small>
-                </label>
-
-                <!-- Optional fields for restock -->
-                <div x-show="adjustReason === 'restock'">
                     <div class="grid-2">
-                        <label for="lot-number-{{ .ItemType }}">
-                            Lot Number (optional)
-                            <input type="text"
-                                   id="lot-number-{{ .ItemType }}"
-                                   name="lot_number"
-                                   placeholder="Lot/batch number">
+                        <label for="adjust-amount-{{ .ItemType }}">
+                            Amount
+                            <input type="number" id="adjust-amount-{{ .ItemType }}" name="amount" step="{{ if eq .Unit "
+                                mL" }}0.1{{ else }}1{{ end }}" x-model="adjustAmount" placeholder="Use - for decrease"
+                                required>
+                            <small class="text-muted">Positive to add, negative to remove</small>
                         </label>
 
-                        <label for="expiration-date-{{ .ItemType }}">
-                            Expiration Date (optional)
-                            <input type="date"
-                                   id="expiration-date-{{ .ItemType }}"
-                                   name="expiration_date">
+                        <label for="adjust-reason-{{ .ItemType }}">
+                            Reason
+                            <select id="adjust-reason-{{ .ItemType }}" name="reason" x-model="adjustReason" required>
+                                <option value="">Select reason...</option>
+                                <option value="restock">Restock</option>
+                                <option value="manual_adjustment">Manual Adjustment</option>
+                                <option value="expired">Expired/Discarded</option>
+                                <option value="damaged">Damaged</option>
+                                <option value="correction">Correction</option>
+                            </select>
                         </label>
                     </div>
-                </div>
 
-                <button type="submit" :disabled="!adjustAmount || !adjustReason" class="w-full btn-sm">
-                    Update Inventory
-                </button>
-            </form>
-        </div>
+                    <label for="adjust-notes-{{ .ItemType }}">
+                        Notes (optional)
+                        <textarea id="adjust-notes-{{ .ItemType }}" name="notes" x-model="adjustNotes" rows="2"
+                            placeholder="Additional details..."></textarea>
+                    </label>
 
-        <!-- Progress Bar for Low Stock -->
-        {{ if .LowStockThreshold }}
-        <div style="margin-top: var(--space-3);">
-            <div style="width: 100%; height: 8px; background-color: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
-                <div style="width: {{ if gt .Quantity .LowStockThreshold }}100%{{ else }}50%{{ end }}; height: 100%; background-color: {{ if .LowStock }}var(--danger-primary){{ else }}var(--success-primary){{ end }};"></div>
+                    <label for="low-stock-threshold-{{ .ItemType }}">
+                        Low Stock Alert Threshold (optional)
+                        <input type="number" id="low-stock-threshold-{{ .ItemType }}" name="low_stock_threshold"
+                            x-model="lowStockThreshold" step="{{ if eq .Unit " mL" }}0.1{{ else }}1{{ end }}" min="0"
+                            placeholder="Alert when quantity is below...">
+                        <small class="text-muted">Get alerts when stock falls below this amount</small>
+                    </label>
+
+                    <!-- Optional fields for restock -->
+                    <div x-show="adjustReason === 'restock'">
+                        <div class="grid-2">
+                            <label for="lot-number-{{ .ItemType }}">
+                                Lot Number (optional)
+                                <input type="text" id="lot-number-{{ .ItemType }}" name="lot_number"
+                                    placeholder="Lot/batch number">
+                            </label>
+
+                            <label for="expiration-date-{{ .ItemType }}">
+                                Expiration Date (optional)
+                                <input type="date" id="expiration-date-{{ .ItemType }}" name="expiration_date">
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" :disabled="!adjustAmount || !adjustReason" class="w-full btn-sm">
+                        Update Inventory
+                    </button>
+                </form>
             </div>
-            <small class="text-muted">Threshold: {{ .LowStockThreshold }} {{ .Unit }}</small>
+
+            <!-- Progress Bar for Low Stock -->
+            {{ if .LowStockThreshold }}
+            <div style="margin-top: var(--space-3);">
+                <div
+                    style="width: 100%; height: 8px; background-color: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
+                    <div
+                        style="width: {{ if gt .Quantity .LowStockThreshold }}100%{{ else }}50%{{ end }}; height: 100%; background-color: {{ if .LowStock }}var(--danger-primary){{ else }}var(--success-primary){{ end }};">
+                    </div>
+                </div>
+                <small class="text-muted">Threshold: {{ .LowStockThreshold }} {{ .Unit }}</small>
+            </div>
+            {{ end }}
         </div>
         {{ end }}
-    </div>
-    {{ end }}
     </div>
 </article>
 
@@ -357,44 +298,43 @@
         <div class="grid-2">
             <label for="progesterone-per-injection">
                 Progesterone per injection (mL)
-                <input type="number"
-                       id="progesterone-per-injection"
-                       name="progesterone_per_injection"
-                       step="0.1"
-                       value="{{ .Settings.ProgesteronePerInjection }}"
-                       required>
+                <input type="number" id="progesterone-per-injection" name="progesterone_per_injection" step="0.1"
+                    value="{{ .Settings.ProgesteronePerInjection }}" required>
             </label>
 
-            <label for="auto-deduct" style="display: flex; align-items: center; gap: var(--space-2); height: 100%; padding-top: 1.5rem;">
-                <input type="checkbox"
-                       id="auto-deduct"
-                       name="auto_deduct"
-                       role="switch"
-                       {{ if .Settings.AutoDeduct }}checked{{ end }}
-                       style="width: 2rem;">
+            <label for="auto-deduct"
+                style="display: flex; align-items: center; gap: var(--space-2); height: 100%; padding-top: 1.5rem;">
+                <input type="checkbox" id="auto-deduct" name="auto_deduct" role="switch" {{ if .Settings.AutoDeduct
+                    }}checked{{ end }} style="width: 2rem;">
                 Enable auto-deduction
             </label>
         </div>
 
-        <details style="margin: var(--space-4) 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3);">
+        <details
+            style="margin: var(--space-4) 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3);">
             <summary style="font-weight: var(--font-medium); cursor: pointer;">Advanced Settings</summary>
 
             <fieldset style="border: none; padding: 0; margin-top: var(--space-3);">
-                <legend style="font-size: var(--text-sm); font-weight: var(--font-semibold); margin-bottom: var(--space-2);">Items deducted per injection</legend>
+                <legend
+                    style="font-size: var(--text-sm); font-weight: var(--font-semibold); margin-bottom: var(--space-2);">
+                    Items deducted per injection</legend>
 
                 <div class="grid-2">
                     <label class="flex items-center gap-2">
-                        <input type="checkbox" name="deduct_draw_needle" checked disabled style="width: 1rem; height: 1rem;">
+                        <input type="checkbox" name="deduct_draw_needle" checked disabled
+                            style="width: 1rem; height: 1rem;">
                         1× Draw Needle
                     </label>
 
                     <label class="flex items-center gap-2">
-                        <input type="checkbox" name="deduct_injection_needle" checked disabled style="width: 1rem; height: 1rem;">
+                        <input type="checkbox" name="deduct_injection_needle" checked disabled
+                            style="width: 1rem; height: 1rem;">
                         1× Injection Needle
                     </label>
 
                     <label class="flex items-center gap-2">
-                        <input type="checkbox" name="deduct_syringe" checked disabled style="width: 1rem; height: 1rem;">
+                        <input type="checkbox" name="deduct_syringe" checked disabled
+                            style="width: 1rem; height: 1rem;">
                         1× Syringe
                     </label>
 
@@ -423,10 +363,7 @@
         <h3>Recent Changes</h3>
     </header>
 
-    <div id="recent-inventory-changes"
-         hx-get="/api/inventory/history/recent"
-         hx-trigger="load"
-         hx-swap="innerHTML">
+    <div id="recent-inventory-changes" hx-get="/api/inventory/history/recent" hx-trigger="load" hx-swap="innerHTML">
         <p aria-busy="true">Loading recent changes...</p>
     </div>
 
@@ -445,14 +382,19 @@
         border: none;
         overflow: hidden;
     }
+
     progress::-webkit-progress-bar {
         background-color: var(--color-bg-tertiary);
     }
+
     progress::-webkit-progress-value {
         background-color: var(--brand-primary);
     }
+
     progress::-moz-progress-bar {
         background-color: var(--brand-primary);
     }
 </style>
+
+<script src="/static/js/inventory.js"></script>
 {{ end }}

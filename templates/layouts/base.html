@@ -86,7 +86,7 @@
             </ul>
 
             <!-- Mobile Menu Toggle -->
-            <div class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            <div class="mobile-menu-toggle" role="button" aria-label="Toggle Menu">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -98,11 +98,11 @@
     </nav>
 
     <!-- Mobile Menu Overlay & Drawer -->
-    <div id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+    <div id="mobile-menu-overlay"></div>
     <div id="mobile-menu-drawer">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
             <strong style="font-size: 1.25rem;">Menu</strong>
-            <button onclick="closeMobileMenu()" class="close"
+            <button class="close"
                 style="background: none; border: none; padding: 0.5rem; cursor: pointer; color: var(--color-text-primary);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -112,19 +112,19 @@
             </button>
         </div>
         <ul>
-            <li><a href="/dashboard" onclick="closeMobileMenu()">Dashboard</a></li>
-            <li><a href="/courses" onclick="closeMobileMenu()">Courses</a></li>
-            <li><a href="/injections" onclick="closeMobileMenu()">Injections</a></li>
-            <li><a href="/symptoms" onclick="closeMobileMenu()">Symptoms</a></li>
-            <li><a href="/medications" onclick="closeMobileMenu()">Medications</a></li>
-            <li><a href="/inventory" onclick="closeMobileMenu()">Inventory</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/courses">Courses</a></li>
+            <li><a href="/injections">Injections</a></li>
+            <li><a href="/symptoms">Symptoms</a></li>
+            <li><a href="/medications">Medications</a></li>
+            <li><a href="/inventory">Inventory</a></li>
             <li>
-                <a href="#" onclick="toggleMobileDropdown(event)" style="justify-content: space-between;">Account
+                <a href="#" class="mobile-dropdown-toggle" style="justify-content: space-between;">Account
                     <span>▼</span></a>
                 <div class="dropdown-content"
                     style="padding-left: 1rem; display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
-                    <a href="/settings" onclick="closeMobileMenu()" style="font-size: 0.9rem;">Settings</a>
-                    <a href="/reports" onclick="closeMobileMenu()" style="font-size: 0.9rem;">Reports</a>
+                    <a href="/settings" style="font-size: 0.9rem;">Settings</a>
+                    <a href="/reports" style="font-size: 0.9rem;">Reports</a>
                     <a href="#" hx-post="/api/auth/logout" hx-swap="none"
                         hx-on::after-request="window.location.href='/login'"
                         style="font-size: 0.9rem; color: var(--danger-primary);">Logout</a>
@@ -140,44 +140,6 @@
     </div>
 
     <script>
-        function toggleMobileMenu() {
-            const overlay = document.getElementById('mobile-menu-overlay');
-            const drawer = document.getElementById('mobile-menu-drawer');
-
-            if (drawer.classList.contains('open')) {
-                closeMobileMenu();
-            } else {
-                overlay.style.display = 'block';
-                setTimeout(() => {
-                    drawer.classList.add('open');
-                }, 10);
-            }
-        }
-
-        function closeMobileMenu() {
-            const overlay = document.getElementById('mobile-menu-overlay');
-            const drawer = document.getElementById('mobile-menu-drawer');
-
-            drawer.classList.remove('open');
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 300);
-        }
-
-        function toggleMobileDropdown(event) {
-            event.preventDefault();
-            const content = event.target.nextElementSibling;
-            const arrow = event.target.querySelector('span');
-
-            if (content.style.display === 'flex') {
-                content.style.display = 'none';
-                arrow.textContent = '▼';
-            } else {
-                content.style.display = 'flex';
-                arrow.textContent = '▲';
-            }
-        }
-
         // Dropdown logic for desktop
         const details = document.querySelector('details.dropdown');
         if (details) {
@@ -187,9 +149,6 @@
                     details.removeAttribute('open');
                 }
             });
-
-            // Toggle on click (default behavior of details/summary, but we can enhance if needed)
-            // The CSS should handle the display of ul when details[open]
         }
     </script>
     {{ end }}

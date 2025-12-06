@@ -7,17 +7,17 @@ import (
 
 // User represents a system user
 type User struct {
-	ID                   int64
-	Username             string
-	PasswordHash         string
-	Email                sql.NullString
-	AccountID            int64
-	Role                 string  // "owner" or "member"
-	IsActive             bool
-	FailedLoginAttempts  int
-	LockedUntil          sql.NullTime
-	CreatedAt            time.Time
-	LastLogin            sql.NullTime
+	ID                  int64
+	Username            string
+	PasswordHash        string
+	Email               sql.NullString
+	AccountID           int64
+	Role                string // "owner" or "member"
+	IsActive            bool
+	FailedLoginAttempts int
+	LockedUntil         sql.NullTime
+	CreatedAt           time.Time
+	LastLogin           sql.NullTime
 }
 
 // Course represents a treatment cycle
@@ -72,20 +72,30 @@ func (c *Course) DaysActive() int {
 
 // Injection represents an injection record
 type Injection struct {
-	ID              int64
-	CourseID        int64
-	AdministeredBy  sql.NullInt64
-	Timestamp       time.Time
-	Side            string
-	SiteX           sql.NullFloat64
-	SiteY           sql.NullFloat64
-	PainLevel       sql.NullInt64
-	HasKnots        bool
-	SiteReaction    sql.NullString
-	Notes           sql.NullString
-	AccountID       int64 // Account this injection belongs to
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID             int64
+	CourseID       int64
+	AdministeredBy sql.NullInt64
+	Timestamp      time.Time
+	Side           string
+	SiteX          sql.NullFloat64
+	SiteY          sql.NullFloat64
+	PainLevel      sql.NullInt64
+	HasKnots       bool
+	SiteReaction   sql.NullString
+	Notes          sql.NullString
+	AccountID      int64 // Account this injection belongs to
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// DateStr returns the date part of the timestamp for HTML date inputs
+func (i *Injection) DateStr() string {
+	return i.Timestamp.Format("2006-01-02")
+}
+
+// TimeStr returns the time part of the timestamp for HTML time inputs
+func (i *Injection) TimeStr() string {
+	return i.Timestamp.Format("15:04")
 }
 
 // SymptomLog represents a symptom log entry
@@ -99,27 +109,27 @@ type SymptomLog struct {
 	PainType     sql.NullString
 	Symptoms     sql.NullString // JSON array
 	Notes        sql.NullString
-	AccountID    int64          // Account this symptom log belongs to
+	AccountID    int64 // Account this symptom log belongs to
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
 
 // Medication represents a medication
 type Medication struct {
-	ID                 int64
-	Name               string
-	Dosage             sql.NullString
-	Frequency          sql.NullString
-	StartDate          sql.NullTime
-	EndDate            sql.NullTime
-	IsActive           bool
-	Notes              sql.NullString
-	ScheduledTime      sql.NullString // HH:MM format (e.g., "08:00")
-	TimeWindowMinutes  sql.NullInt64  // Minutes before/after scheduled time
-	ReminderEnabled    bool
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	AccountID          int64 // Account this medication belongs to
+	ID                int64
+	Name              string
+	Dosage            sql.NullString
+	Frequency         sql.NullString
+	StartDate         sql.NullTime
+	EndDate           sql.NullTime
+	IsActive          bool
+	Notes             sql.NullString
+	ScheduledTime     sql.NullString // HH:MM format (e.g., "08:00")
+	TimeWindowMinutes sql.NullInt64  // Minutes before/after scheduled time
+	ReminderEnabled   bool
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         int64 // Account this medication belongs to
 
 	// Computed fields (set by repository)
 	TakenToday bool
@@ -146,17 +156,17 @@ type MedicationLog struct {
 
 // InventoryItem represents an inventory item
 type InventoryItem struct {
-	ID                 int64
-	ItemType           string
-	Quantity           float64
-	Unit               string
-	ExpirationDate     sql.NullTime
-	LotNumber          sql.NullString
-	LowStockThreshold  sql.NullFloat64
-	Notes              sql.NullString
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	AccountID          int64 // Account this inventory belongs to
+	ID                int64
+	ItemType          string
+	Quantity          float64
+	Unit              string
+	ExpirationDate    sql.NullTime
+	LotNumber         sql.NullString
+	LowStockThreshold sql.NullFloat64
+	Notes             sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         int64 // Account this inventory belongs to
 }
 
 // InventoryHistory represents an inventory change record

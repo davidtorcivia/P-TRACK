@@ -10,16 +10,59 @@ document.addEventListener('DOMContentLoaded', function () {
         return metaTag ? metaTag.getAttribute('content') : '';
     }
 
+    // Helper to format date for input[type="date"]
+    function formatDate(date) {
+        const d = new Date(date);
+        let month = '' + (d.getMonth() + 1);
+        let day = '' + d.getDate();
+        const year = d.getFullYear();
+
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [year, month, day].join('-');
+    }
+
+    // Helper to format time for input[type="time"]
+    function formatTime(date) {
+        const d = new Date(date);
+        let hours = '' + d.getHours();
+        let minutes = '' + d.getMinutes();
+
+        if (hours.length < 2) hours = '0' + hours;
+        if (minutes.length < 2) minutes = '0' + minutes;
+
+        return [hours, minutes].join(':');
+    }
+
+    // Helper to combine date and time inputs into RFC3339 timestamp
+    function combineDateTime(dateStr, timeStr) {
+        if (!dateStr || !timeStr) return null;
+        // Create date object from inputs
+        const date = new Date(dateStr + 'T' + timeStr);
+        return date.toISOString();
+    }
+
     // --- Create Injection ---
 
-    // Open modal
-    const logInjectionBtn = document.querySelector('[data-action="log-injection"]');
-    if (logInjectionBtn) {
-        logInjectionBtn.addEventListener('click', function () {
+    // Open modal - HANDLES MULTIPLE BUTTONS
+    const logInjectionBtns = document.querySelectorAll('[data-action="log-injection"]');
+    logInjectionBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
             const modal = document.getElementById('log-injection');
-            if (modal) modal.showModal();
+            if (modal) {
+                // Pre-fill with current date/time
+                const now = new Date();
+                const dateInput = modal.querySelector('input[name="date"]');
+                const timeInput = modal.querySelector('input[name="time"]');
+
+                if (dateInput) dateInput.value = formatDate(now);
+                if (timeInput) timeInput.value = formatTime(now);
+
+                modal.showModal();
+            }
         });
-    }
+    });
 
     // Close modal
     const closeLogInjectionBtns = document.querySelectorAll('[data-action="close-log-injection"]');
@@ -49,11 +92,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const courseId = e.target.getAttribute('data-course-id');
             const btn = e.target.querySelector('button[type=submit]');
 
+            // Get date/time
+            const dateStr = formData.get('date');
+            const timeStr = formData.get('time');
+            const timestamp = combineDateTime(dateStr, timeStr);
+
             const data = {
                 course_id: parseInt(courseId),
                 side: formData.get('side'),
                 pain_level: parseInt(formData.get('pain_level')),
-                notes: formData.get('notes')
+                notes: formData.get('notes'),
+                timestamp: timestamp
             };
 
             btn.disabled = true;
@@ -95,6 +144,10 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             const id = this.getAttribute('data-id');
             const modal = document.getElementById('edit-injection-' + id);
+
+            // Date/Time are pre-filled by backend template logic or we could parse them here
+            // Parsing existing timestamp from data attribute would be robust
+
             if (modal) modal.showModal();
         });
     });
@@ -127,10 +180,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(e.target);
             const btn = e.target.querySelector('button[type=submit]');
 
+            // Get date/time
+            const dateStr = formData.get('date');
+            const timeStr = formData.get('time');
+            const timestamp = combineDateTime(dateStr, timeStr);
+
             const data = {
                 side: formData.get('side-' + id), // Radio buttons have unique names
                 pain_level: parseInt(formData.get('pain_level')),
-                notes: formData.get('notes')
+                notes: formData.get('notes'),
+                timestamp: timestamp
             };
 
             btn.disabled = true;

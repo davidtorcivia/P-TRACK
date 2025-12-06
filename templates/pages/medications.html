@@ -5,7 +5,7 @@
         <p>Track pills, supplements, and other medications</p>
     </hgroup>
 
-    <button onclick="document.getElementById('new-medication').showModal()" class="btn w-full mt-4">Add Medication</button>
+    <button id="btn-add-medication" class="btn w-full mt-4">Add Medication</button>
 </article>
 
 <!-- Active Medications -->
@@ -15,11 +15,16 @@
     {{ if .ActiveMedications }}
     <div class="grid desktop-grid-cols-2" style="gap: var(--space-4);">
         {{ range .ActiveMedications }}
-        <article class="card" style="margin: 0; padding: var(--space-4); border: 1px solid var(--color-border); box-shadow: none;">
+        <article class="card"
+            style="margin: 0; padding: var(--space-4); border: 1px solid var(--color-border); box-shadow: none;">
             <header style="margin-bottom: var(--space-3); border-bottom: none; padding-bottom: 0;">
                 <h4 style="margin: 0; font-size: var(--text-lg);">{{ .Name }}</h4>
-                {{ if .Dosage.Valid }}<p style="margin: var(--space-1) 0 0 0; color: var(--color-text-secondary); font-size: var(--text-sm);">{{ .Dosage.String }}</p>{{ end }}
-                {{ if .Frequency.Valid }}<p style="margin: 0; color: var(--color-text-secondary); font-size: var(--text-sm);">{{ .Frequency.String }}</p>{{ end }}
+                {{ if .Dosage.Valid }}<p
+                    style="margin: var(--space-1) 0 0 0; color: var(--color-text-secondary); font-size: var(--text-sm);">
+                    {{ .Dosage.String }}</p>{{ end }}
+                {{ if .Frequency.Valid }}<p
+                    style="margin: 0; color: var(--color-text-secondary); font-size: var(--text-sm);">{{
+                    .Frequency.String }}</p>{{ end }}
             </header>
             <div style="margin: var(--space-3) 0;">
                 {{ if .TakenToday }}
@@ -28,22 +33,14 @@
                 <span class="badge badge-secondary">Not taken today</span>
                 {{ end }}
             </div>
-            <footer style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">
+            <footer
+                style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">
                 <div class="grid-2" style="gap: var(--space-2);">
-                    <button onclick="
-                        const taken = {{ if .TakenToday }}false{{ else }}true{{ end }};
-                        fetch('/api/medications/{{ .ID }}/log', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': '{{ $.CSRFToken }}'
-                            },
-                            body: JSON.stringify({taken: taken})
-                        }).then(() => window.location.reload());
-                    " class="btn-sm outline w-full">
+                    <button data-action="log-medication" data-id="{{ .ID }}"
+                        data-taken="{{ if .TakenToday }}false{{ else }}true{{ end }}" class="btn-sm outline w-full">
                         {{ if .TakenToday }}Mark Missed{{ else }}Mark Taken{{ end }}
                     </button>
-                    <button onclick="document.getElementById('edit-medication-{{ .ID }}').showModal()" class="btn-sm outline secondary w-full">
+                    <button data-action="edit-medication" data-id="{{ .ID }}" class="btn-sm outline secondary w-full">
                         Edit
                     </button>
                 </div>
@@ -64,25 +61,23 @@
 <article class="card">
     <h3 style="margin-bottom: var(--space-4);">Inactive Medications</h3>
     {{ range .InactiveMedications }}
-    <div style="margin-bottom: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-3);">
+    <div
+        style="margin-bottom: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-3);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <strong>{{ .Name }}</strong>
-                <br><small class="text-muted">{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}{{ if and .Dosage.Valid .Frequency.Valid }} - {{ end }}{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}</small>
+                <br><small class="text-muted">{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}{{ if and .Dosage.Valid
+                    .Frequency.Valid }} - {{ end }}{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}</small>
             </div>
         </div>
         <div class="grid-2" style="gap: var(--space-2);">
-            <button onclick="
-                fetch('/api/medications/{{ .ID }}', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ $.CSRFToken }}'
-                    },
-                    body: JSON.stringify({is_active: true, name: '{{ .Name }}', dosage: '{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}', frequency: '{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}'})
-                }).then(() => window.location.reload());
-            " class="btn-sm outline w-full">Reactivate</button>
-            <button onclick="showDeleteConfirmation('{{ .ID }}', '{{ .Name }}', 'inactive')" class="btn-sm outline secondary w-full" style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+            <button data-action="reactivate-medication" data-id="{{ .ID }}" data-name="{{ .Name }}"
+                data-dosage="{{ if .Dosage.Valid }}{{ .Dosage.String }}{{ end }}"
+                data-frequency="{{ if .Frequency.Valid }}{{ .Frequency.String }}{{ end }}"
+                class="btn-sm outline w-full">Reactivate</button>
+            <button data-action="confirm-delete" data-id="{{ .ID }}" data-name="{{ .Name }}"
+                class="btn-sm outline secondary w-full"
+                style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
         </div>
     </div>
     {{ end }}
@@ -95,55 +90,9 @@
     <article>
         <header>
             <h3>Edit {{ .Name }}</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-medication-{{ .ID }}').close()"></button>
+            <button aria-label="Close" rel="prev"></button>
         </header>
-        <form id="edit-form-{{ .ID }}" onsubmit="event.preventDefault();
-            const formData = new FormData(event.target);
-            const data = {
-                name: formData.get('name'),
-                dosage: formData.get('dosage'),
-                frequency_type: formData.get('frequency_type'),
-                frequency_value: formData.get('frequency_value'),
-                reminder_time: formData.get('reminder_time'),
-                is_active: true,
-                notes: formData.get('notes') || null
-            };
-
-            // Build frequency string
-            if (data.frequency_type === 'daily') {
-                data.frequency = 'Every day';
-            } else if (data.frequency_type === 'hours') {
-                data.frequency = 'Every ' + data.frequency_value + ' hours';
-            } else if (data.frequency_type === 'days') {
-                data.frequency = 'Every ' + data.frequency_value + ' days';
-            } else {
-                data.frequency = formData.get('frequency_custom');
-            }
-
-            const btn = event.target.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/medications/{{ .ID }}', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ $.CSRFToken }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    response.text().then(text => {
-                        console.error('Error:', text);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                    });
-                }
-            });
-        ">
+        <form id="edit-form-{{ .ID }}" data-form="edit-medication" data-id="{{ .ID }}">
             <label>
                 Medication Name
                 <input type="text" name="name" value="{{ .Name }}" required>
@@ -162,15 +111,18 @@
                     </label>
                     <label class="flex items-center gap-2">
                         <input type="radio" name="frequency_type" value="hours" style="margin:0;"> Every X hours
-                        <input type="number" name="frequency_value" min="1" max="24" placeholder="Hours" style="width: 80px; margin-left: 0.5rem;">
+                        <input type="number" name="frequency_value" min="1" max="24" placeholder="Hours"
+                            style="width: 80px; margin-left: 0.5rem;">
                     </label>
                     <label class="flex items-center gap-2">
                         <input type="radio" name="frequency_type" value="days" style="margin:0;"> Every X days
-                        <input type="number" name="frequency_value" min="1" max="30" placeholder="Days" style="width: 80px; margin-left: 0.5rem;">
+                        <input type="number" name="frequency_value" min="1" max="30" placeholder="Days"
+                            style="width: 80px; margin-left: 0.5rem;">
                     </label>
                     <label class="flex items-center gap-2">
                         <input type="radio" name="frequency_type" value="custom" style="margin:0;"> Custom
-                        <input type="text" name="frequency_custom" placeholder="e.g., Twice daily" style="margin-left: 0.5rem; flex: 1;">
+                        <input type="text" name="frequency_custom" placeholder="e.g., Twice daily"
+                            style="margin-left: 0.5rem; flex: 1;">
                     </label>
                 </div>
             </fieldset>
@@ -188,12 +140,15 @@
 
             <footer>
                 <div class="grid-2" style="gap: var(--space-2);">
-                    <button type="button" class="secondary" onclick="document.getElementById('edit-medication-{{ .ID }}').close()">Cancel</button>
+                    <button type="button" class="secondary">Cancel</button>
                     <button type="submit">Save Changes</button>
                 </div>
                 <div class="grid-2" style="gap: var(--space-2); margin-top: var(--space-3);">
-                    <button type="button" onclick="showDeactivateConfirmation('{{ .ID }}', '{{ .Name }}')" class="outline w-full">Deactivate</button>
-                    <button type="button" onclick="showDeleteConfirmation('{{ .ID }}', '{{ .Name }}', 'active')" class="outline secondary w-full" style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+                    <button type="button" data-action="confirm-deactivate" data-id="{{ .ID }}" data-name="{{ .Name }}"
+                        class="outline w-full">Deactivate</button>
+                    <button type="button" data-action="confirm-delete" data-id="{{ .ID }}" data-name="{{ .Name }}"
+                        class="outline secondary w-full"
+                        style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
                 </div>
             </footer>
         </form>
@@ -206,54 +161,9 @@
     <article>
         <header>
             <h3>Add Medication</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('new-medication').close()"></button>
+            <button aria-label="Close" rel="prev"></button>
         </header>
-        <form onsubmit="event.preventDefault();
-            const formData = new FormData(event.target);
-            const data = {
-                name: formData.get('name'),
-                dosage: formData.get('dosage'),
-                frequency_type: formData.get('frequency_type'),
-                frequency_value: formData.get('frequency_value'),
-                reminder_time: formData.get('reminder_time'),
-                notes: formData.get('notes') || null
-            };
-
-            // Build frequency string
-            if (data.frequency_type === 'daily') {
-                data.frequency = 'Every day';
-            } else if (data.frequency_type === 'hours') {
-                data.frequency = 'Every ' + data.frequency_value + ' hours';
-            } else if (data.frequency_type === 'days') {
-                data.frequency = 'Every ' + data.frequency_value + ' days';
-            } else {
-                data.frequency = formData.get('frequency_custom');
-            }
-
-            const btn = event.target.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/medications', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ .CSRFToken }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    response.text().then(text => {
-                        console.error('Error:', text);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                    });
-                }
-            });
-        ">
+        <form>
             <label>
                 Medication Name
                 <input type="text" name="name" placeholder="e.g., Prenatal Vitamin" required>
@@ -272,15 +182,18 @@
                     </label>
                     <label class="flex items-center gap-2">
                         <input type="radio" name="frequency_type" value="hours" style="margin:0;"> Every X hours
-                        <input type="number" name="frequency_value" min="1" max="24" placeholder="Hours" style="width: 80px; margin-left: 0.5rem;">
+                        <input type="number" name="frequency_value" min="1" max="24" placeholder="Hours"
+                            style="width: 80px; margin-left: 0.5rem;">
                     </label>
                     <label class="flex items-center gap-2">
                         <input type="radio" name="frequency_type" value="days" style="margin:0;"> Every X days
-                        <input type="number" name="frequency_value" min="1" max="30" placeholder="Days" style="width: 80px; margin-left: 0.5rem;">
+                        <input type="number" name="frequency_value" min="1" max="30" placeholder="Days"
+                            style="width: 80px; margin-left: 0.5rem;">
                     </label>
                     <label class="flex items-center gap-2">
                         <input type="radio" name="frequency_type" value="custom" style="margin:0;"> Custom
-                        <input type="text" name="frequency_custom" placeholder="e.g., Twice daily" style="margin-left: 0.5rem; flex: 1;">
+                        <input type="text" name="frequency_custom" placeholder="e.g., Twice daily"
+                            style="margin-left: 0.5rem; flex: 1;">
                     </label>
                 </div>
             </fieldset>
@@ -298,7 +211,7 @@
 
             <footer>
                 <div class="grid-2" style="gap: var(--space-2);">
-                    <button type="button" class="secondary" onclick="document.getElementById('new-medication').close()">Cancel</button>
+                    <button type="button" class="secondary">Cancel</button>
                     <button type="submit">Add Medication</button>
                 </div>
             </footer>
@@ -311,14 +224,15 @@
     <article style="max-width: 400px;">
         <header>
             <h3>Confirm Deletion</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('delete-medication-confirm').close()"></button>
+            <button aria-label="Close" rel="prev"></button>
         </header>
         <p>Are you sure you want to permanently delete <strong id="delete-med-name"></strong>?</p>
         <p><small class="text-danger">This action cannot be undone.</small></p>
         <footer>
             <div class="grid-2" style="gap: var(--space-2);">
-                <button type="button" class="secondary" onclick="document.getElementById('delete-medication-confirm').close()">Cancel</button>
-                <button type="button" class="contrast" onclick="confirmDelete()" style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+                <button type="button" class="secondary">Cancel</button>
+                <button type="button" id="btn-confirm-delete" class="contrast"
+                    style="background-color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
             </div>
         </footer>
     </article>
@@ -329,80 +243,18 @@
     <article style="max-width: 400px;">
         <header>
             <h3>Confirm Deactivation</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('deactivate-medication-confirm').close()"></button>
+            <button aria-label="Close" rel="prev"></button>
         </header>
         <p>Mark <strong id="deactivate-med-name"></strong> as inactive?</p>
         <p><small class="text-secondary">You can reactivate it later if needed.</small></p>
         <footer>
             <div class="grid-2" style="gap: var(--space-2);">
-                <button type="button" class="secondary" onclick="document.getElementById('deactivate-medication-confirm').close()">Cancel</button>
-                <button type="button" onclick="confirmDeactivate()">Deactivate</button>
+                <button type="button" class="secondary">Cancel</button>
+                <button type="button" id="btn-confirm-deactivate">Deactivate</button>
             </div>
         </footer>
     </article>
 </dialog>
 
-<script>
-let currentMedicationId = null;
-let currentMedicationType = null;
-
-function showDeleteConfirmation(medId, medName, medType) {
-    currentMedicationId = medId;
-    currentMedicationType = medType;
-    document.getElementById('delete-med-name').textContent = medName;
-    document.getElementById('delete-medication-confirm').showModal();
-}
-
-function showDeactivateConfirmation(medId, medName) {
-    currentMedicationId = medId;
-    document.getElementById('deactivate-med-name').textContent = medName;
-    document.getElementById('deactivate-medication-confirm').showModal();
-}
-
-function confirmDelete() {
-    if (!currentMedicationId) return;
-
-    // Close edit modal if open
-    const editModal = document.getElementById('edit-medication-' + currentMedicationId);
-    if (editModal) editModal.close();
-
-    fetch('/api/medications/' + currentMedicationId, {
-        method: 'DELETE',
-        headers: {'X-CSRF-Token': '{{ .CSRFToken }}'}
-    }).then(response => {
-        if (response.ok) {
-            window.location.reload();
-        } else {
-            console.error('Error deleting medication');
-            window.location.reload();
-        }
-    });
-
-    document.getElementById('delete-medication-confirm').close();
-}
-
-function confirmDeactivate() {
-    if (!currentMedicationId) return;
-
-    document.getElementById('edit-medication-' + currentMedicationId).close();
-
-    fetch('/api/medications/' + currentMedicationId, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': '{{ .CSRFToken }}'
-        },
-        body: JSON.stringify({is_active: false})
-    }).then(response => {
-        if (response.ok) {
-            window.location.reload();
-        } else {
-            console.error('Error deactivating medication');
-            window.location.reload();
-        }
-    });
-
-    document.getElementById('deactivate-medication-confirm').close();
-}
-</script>
+<script src="/static/js/medications.js"></script>
 {{ end }}
