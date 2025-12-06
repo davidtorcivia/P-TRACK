@@ -4,7 +4,7 @@
     <p>Manage your treatment cycles</p>
 </hgroup>
 
-<a href="javascript:document.getElementById('new-course').showModal()" role="button" class="btn w-full" style="margin-bottom: var(--space-6);">Create Course</a>
+<button data-action="create-course" class="btn w-full" style="margin-bottom: var(--space-6);">Create Course</button>
 
 <!-- Active Course -->
 {{ if .ActiveCourse }}
@@ -37,23 +37,12 @@
     {{ end }}
     <footer>
         <div class="grid-2">
-            <button onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').showModal()" class="btn outline secondary w-full">
+            <button data-action="edit-course" data-course-id="{{ .ActiveCourse.ID }}"
+                class="btn outline secondary w-full">
                 Edit
             </button>
-            <button onclick="if(confirm('Close this course?')) {
-                fetch('/api/courses/{{ .ActiveCourse.ID }}/close', {
-                    method: 'POST',
-                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        response.text().then(text => console.error('Error:', text));
-                        window.location.reload();
-                    }
-                });
-            }" class="btn outline w-full">Close Course</button>
+            <button data-action="close-course" data-course-id="{{ .ActiveCourse.ID }}" class="btn outline w-full">Close
+                Course</button>
         </div>
     </footer>
 </article>
@@ -63,45 +52,10 @@
     <article class="modal-card">
         <header>
             <h3>Edit Course</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()"></button>
+            <button aria-label="Close" rel="prev" data-action="close-edit-course"
+                data-course-id="{{ .ActiveCourse.ID }}"></button>
         </header>
-        <form onsubmit="event.preventDefault();
-            const formData = new FormData(event.target);
-            const data = {
-                name: formData.get('name'),
-                start_date: formData.get('start_date'),
-                expected_end_date: formData.get('expected_end_date') || null,
-                notes: formData.get('notes') || null
-            };
-            const btn = event.target.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/courses/{{ .ActiveCourse.ID }}', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ $.CSRFToken }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    return response.text().then(text => {
-                        alert('Error: ' + text);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                    });
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-                btn.disabled = false;
-                btn.removeAttribute('aria-busy');
-            });
-        ">
+        <form data-form="edit-course" data-course-id="{{ .ActiveCourse.ID }}">
             <label>
                 Course Name
                 <input type="text" name="name" value="{{ .ActiveCourse.Name }}" required>
@@ -122,7 +76,8 @@
             </label>
             <footer>
                 <div class="grid-2">
-                    <button type="button" class="secondary" onclick="document.getElementById('edit-course-{{ .ActiveCourse.ID }}').close()">Cancel</button>
+                    <button type="button" class="secondary" data-action="close-edit-course"
+                        data-course-id="{{ .ActiveCourse.ID }}">Cancel</button>
                     <button type="submit">Save Changes</button>
                 </div>
             </footer>
@@ -145,35 +100,14 @@
     {{ end }}
     <footer>
         <div class="grid-3">
-            <button onclick="document.getElementById('edit-course-{{ .ID }}').showModal()" class="btn-sm outline secondary w-full">
+            <button data-action="edit-course" data-course-id="{{ .ID }}" class="btn-sm outline secondary w-full">
                 Edit
             </button>
-            <button onclick="
-                fetch('/api/courses/{{ .ID }}/activate', {
-                    method: 'POST',
-                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                }).then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        console.error('Error activating course');
-                        window.location.reload();
-                    }
-                });
-            " class="btn-sm outline w-full">Reactivate</button>
-            <button onclick="if(confirm('Delete {{ .Name }}? This will delete all associated data.')) {
-                fetch('/api/courses/{{ .ID }}', {
-                    method: 'DELETE',
-                    headers: {'X-CSRF-Token': '{{ $.CSRFToken }}'}
-                }).then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        console.error('Error deleting course');
-                        window.location.reload();
-                    }
-                });
-            }" class="btn-sm outline secondary w-full" style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
+            <button data-action="activate-course" data-course-id="{{ .ID }}"
+                class="btn-sm outline w-full">Reactivate</button>
+            <button data-action="delete-course" data-course-id="{{ .ID }}" data-course-name="{{ .Name }}"
+                class="btn-sm outline secondary w-full"
+                style="color: var(--danger-primary); border-color: var(--danger-primary);">Delete</button>
         </div>
     </footer>
 </article>
@@ -183,46 +117,9 @@
     <article class="modal-card">
         <header>
             <h3>Edit Course</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-course-{{ .ID }}').close()"></button>
+            <button aria-label="Close" rel="prev" data-action="close-edit-course" data-course-id="{{ .ID }}"></button>
         </header>
-        <form onsubmit="event.preventDefault();
-            const formData = new FormData(event.target);
-            const data = {
-                name: formData.get('name'),
-                start_date: formData.get('start_date'),
-                expected_end_date: formData.get('expected_end_date') || null,
-                actual_end_date: formData.get('actual_end_date') || null,
-                notes: formData.get('notes') || null
-            };
-            const btn = event.target.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/courses/{{ .ID }}', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ $.CSRFToken }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    return response.text().then(text => {
-                        alert('Error: ' + text);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                    });
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-                btn.disabled = false;
-                btn.removeAttribute('aria-busy');
-            });
-        ">
+        <form data-form="edit-course" data-course-id="{{ .ID }}">
             <label>
                 Course Name
                 <input type="text" name="name" value="{{ .Name }}" required>
@@ -247,7 +144,8 @@
             </label>
             <footer>
                 <div class="grid-2">
-                    <button type="button" class="secondary" onclick="document.getElementById('edit-course-{{ .ID }}').close()">Cancel</button>
+                    <button type="button" class="secondary" data-action="close-edit-course"
+                        data-course-id="{{ .ID }}">Cancel</button>
                     <button type="submit">Save Changes</button>
                 </div>
             </footer>
@@ -265,7 +163,7 @@
         <h3>No Courses Yet</h3>
         <p>Create your first treatment course to start tracking</p>
     </hgroup>
-    <a href="javascript:document.getElementById('new-course').showModal()" role="button" class="btn btn-lg">Create Your First Course</a>
+    <button data-action="create-course" class="btn btn-lg">Create Your First Course</button>
 </article>
 {{ end }}
 {{ end }}
@@ -275,45 +173,9 @@
     <article class="modal-card">
         <header>
             <h3>Create New Course</h3>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('new-course').close()"></button>
+            <button aria-label="Close" rel="prev" data-action="close-new-course"></button>
         </header>
-        <form onsubmit="event.preventDefault();
-            const formData = new FormData(event.target);
-            const data = {
-                name: formData.get('name'),
-                start_date: formData.get('start_date'),
-                expected_end_date: formData.get('expected_end_date') || null,
-                notes: formData.get('notes') || null
-            };
-            const btn = event.target.querySelector('button[type=submit]');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-
-            fetch('/api/courses', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ .CSRFToken }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    return response.text().then(text => {
-                        alert('Error: ' + text);
-                        btn.disabled = false;
-                        btn.removeAttribute('aria-busy');
-                    });
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-                btn.disabled = false;
-                btn.removeAttribute('aria-busy');
-            });
-        ">
+        <form id="new-course-form">
             <label>
                 Course Name
                 <input type="text" name="name" placeholder="e.g., IVF Cycle 1" required>
@@ -334,11 +196,14 @@
             </label>
             <footer>
                 <div class="grid-2">
-                    <button type="button" class="secondary" onclick="document.getElementById('new-course').close()">Cancel</button>
+                    <button type="button" class="secondary" data-action="close-new-course">Cancel</button>
                     <button type="submit">Create Course</button>
                 </div>
             </footer>
         </form>
     </article>
 </dialog>
+
+<!-- Include courses JavaScript -->
+<script src="/static/js/courses.js"></script>
 {{ end }}
