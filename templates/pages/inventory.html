@@ -175,14 +175,13 @@
                         <label for="adjust-amount-{{ .ItemType }}">
                             Amount
                             <input type="number" id="adjust-amount-{{ .ItemType }}" name="amount" step="{{ if eq .Unit "
-                                mL" }}0.1{{ else }}1{{ end }}" x-model="adjustAmount" placeholder="Use - for decrease"
-                                required>
+                                mL" }}0.1{{ else }}1{{ end }}" placeholder="Use - for decrease" required>
                             <small class="text-muted">Positive to add, negative to remove</small>
                         </label>
 
                         <label for="adjust-reason-{{ .ItemType }}">
                             Reason
-                            <select id="adjust-reason-{{ .ItemType }}" name="reason" x-model="adjustReason" required>
+                            <select id="adjust-reason-{{ .ItemType }}" name="reason" required>
                                 <option value="">Select reason...</option>
                                 <option value="restock">Restock</option>
                                 <option value="manual_adjustment">Manual Adjustment</option>
@@ -195,7 +194,7 @@
 
                     <label for="adjust-notes-{{ .ItemType }}">
                         Notes (optional)
-                        <textarea id="adjust-notes-{{ .ItemType }}" name="notes" x-model="adjustNotes" rows="2"
+                        <textarea id="adjust-notes-{{ .ItemType }}" name="notes" rows="2"
                             placeholder="Additional details..."></textarea>
                     </label>
 
