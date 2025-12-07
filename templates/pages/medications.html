@@ -87,7 +87,7 @@
 <!-- Edit Modals for Active Medications -->
 {{ range .ActiveMedications }}
 <dialog id="edit-medication-{{ .ID }}">
-    <article>
+    <article class="modal-card">
         <header>
             <h3>Edit {{ .Name }}</h3>
             <button aria-label="Close" rel="prev"></button>
@@ -158,7 +158,7 @@
 
 <!-- New Medication Modal -->
 <dialog id="new-medication">
-    <article>
+    <article class="modal-card">
         <header>
             <h3>Add Medication</h3>
             <button aria-label="Close" rel="prev"></button>
@@ -221,7 +221,7 @@
 
 <!-- Delete Confirmation Dialog -->
 <dialog id="delete-medication-confirm">
-    <article style="max-width: 400px;">
+    <article class="modal-card" style="max-width: 400px;">
         <header>
             <h3>Confirm Deletion</h3>
             <button aria-label="Close" rel="prev"></button>
@@ -240,7 +240,7 @@
 
 <!-- Deactivate Confirmation Dialog -->
 <dialog id="deactivate-medication-confirm">
-    <article style="max-width: 400px;">
+    <article class="modal-card" style="max-width: 400px;">
         <header>
             <h3>Confirm Deactivation</h3>
             <button aria-label="Close" rel="prev"></button>

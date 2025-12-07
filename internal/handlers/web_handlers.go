@@ -310,6 +310,8 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 							"ID":        id,
 							"Date":      convertedTime.Format("Jan 2, 2006"),
 							"Time":      timeStr,
+							"DateStr":   convertedTime.Format("2006-01-02"), // For edit form input
+							"TimeStr":   convertedTime.Format("15:04"),      // For edit form input
 							"Side":      cases.Title(language.English).String(side),
 							"SideLower": side, // Add lowercase version for radio buttons
 							"PainLevel": painLevel.Int64,
