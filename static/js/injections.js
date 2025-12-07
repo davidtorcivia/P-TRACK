@@ -192,6 +192,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 timestamp: timestamp
             };
 
+            console.log('Injection edit - sending data:', {
+                id: id,
+                dateStr: dateStr,
+                timeStr: timeStr,
+                timestamp: timestamp,
+                data: data
+            });
+
             btn.disabled = true;
             btn.setAttribute('aria-busy', 'true');
 
