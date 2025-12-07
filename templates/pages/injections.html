@@ -94,13 +94,13 @@
                         style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
                         <input type="radio" value="left" name="side-{{ .ID }}" {{ if eq .SideLower "left" }}checked{{
                             end }} style="margin:0;">
-                        <span>Left</span>
+                        <span style="color: var(--color-text-primary);">Left</span>
                     </label>
                     <label
                         style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
                         <input type="radio" value="right" name="side-{{ .ID }}" {{ if eq .SideLower "right" }}checked{{
                             end }} style="margin:0;">
-                        <span>Right</span>
+                        <span style="color: var(--color-text-primary);">Right</span>
                     </label>
                 </div>
             </fieldset>
@@ -169,12 +169,12 @@
                     <label
                         style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
                         <input type="radio" value="left" name="side" checked style="margin:0;">
-                        <span>Left</span>
+                        <span style="color: var(--color-text-primary);">Left</span>
                     </label>
                     <label
                         style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
                         <input type="radio" value="right" name="side" style="margin:0;">
-                        <span>Right</span>
+                        <span style="color: var(--color-text-primary);">Right</span>
                     </label>
                 </div>
             </fieldset>
