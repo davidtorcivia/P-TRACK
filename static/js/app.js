@@ -98,7 +98,20 @@ document.addEventListener('DOMContentLoaded', () => {
     checkOfflineStatus();
     initPWA();
     initMobileMenu();
+    initDesktopDropdown();
 });
+
+// Desktop dropdown close on outside click
+function initDesktopDropdown() {
+    const details = document.querySelector('details.dropdown');
+    if (details) {
+        document.addEventListener('click', function (e) {
+            if (!details.contains(e.target)) {
+                details.removeAttribute('open');
+            }
+        });
+    }
+}
 
 // Mobile Menu Logic
 function initMobileMenu() {
