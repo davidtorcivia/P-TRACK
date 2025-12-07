@@ -192,13 +192,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 timestamp: timestamp
             };
 
-            console.log('Injection edit - sending data:', {
-                id: id,
-                dateStr: dateStr,
-                timeStr: timeStr,
-                timestamp: timestamp,
-                data: data
-            });
+            // DEBUG: Alert the data being sent
+            const debugMsg = `Sending Update:\nID: ${id}\nDate: ${dateStr}\nTime: ${timeStr}\nTimestamp: ${timestamp}\nSide: ${data.side}`;
+            alert(debugMsg);
 
             btn.disabled = true;
             btn.setAttribute('aria-busy', 'true');
@@ -213,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
                 .then(response => {
                     if (response.ok) {
+                        alert("Update Successful! Reloading...");
                         window.location.reload();
                     } else {
                         return response.text().then(text => {
