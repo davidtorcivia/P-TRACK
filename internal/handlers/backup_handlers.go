@@ -490,6 +490,57 @@ func HandleUpdateAutoBackupSettings(db *database.DB) http.HandlerFunc {
 		if req.KeepCount < 1 {
 			req.KeepCount = 7
 		}
+
+		// Save to settings table
+		now := time.Now().Format("2006-01-02 15:04:05")
+		enabledStr := "false"
+		if req.Enabled {
+			enabledStr = "true"
+		}
+
+		// Use a transaction for consistency
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+			"auto_backup_enabled", enabledStr, now)
+		if err != nil {
+			http.Error(w, "Failed to save settings", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = tx.Exec(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+			"auto_backup_frequency", req.Frequency, now)
+		if err != nil {
+			http.Error(w, "Failed to save settings", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = tx.Exec(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+			"auto_backup_keep_count", fmt.Sprintf("%d", req.KeepCount), now)
+		if err != nil {
+			http.Error(w, "Failed to save settings", http.StatusInternalServerError)
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+			return
+		}
+
+		// Return updated settings
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":  "Settings saved successfully",
+			"settings": getAutoBackupSettings(db),
+		})
 	}
 }
 
