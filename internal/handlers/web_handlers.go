@@ -275,6 +275,11 @@ func HandleInjectionsPage(db *database.DB, csrf *middleware.CSRFProtection) http
 		accountID := middleware.GetAccountID(r.Context())
 		userTimezone := GetUserTimezone(db, userID)
 
+		// Set current date/time in user's timezone for pre-populating forms
+		now := ConvertToUserTZ(time.Now(), userTimezone)
+		data["CurrentDate"] = now.Format("2006-01-02")
+		data["CurrentTime"] = now.Format("15:04")
+
 		// Get active course
 		courseRepo := repository.NewCourseRepository(db)
 		activeCourse, err := courseRepo.GetActiveCourse(accountID)

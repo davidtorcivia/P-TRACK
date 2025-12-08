@@ -164,7 +164,7 @@
         </header>
         <form id="log-injection-form" data-course-id="{{ .ActiveCourse.ID }}">
             <fieldset>
-                <legend>Which side?</legend>
+                <legend style="color: var(--color-text-primary);">Which side?</legend>
                 <div class="grid-2">
                     <label
                         style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
@@ -180,13 +180,13 @@
             </fieldset>
 
             <div class="grid-2">
-                <label>
+                <label style="color: var(--color-text-primary);">
                     Date
-                    <input type="date" name="date" required>
+                    <input type="date" name="date" value="{{ .CurrentDate }}" required>
                 </label>
-                <label>
+                <label style="color: var(--color-text-primary);">
                     Time
-                    <input type="time" name="time" required>
+                    <input type="time" name="time" value="{{ .CurrentTime }}" required>
                 </label>
             </div>
 

@@ -51,14 +51,6 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             const modal = document.getElementById('log-injection');
             if (modal) {
-                // Pre-fill with current date/time
-                const now = new Date();
-                const dateInput = modal.querySelector('input[name="date"]');
-                const timeInput = modal.querySelector('input[name="time"]');
-
-                if (dateInput) dateInput.value = formatDate(now);
-                if (timeInput) timeInput.value = formatTime(now);
-
                 modal.showModal();
             }
         });
