@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -184,7 +185,8 @@ func HandleGetInventory(db *database.DB) http.HandlerFunc {
 func HandleUpdateInventory(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -247,17 +249,22 @@ func HandleUpdateInventory(db *database.DB) http.HandlerFunc {
 		updates = append(updates, "updated_at = ?")
 		args = append(args, time.Now())
 		args = append(args, itemType)
+		args = append(args, accountID)
 
-		query := "UPDATE inventory_items SET " + joinStrings(updates, ", ") + " WHERE item_type = ?"
+		query := "UPDATE inventory_items SET " + joinStrings(updates, ", ") + " WHERE item_type = ? AND account_id = ?"
 
 		result, err := db.Exec(query, args...)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to update inventory: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to update inventory", http.StatusInternalServerError)
 			return
 		}
 
 		rowsAffected, err := result.RowsAffected()
-		if err != nil || rowsAffected == 0 {
+		if err != nil {
+			http.Error(w, "Failed to update inventory", http.StatusInternalServerError)
+			return
+		}
+		if rowsAffected == 0 {
 			http.Error(w, "Inventory item not found", http.StatusNotFound)
 			return
 		}
@@ -269,7 +276,7 @@ func HandleUpdateInventory(db *database.DB) http.HandlerFunc {
 		`, userID, "update", "inventory", 0, fmt.Sprintf("Updated inventory for %s", itemType), time.Now())
 
 		// Return updated item
-		item, err := getInventoryItemByType(db, itemType)
+		item, err := getInventoryItemByType(db, itemType, accountID)
 		if err != nil {
 			http.Error(w, "Failed to retrieve updated inventory item", http.StatusInternalServerError)
 			return
@@ -285,27 +292,30 @@ func HandleUpdateInventory(db *database.DB) http.HandlerFunc {
 // HandleGetInventoryHistory returns the history for a specific item type
 func HandleGetInventoryHistory(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		itemType := chi.URLParam(r, "itemType")
 		if !isValidItemType(itemType) {
 			http.Error(w, "Invalid item type", http.StatusBadRequest)
 			return
 		}
 
-		// Parse query parameters for pagination
-		limit := r.URL.Query().Get("limit")
-		if limit == "" {
-			limit = "50" // Default limit
-		}
+		// Parse and bound the pagination limit.
+		limit := parsePositiveInt(r.URL.Query().Get("limit"), 50, 1000)
 
-		// Query history
+		// Query history (scoped to the caller's account)
 		rows, err := db.Query(`
 			SELECT id, item_type, change_amount, quantity_before, quantity_after,
 				reason, reference_id, reference_type, performed_by, timestamp, notes
 			FROM inventory_history
-			WHERE item_type = ?
+			WHERE item_type = ? AND account_id = ?
 			ORDER BY timestamp DESC
 			LIMIT ?
-		`, itemType, limit)
+		`, itemType, accountID, limit)
 		if err != nil {
 			http.Error(w, "Failed to query inventory history", http.StatusInternalServerError)
 			return
@@ -375,7 +385,8 @@ func HandleGetInventoryHistory(db *database.DB) http.HandlerFunc {
 func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -428,16 +439,16 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 		// Get current quantity (or create item if doesn't exist)
 		var currentQty float64
 		var unit string
-		err = tx.QueryRow(`SELECT quantity, unit FROM inventory_items WHERE item_type = ?`, itemType).Scan(&currentQty, &unit)
+		err = tx.QueryRow(`SELECT quantity, unit FROM inventory_items WHERE item_type = ? AND account_id = ?`, itemType, accountID).Scan(&currentQty, &unit)
 
 		if err == sql.ErrNoRows {
 			// Item doesn't exist - create it with default unit and optional fields
 			unit = getDefaultUnit(itemType)
 			now := time.Now()
 
-			insertQuery := `INSERT INTO inventory_items (item_type, quantity, unit`
-			valuePlaceholders := `VALUES (?, ?, ?`
-			insertValues := []interface{}{itemType, 0, unit}
+			insertQuery := `INSERT INTO inventory_items (item_type, quantity, unit, account_id`
+			valuePlaceholders := `VALUES (?, ?, ?, ?`
+			insertValues := []interface{}{itemType, 0, unit, accountID}
 
 			if req.ExpirationDate != nil {
 				insertQuery += `, expiration_date`
@@ -496,8 +507,8 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 			updateArgs = append(updateArgs, *req.LowStockThreshold)
 		}
 
-		updateQuery += ` WHERE item_type = ?`
-		updateArgs = append(updateArgs, itemType)
+		updateQuery += ` WHERE item_type = ? AND account_id = ?`
+		updateArgs = append(updateArgs, itemType, accountID)
 
 		_, err = tx.Exec(updateQuery, updateArgs...)
 		if err != nil {
@@ -509,8 +520,8 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 		_, err = tx.Exec(`
 			INSERT INTO inventory_history (
 				item_type, change_amount, quantity_before, quantity_after,
-				reason, performed_by, timestamp, notes
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+				reason, performed_by, timestamp, notes, account_id
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`,
 			itemType,
 			req.ChangeAmount,
@@ -520,6 +531,7 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 			userID,
 			time.Now(),
 			nullString(req.Notes),
+			accountID,
 		)
 		if err != nil {
 			http.Error(w, "Failed to log inventory adjustment", http.StatusInternalServerError)
@@ -546,7 +558,7 @@ func HandleAdjustInventory(db *database.DB) http.HandlerFunc {
 		}
 
 		// Return updated item
-		item, err := getInventoryItemByType(db, itemType)
+		item, err := getInventoryItemByType(db, itemType, accountID)
 		if err != nil {
 			http.Error(w, "Adjustment successful but failed to retrieve updated item", http.StatusInternalServerError)
 			return
@@ -748,14 +760,14 @@ func formatItemTypeName(itemType string) string {
 	}
 }
 
-func getInventoryItemByType(db *database.DB, itemType string) (*models.InventoryItem, error) {
+func getInventoryItemByType(db *database.DB, itemType string, accountID int64) (*models.InventoryItem, error) {
 	var item models.InventoryItem
 	err := db.QueryRow(`
 		SELECT id, item_type, quantity, unit, expiration_date,
 			lot_number, low_stock_threshold, notes, created_at, updated_at
 		FROM inventory_items
-		WHERE item_type = ?
-	`, itemType).Scan(
+		WHERE item_type = ? AND account_id = ?
+	`, itemType, accountID).Scan(
 		&item.ID,
 		&item.ItemType,
 		&item.Quantity,
@@ -820,19 +832,20 @@ func HandleUpdateInventorySettings(db *database.DB) http.HandlerFunc {
 // HandleGetRecentInventoryChanges returns recent inventory changes
 func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		// Get recent inventory changes
+		// Get recent inventory changes (scoped to the caller's account)
 		rows, err := db.Query(`
 			SELECT item_type, change_amount, reason, timestamp, notes
 			FROM inventory_history
+			WHERE account_id = ?
 			ORDER BY timestamp DESC
 			LIMIT 10
-		`)
+		`, accountID)
 		if err != nil {
 			w.Header().Set("Content-Type", "text/html")
 			_, _ = w.Write([]byte(`<p>Error loading inventory changes</p>`))
@@ -896,10 +909,10 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 			html += `<div style="display: flex; justify-content: space-between; align-items: start;">`
 			html += `<div><strong>` + itemName + `</strong> `
 			html += `<span style="color: ` + color + `;">` + sign + fmt.Sprintf("%.1f", change.ChangeAmount) + `</span>`
-			html += `<br><small style="color: var(--pico-muted-color);">` + cases.Title(language.English).String(strings.ReplaceAll(change.Reason, "_", " ")) + `</small>`
+			html += `<br><small style="color: var(--pico-muted-color);">` + template.HTMLEscapeString(cases.Title(language.English).String(strings.ReplaceAll(change.Reason, "_", " "))) + `</small>`
 
 			if change.Notes.Valid && change.Notes.String != "" {
-				html += `<br><small>` + change.Notes.String + `</small>`
+				html += `<br><small>` + template.HTMLEscapeString(change.Notes.String) + `</small>`
 			}
 
 			html += `</div>`
@@ -915,29 +928,23 @@ func HandleGetRecentInventoryChanges(db *database.DB) http.HandlerFunc {
 // HandleGetAllInventoryHistory returns all inventory history (for /api/inventory/history)
 func HandleGetAllInventoryHistory(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		// Get limit from query params (default 100)
-		limit := 100
-		if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-			if parsedLimit, err := fmt.Sscanf(limitStr, "%d", &limit); err == nil && parsedLimit == 1 {
-				if limit > 1000 {
-					limit = 1000 // Cap at 1000
-				}
-			}
-		}
+		// Get limit from query params (default 100, capped at 1000)
+		limit := parsePositiveInt(r.URL.Query().Get("limit"), 100, 1000)
 
-		// Get all inventory changes
+		// Get all inventory changes (scoped to the caller's account)
 		rows, err := db.Query(`
 			SELECT item_type, change_amount, reason, timestamp, notes
 			FROM inventory_history
+			WHERE account_id = ?
 			ORDER BY timestamp DESC
 			LIMIT ?
-		`, limit)
+		`, accountID, limit)
 		if err != nil {
 			http.Error(w, "Failed to retrieve inventory history", http.StatusInternalServerError)
 			return

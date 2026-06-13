@@ -2,7 +2,7 @@
 function adminSettings() {
     return {
         smtp: { host: '', port: 587, username: '', password: '', from_name: 'P-TRACK', from_email: '', enabled: false },
-        site: { site_url: '', site_title: 'P-TRACK', site_description: '' },
+        site: { site_url: '', site_title: 'P-TRACK', site_description: '', allow_registration: false },
         stats: {},
         users: [],
         accounts: [],

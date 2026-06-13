@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -160,17 +161,24 @@ func (c *CSRFProtection) cleanupExpiredTokens() {
 
 // RateLimiter implements rate limiting per IP address
 type RateLimiter struct {
-	visitors map[string]*rate.Limiter
-	mu       sync.RWMutex
+	visitors map[string]*visitor
+	mu       sync.Mutex
 	rate     rate.Limit
 	burst    int
+	window   time.Duration
+}
+
+type visitor struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
 func NewRateLimiter(requestsPerWindow int, window time.Duration) *RateLimiter {
 	rl := &RateLimiter{
-		visitors: make(map[string]*rate.Limiter),
+		visitors: make(map[string]*visitor),
 		rate:     rate.Limit(float64(requestsPerWindow) / window.Seconds()),
 		burst:    requestsPerWindow,
+		window:   window,
 	}
 
 	// Start cleanup goroutine
@@ -197,47 +205,102 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	limiter, exists := rl.visitors[ip]
+	v, exists := rl.visitors[ip]
 	if !exists {
-		limiter = rate.NewLimiter(rl.rate, rl.burst)
-		rl.visitors[ip] = limiter
+		v = &visitor{limiter: rate.NewLimiter(rl.rate, rl.burst)}
+		rl.visitors[ip] = v
 	}
+	v.lastSeen = time.Now()
 
-	return limiter
+	return v.limiter
 }
 
 func (rl *RateLimiter) cleanupVisitors() {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
 		rl.mu.Lock()
-		// Remove visitors that haven't made requests recently
-		for ip := range rl.visitors {
-			delete(rl.visitors, ip)
+		// Only evict visitors idle for longer than the rate-limit window, so an
+		// active attacker's bucket is never reset out from under the limiter.
+		for ip, v := range rl.visitors {
+			if time.Since(v.lastSeen) > rl.window {
+				delete(rl.visitors, ip)
+			}
 		}
 		rl.mu.Unlock()
 	}
 }
 
-// getIP extracts the real IP address from the request
+// trustedProxies holds the parsed CIDRs whose forwarding headers we trust.
+// It is set once at startup via SetTrustedProxies and read-only thereafter.
+var trustedProxies []*net.IPNet
+
+// SetTrustedProxies configures which proxy CIDRs may set X-Forwarded-For /
+// X-Real-IP. Invalid entries are ignored. Call once during startup.
+func SetTrustedProxies(cidrs []string) {
+	parsed := make([]*net.IPNet, 0, len(cidrs))
+	for _, c := range cidrs {
+		c = strings.TrimSpace(c)
+		if c == "" {
+			continue
+		}
+		// Allow bare IPs as well as CIDRs.
+		if !strings.Contains(c, "/") {
+			if strings.Contains(c, ":") {
+				c += "/128"
+			} else {
+				c += "/32"
+			}
+		}
+		if _, n, err := net.ParseCIDR(c); err == nil {
+			parsed = append(parsed, n)
+		}
+	}
+	trustedProxies = parsed
+}
+
+func isTrustedProxy(ip net.IP) bool {
+	for _, n := range trustedProxies {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// ClientIP returns the trusted client IP for the request, honoring forwarding
+// headers only from configured trusted proxies. Exported for use by handlers
+// (e.g. audit logging) so IP resolution is consistent across the app.
+func ClientIP(r *http.Request) string {
+	return getIP(r)
+}
+
+// getIP extracts the client IP address from the request. Forwarding headers
+// (X-Forwarded-For / X-Real-IP) are honored only when the direct peer is a
+// configured trusted proxy; otherwise they are attacker-controlled and ignored,
+// preventing rate-limit / lockout bypass via header spoofing.
 func getIP(r *http.Request) string {
-	// Check X-Forwarded-For header (if behind proxy)
-	forwarded := r.Header.Get("X-Forwarded-For")
-	if forwarded != "" {
-		// Take the first IP
-		ips := strings.Split(forwarded, ",")
-		return strings.TrimSpace(ips[0])
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	peer := net.ParseIP(host)
+
+	if peer != nil && isTrustedProxy(peer) {
+		// Trust the left-most (original client) entry of X-Forwarded-For.
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			first := strings.TrimSpace(strings.Split(forwarded, ",")[0])
+			if first != "" {
+				return first
+			}
+		}
+		if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
+			return realIP
+		}
 	}
 
-	// Check X-Real-IP header
-	realIP := r.Header.Get("X-Real-IP")
-	if realIP != "" {
-		return realIP
-	}
-
-	// Fallback to RemoteAddr
-	return r.RemoteAddr
+	return host
 }
 
 // generateNonce generates a random nonce for CSP

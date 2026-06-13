@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -162,6 +163,13 @@ func HandleCreateSymptom(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Ensure the target course belongs to the caller's account. The repository
+		// Create assumes the caller has verified this.
+		if !courseBelongsToAccount(db, req.CourseID, accountID) {
+			http.Error(w, "Course not found", http.StatusNotFound)
+			return
+		}
+
 		// Validate pain level if provided
 		if req.PainLevel != nil && (*req.PainLevel < 1 || *req.PainLevel > 10) {
 			http.Error(w, "pain_level must be between 1 and 10", http.StatusBadRequest)
@@ -206,7 +214,7 @@ func HandleCreateSymptom(db *database.DB) http.HandlerFunc {
 
 		symptomRepo := repository.NewSymptomRepository(db)
 		if err := symptomRepo.Create(symptom); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to create symptom log: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to create symptom log", http.StatusInternalServerError)
 			return
 		}
 
@@ -518,8 +526,8 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 				formattedTime,
 				timeAgo,
 				painLevel,
-				nullStringValue(symptom.PainLocation, "N/A"),
-				nullStringValue(symptom.PainType, "N/A"),
+				template.HTMLEscapeString(nullStringValue(symptom.PainLocation, "N/A")),
+				template.HTMLEscapeString(nullStringValue(symptom.PainType, "N/A")),
 			)
 
 			if symptomsJSON != "" && symptomsJSON != "[]" && symptomsJSON != "null" {
@@ -534,14 +542,14 @@ func HandleGetRecentSymptoms(db *database.DB) http.HandlerFunc {
 						// Format symptom names nicely
 						formattedSymptom := strings.ReplaceAll(symptom, "_", " ")
 						formattedSymptom = cases.Title(language.English).String(formattedSymptom)
-						html += formattedSymptom
+						html += template.HTMLEscapeString(formattedSymptom)
 					}
 					html += `</div>`
 				}
 			}
 
 			if symptom.Notes.Valid && symptom.Notes.String != "" {
-				html += fmt.Sprintf(`<div><strong>Notes:</strong> %s</div>`, symptom.Notes.String)
+				html += fmt.Sprintf(`<div><strong>Notes:</strong> %s</div>`, template.HTMLEscapeString(symptom.Notes.String))
 			}
 
 			// Add action buttons

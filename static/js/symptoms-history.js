@@ -13,6 +13,17 @@ function getCSRFToken() {
     return meta ? meta.getAttribute('content') : '';
 }
 
+// Escape user-controlled text before inserting into innerHTML to prevent XSS.
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Render symptoms list HTML
 function renderSymptomsList(data, container) {
     if (data.length === 0) {
@@ -34,20 +45,20 @@ function renderSymptomsList(data, container) {
         html += '<article>';
         html += '<header>' + formattedDate + '</header>';
         html += '<div><strong>Pain Level:</strong> ' + (symptom.pain_level || 'N/A') + '/10</div>';
-        html += '<div><strong>Location:</strong> ' + (symptom.pain_location || 'N/A') + '</div>';
-        html += '<div><strong>Type:</strong> ' + (symptom.pain_type || 'N/A') + '</div>';
+        html += '<div><strong>Location:</strong> ' + escapeHtml(symptom.pain_location || 'N/A') + '</div>';
+        html += '<div><strong>Type:</strong> ' + escapeHtml(symptom.pain_type || 'N/A') + '</div>';
 
         if (symptom.symptoms) {
             try {
                 const symptoms = JSON.parse(symptom.symptoms);
                 if (symptoms.length > 0) {
-                    html += '<div><strong>Symptoms:</strong> ' + symptoms.join(', ') + '</div>';
+                    html += '<div><strong>Symptoms:</strong> ' + symptoms.map(escapeHtml).join(', ') + '</div>';
                 }
             } catch (e) { }
         }
 
         if (symptom.notes) {
-            html += '<div><strong>Notes:</strong> ' + symptom.notes + '</div>';
+            html += '<div><strong>Notes:</strong> ' + escapeHtml(symptom.notes) + '</div>';
         }
 
         html += '<footer style="margin-top:1rem;">';

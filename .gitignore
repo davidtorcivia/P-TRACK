@@ -9,6 +9,10 @@ dist/
 build/
 out/
 injection-tracker
+/server
+
+# Saved HTTP cookies (may contain auth tokens)
+cookies.txt
 
 # Test binary, built with `go test -c`
 *.test

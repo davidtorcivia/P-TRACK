@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -64,7 +65,8 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get user ID from context
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -79,6 +81,13 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 		// Validate required fields
 		if req.CourseID == 0 {
 			http.Error(w, "course_id is required", http.StatusBadRequest)
+			return
+		}
+
+		// Ensure the target course belongs to the caller's account (prevents
+		// logging injections into another account's course).
+		if !courseBelongsToAccount(db, req.CourseID, accountID) {
+			http.Error(w, "Course not found", http.StatusNotFound)
 			return
 		}
 		if req.Side != "left" && req.Side != "right" {
@@ -171,31 +180,32 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 		}
 
 		for _, item := range inventoryItems {
-			// Get current quantity
+			// Get current quantity for this account's item
 			var currentQty float64
 			err := tx.QueryRow(`
-				SELECT quantity FROM inventory_items WHERE item_type = ?
-			`, item.itemType).Scan(&currentQty)
+				SELECT quantity FROM inventory_items WHERE item_type = ? AND account_id = ?
+			`, item.itemType, accountID).Scan(&currentQty)
 
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// Item doesn't exist - initialize with 0 quantity
+					// Item doesn't exist for this account - initialize with 0 quantity
 					_, err = tx.Exec(`
-						INSERT INTO inventory_items (item_type, quantity, unit, created_at, updated_at)
-						VALUES (?, ?, ?, ?, ?)
-					`, item.itemType, 0.0, item.unit, time.Now(), time.Now())
+						INSERT INTO inventory_items (item_type, quantity, unit, account_id, created_at, updated_at)
+						VALUES (?, ?, ?, ?, ?, ?)
+					`, item.itemType, 0.0, item.unit, accountID, time.Now(), time.Now())
 					if err != nil {
-						http.Error(w, fmt.Sprintf("Failed to initialize inventory for %s: %v", item.itemType, err), http.StatusInternalServerError)
+						http.Error(w, "Failed to initialize inventory", http.StatusInternalServerError)
 						return
 					}
 					currentQty = 0.0
 				} else {
-					http.Error(w, fmt.Sprintf("Failed to check inventory for %s: %v", item.itemType, err), http.StatusInternalServerError)
+					http.Error(w, "Failed to check inventory", http.StatusInternalServerError)
 					return
 				}
 			}
 
-			// Calculate new quantity (don't go below 0)
+			// Calculate new quantity (don't go below 0). Inventory tracking is
+			// best-effort: a depleted/untracked count must not block logging.
 			newQty := currentQty - item.amount
 			if newQty < 0 {
 				newQty = 0
@@ -205,10 +215,10 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 			_, err = tx.Exec(`
 				UPDATE inventory_items
 				SET quantity = ?, updated_at = ?
-				WHERE item_type = ?
-			`, newQty, time.Now(), item.itemType)
+				WHERE item_type = ? AND account_id = ?
+			`, newQty, time.Now(), item.itemType, accountID)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to update inventory for %s: %v", item.itemType, err), http.StatusInternalServerError)
+				http.Error(w, "Failed to update inventory", http.StatusInternalServerError)
 				return
 			}
 
@@ -216,8 +226,8 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 			_, err = tx.Exec(`
 				INSERT INTO inventory_history (
 					item_type, change_amount, quantity_before, quantity_after,
-					reason, reference_id, reference_type, performed_by, timestamp, notes
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					reason, reference_id, reference_type, performed_by, timestamp, notes, account_id
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`,
 				item.itemType,
 				-item.amount,
@@ -229,9 +239,10 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 				userID,
 				time.Now(),
 				fmt.Sprintf("Auto-decremented for injection #%d", injectionID),
+				accountID,
 			)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to log inventory history for %s: %v", item.itemType, err), http.StatusInternalServerError)
+				http.Error(w, "Failed to log inventory history", http.StatusInternalServerError)
 				return
 			}
 		}
@@ -260,7 +271,7 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 		}
 
 		// Retrieve the created injection
-		injection, err := getInjectionByID(db, injectionID)
+		injection, err := getInjectionByID(db, injectionID, accountID)
 		if err != nil {
 			http.Error(w, "Injection created but failed to retrieve", http.StatusInternalServerError)
 			return
@@ -279,6 +290,12 @@ func HandleCreateInjection(db *database.DB) http.HandlerFunc {
 func HandleGetInjections(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse query parameters
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		courseID := r.URL.Query().Get("course_id")
 		side := r.URL.Query().Get("side")
 		startDate := r.URL.Query().Get("start_date")
@@ -286,43 +303,41 @@ func HandleGetInjections(db *database.DB) http.HandlerFunc {
 		limit := r.URL.Query().Get("limit")
 		offset := r.URL.Query().Get("offset")
 
-		// Build query
+		// Build query, scoped to the caller's account via the injection's course.
 		query := `
-			SELECT id, course_id, administered_by, timestamp, side,
-				site_x, site_y, pain_level, has_knots, site_reaction,
-				notes, created_at, updated_at
-			FROM injections
-			WHERE 1=1
+			SELECT i.id, i.course_id, i.administered_by, i.timestamp, i.side,
+				i.site_x, i.site_y, i.pain_level, i.has_knots, i.site_reaction,
+				i.notes, i.created_at, i.updated_at
+			FROM injections i
+			JOIN courses c ON c.id = i.course_id
+			WHERE c.account_id = ?
 		`
-		args := []interface{}{}
+		args := []interface{}{accountID}
 
 		if courseID != "" {
-			query += " AND course_id = ?"
+			query += " AND i.course_id = ?"
 			args = append(args, courseID)
 		}
 		if side != "" {
-			query += " AND side = ?"
+			query += " AND i.side = ?"
 			args = append(args, side)
 		}
 		if startDate != "" {
-			query += " AND timestamp >= ?"
+			query += " AND i.timestamp >= ?"
 			args = append(args, startDate)
 		}
 		if endDate != "" {
-			query += " AND timestamp <= ?"
+			query += " AND i.timestamp <= ?"
 			args = append(args, endDate)
 		}
 
-		query += " ORDER BY timestamp DESC"
+		query += " ORDER BY i.timestamp DESC"
 
-		if limit != "" {
-			query += " LIMIT ?"
-			args = append(args, limit)
-		}
-		if offset != "" {
-			query += " OFFSET ?"
-			args = append(args, offset)
-		}
+		// Always bound the result set; cap and sanitize pagination params.
+		lim := parsePositiveInt(limit, 200, 1000)
+		off := parsePositiveInt(offset, 0, 1<<31)
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, lim, off)
 
 		rows, err := db.Query(query, args...)
 		if err != nil {
@@ -376,6 +391,12 @@ func HandleGetInjections(db *database.DB) http.HandlerFunc {
 // HandleGetInjection returns a single injection by ID
 func HandleGetInjection(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		idStr := chi.URLParam(r, "id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
@@ -383,7 +404,7 @@ func HandleGetInjection(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		injection, err := getInjectionByID(db, id)
+		injection, err := getInjectionByID(db, id, accountID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, "Injection not found", http.StatusNotFound)
@@ -404,7 +425,8 @@ func HandleGetInjection(db *database.DB) http.HandlerFunc {
 func HandleUpdateInjection(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -485,8 +507,11 @@ func HandleUpdateInjection(db *database.DB) http.HandlerFunc {
 		updates = append(updates, "updated_at = ?")
 		args = append(args, time.Now())
 		args = append(args, id)
+		args = append(args, accountID)
 
-		query := "UPDATE injections SET " + joinStrings(updates, ", ") + " WHERE id = ?"
+		// Scope the update to the caller's account via the injection's course.
+		query := "UPDATE injections SET " + joinStrings(updates, ", ") +
+			" WHERE id = ? AND EXISTS (SELECT 1 FROM courses c WHERE c.id = injections.course_id AND c.account_id = ?)"
 
 		result, err := db.Exec(query, args...)
 		if err != nil {
@@ -495,7 +520,11 @@ func HandleUpdateInjection(db *database.DB) http.HandlerFunc {
 		}
 
 		rowsAffected, err := result.RowsAffected()
-		if err != nil || rowsAffected == 0 {
+		if err != nil {
+			http.Error(w, "Failed to update injection", http.StatusInternalServerError)
+			return
+		}
+		if rowsAffected == 0 {
 			http.Error(w, "Injection not found", http.StatusNotFound)
 			return
 		}
@@ -507,7 +536,7 @@ func HandleUpdateInjection(db *database.DB) http.HandlerFunc {
 		`, userID, "update", "injection", id, "Updated injection", time.Now())
 
 		// Return updated injection
-		injection, err := getInjectionByID(db, id)
+		injection, err := getInjectionByID(db, id, accountID)
 		if err != nil {
 			http.Error(w, "Failed to retrieve updated injection", http.StatusInternalServerError)
 			return
@@ -524,7 +553,8 @@ func HandleUpdateInjection(db *database.DB) http.HandlerFunc {
 func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -536,6 +566,17 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Verify the injection exists and belongs to the caller's account before
+		// touching any inventory.
+		if _, err := getInjectionByID(db, id, accountID); err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Injection not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "Failed to get injection", http.StatusInternalServerError)
+			return
+		}
+
 		// Begin transaction
 		tx, err := db.BeginTx()
 		if err != nil {
@@ -544,12 +585,12 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 		}
 		defer func() { _ = tx.Rollback() }()
 
-		// Get inventory changes for this injection
+		// Get inventory changes for this injection (scoped to the account)
 		rows, err := tx.Query(`
 			SELECT item_type, change_amount, quantity_before
 			FROM inventory_history
-			WHERE reference_id = ? AND reference_type = 'injection'
-		`, id)
+			WHERE reference_id = ? AND reference_type = 'injection' AND account_id = ?
+		`, id, accountID)
 		if err != nil {
 			http.Error(w, "Failed to query inventory history", http.StatusInternalServerError)
 			return
@@ -575,11 +616,11 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 
 		// Rollback inventory changes
 		for _, rb := range rollbacks {
-			// Get current quantity
+			// Get current quantity (scoped to the account)
 			var currentQty float64
-			err := tx.QueryRow(`SELECT quantity FROM inventory_items WHERE item_type = ?`, rb.itemType).Scan(&currentQty)
+			err := tx.QueryRow(`SELECT quantity FROM inventory_items WHERE item_type = ? AND account_id = ?`, rb.itemType, accountID).Scan(&currentQty)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to get current inventory for %s", rb.itemType), http.StatusInternalServerError)
+				http.Error(w, "Failed to get current inventory", http.StatusInternalServerError)
 				return
 			}
 
@@ -590,10 +631,10 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 			_, err = tx.Exec(`
 				UPDATE inventory_items
 				SET quantity = ?, updated_at = ?
-				WHERE item_type = ?
-			`, newQty, time.Now(), rb.itemType)
+				WHERE item_type = ? AND account_id = ?
+			`, newQty, time.Now(), rb.itemType, accountID)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to rollback inventory for %s", rb.itemType), http.StatusInternalServerError)
+				http.Error(w, "Failed to rollback inventory", http.StatusInternalServerError)
 				return
 			}
 
@@ -601,8 +642,8 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 			_, err = tx.Exec(`
 				INSERT INTO inventory_history (
 					item_type, change_amount, quantity_before, quantity_after,
-					reason, reference_id, reference_type, performed_by, timestamp, notes
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					reason, reference_id, reference_type, performed_by, timestamp, notes, account_id
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`,
 				rb.itemType,
 				-rb.amount, // Opposite of the original change
@@ -614,6 +655,7 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 				userID,
 				time.Now(),
 				fmt.Sprintf("Rollback for deleted injection #%d", id),
+				accountID,
 			)
 			if err != nil {
 				http.Error(w, "Failed to log inventory rollback", http.StatusInternalServerError)
@@ -621,15 +663,23 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 			}
 		}
 
-		// Delete the injection
-		result, err := tx.Exec("DELETE FROM injections WHERE id = ?", id)
+		// Delete the injection (scoped to the account via its course)
+		result, err := tx.Exec(`
+			DELETE FROM injections
+			WHERE id = ?
+			AND EXISTS (SELECT 1 FROM courses c WHERE c.id = injections.course_id AND c.account_id = ?)
+		`, id, accountID)
 		if err != nil {
 			http.Error(w, "Failed to delete injection", http.StatusInternalServerError)
 			return
 		}
 
 		rowsAffected, err := result.RowsAffected()
-		if err != nil || rowsAffected == 0 {
+		if err != nil {
+			http.Error(w, "Failed to delete injection", http.StatusInternalServerError)
+			return
+		}
+		if rowsAffected == 0 {
 			http.Error(w, "Injection not found", http.StatusNotFound)
 			return
 		}
@@ -653,14 +703,22 @@ func HandleDeleteInjection(db *database.DB) http.HandlerFunc {
 // HandleGetRecentInjections returns the last 10 injections
 func HandleGetRecentInjections(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		rows, err := db.Query(`
-			SELECT id, course_id, administered_by, timestamp, side,
-				site_x, site_y, pain_level, has_knots, site_reaction,
-				notes, created_at, updated_at
-			FROM injections
-			ORDER BY timestamp DESC
+			SELECT i.id, i.course_id, i.administered_by, i.timestamp, i.side,
+				i.site_x, i.site_y, i.pain_level, i.has_knots, i.site_reaction,
+				i.notes, i.created_at, i.updated_at
+			FROM injections i
+			JOIN courses c ON c.id = i.course_id
+			WHERE c.account_id = ?
+			ORDER BY i.timestamp DESC
 			LIMIT 10
-		`)
+		`, accountID)
 		if err != nil {
 			http.Error(w, "Failed to query recent injections", http.StatusInternalServerError)
 			return
@@ -711,17 +769,14 @@ func HandleGetRecentInjections(db *database.DB) http.HandlerFunc {
 				}
 				notes := ""
 				if inj.Notes.Valid {
-					notes = inj.Notes.String
-					if len(notes) > 50 {
-						notes = notes[:50] + "..."
-					}
+					notes = truncateRunes(inj.Notes.String, 50)
 				}
 				html += fmt.Sprintf(`<tr>
 					<td>%s</td>
 					<td>%s</td>
 					<td>%s</td>
 					<td>%s</td>
-				</tr>`, inj.Timestamp.Format("Jan 2, 2006 3:04 PM"), inj.Side, pain, notes)
+				</tr>`, inj.Timestamp.Format("Jan 2, 2006 3:04 PM"), template.HTMLEscapeString(inj.Side), pain, template.HTMLEscapeString(notes))
 			}
 
 			html += `</tbody></table></div>`
@@ -739,6 +794,12 @@ func HandleGetRecentInjections(db *database.DB) http.HandlerFunc {
 // HandleGetInjectionStats returns statistics for injections
 func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		courseID := r.URL.Query().Get("course_id")
 
 		stats := InjectionStatsResponse{
@@ -746,37 +807,36 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 			PainTrend:      []PainTrendPoint{},
 		}
 
-		// Build query based on whether course_id is provided
-		whereClause := " WHERE 1=1"
-		args := []interface{}{}
+		// Base scoped to the caller's account via the injection's course.
+		whereClause := " FROM injections i JOIN courses c ON c.id = i.course_id WHERE c.account_id = ?"
+		args := []interface{}{accountID}
 		if courseID != "" {
-			whereClause += " AND course_id = ?"
+			whereClause += " AND i.course_id = ?"
 			args = append(args, courseID)
 		}
 
 		// Get total count
-		query := "SELECT COUNT(*) FROM injections" + whereClause
+		query := "SELECT COUNT(*)" + whereClause
 		_ = db.QueryRow(query, args...).Scan(&stats.TotalInjections)
 
 		// Get left/right counts
 		// Note: Assuming 'left' and 'right' are lowercase in DB as enforced by HandleCreateInjection
-		query = "SELECT COUNT(*) FROM injections" + whereClause + " AND side = 'left'"
+		query = "SELECT COUNT(*)" + whereClause + " AND i.side = 'left'"
 		_ = db.QueryRow(query, args...).Scan(&stats.LeftCount)
 
-		query = "SELECT COUNT(*) FROM injections" + whereClause + " AND side = 'right'"
+		query = "SELECT COUNT(*)" + whereClause + " AND i.side = 'right'"
 		_ = db.QueryRow(query, args...).Scan(&stats.RightCount)
 
 		// Get average pain level
-		query = "SELECT AVG(CAST(pain_level AS REAL)) FROM injections" + whereClause + " AND pain_level IS NOT NULL"
+		query = "SELECT AVG(CAST(i.pain_level AS REAL))" + whereClause + " AND i.pain_level IS NOT NULL"
 		_ = db.QueryRow(query, args...).Scan(&stats.AvgPainLevel)
 
 		// Get last injection
 		query = `
-			SELECT id, course_id, administered_by, timestamp, side,
-				site_x, site_y, pain_level, has_knots, site_reaction,
-				notes, created_at, updated_at
-			FROM injections
-		` + whereClause + " ORDER BY timestamp DESC LIMIT 1"
+			SELECT i.id, i.course_id, i.administered_by, i.timestamp, i.side,
+				i.site_x, i.site_y, i.pain_level, i.has_knots, i.site_reaction,
+				i.notes, i.created_at, i.updated_at
+		` + whereClause + " ORDER BY i.timestamp DESC LIMIT 1"
 
 		var lastInj models.Injection
 		err := db.QueryRow(query, args...).Scan(
@@ -800,10 +860,9 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 
 		// Get frequency by day
 		query = `
-			SELECT DATE(timestamp) as day, COUNT(*) as count
-			FROM injections
+			SELECT DATE(i.timestamp) as day, COUNT(*) as count
 		` + whereClause + `
-			GROUP BY DATE(timestamp)
+			GROUP BY DATE(i.timestamp)
 			ORDER BY day DESC
 			LIMIT 30
 		`
@@ -821,10 +880,9 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 
 		// Get pain trend (last 30 days)
 		query = `
-			SELECT DATE(timestamp) as day, AVG(CAST(pain_level AS REAL)) as avg_pain
-			FROM injections
-		` + whereClause + ` AND pain_level IS NOT NULL
-			GROUP BY DATE(timestamp)
+			SELECT DATE(i.timestamp) as day, AVG(CAST(i.pain_level AS REAL)) as avg_pain
+		` + whereClause + ` AND i.pain_level IS NOT NULL
+			GROUP BY DATE(i.timestamp)
 			ORDER BY day DESC
 			LIMIT 30
 		`
@@ -875,15 +933,43 @@ func HandleGetInjectionStats(db *database.DB) http.HandlerFunc {
 
 // Helper functions
 
-func getInjectionByID(db *database.DB, id int64) (*models.Injection, error) {
+// parsePositiveInt parses s as a non-negative integer, returning defaultVal when
+// empty/invalid and capping the result at maxVal to bound resource usage.
+func parsePositiveInt(s string, defaultVal, maxVal int) int {
+	if s == "" {
+		return defaultVal
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 0 {
+		return defaultVal
+	}
+	if n > maxVal {
+		return maxVal
+	}
+	return n
+}
+
+// courseBelongsToAccount reports whether the given course exists and is owned by
+// the account, used to prevent cross-account writes that reference a course_id.
+func courseBelongsToAccount(db *database.DB, courseID, accountID int64) bool {
+	var exists int
+	err := db.QueryRow(
+		`SELECT 1 FROM courses WHERE id = ? AND account_id = ?`,
+		courseID, accountID,
+	).Scan(&exists)
+	return err == nil
+}
+
+func getInjectionByID(db *database.DB, id int64, accountID int64) (*models.Injection, error) {
 	var inj models.Injection
 	err := db.QueryRow(`
-		SELECT id, course_id, administered_by, timestamp, side,
-			site_x, site_y, pain_level, has_knots, site_reaction,
-			notes, created_at, updated_at
-		FROM injections
-		WHERE id = ?
-	`, id).Scan(
+		SELECT i.id, i.course_id, i.administered_by, i.timestamp, i.side,
+			i.site_x, i.site_y, i.pain_level, i.has_knots, i.site_reaction,
+			i.notes, i.created_at, i.updated_at
+		FROM injections i
+		JOIN courses c ON c.id = i.course_id
+		WHERE i.id = ? AND c.account_id = ?
+	`, id, accountID).Scan(
 		&inj.ID,
 		&inj.CourseID,
 		&inj.AdministeredBy,

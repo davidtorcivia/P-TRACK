@@ -48,10 +48,11 @@ const (
 func HandleGetSettings(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
 
-		settings, err := getSettings(db)
+		settings, err := getSettings(db, accountID)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get settings: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to get settings", http.StatusInternalServerError)
 			return
 		}
 
@@ -102,7 +103,8 @@ func HandleGetSettings(db *database.DB) http.HandlerFunc {
 func HandleUpdateSettings(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -142,44 +144,45 @@ func HandleUpdateSettings(db *database.DB) http.HandlerFunc {
 
 		now := time.Now()
 
-		// Update each setting if provided
+		// Update each setting if provided. These are account-level settings,
+		// namespaced by account so one account's preferences don't affect another.
 		if req.AdvancedModeEnabled != nil {
-			if err := upsertSetting(tx, "advanced_mode_enabled", boolToString(*req.AdvancedModeEnabled), userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "advanced_mode_enabled"), boolToString(*req.AdvancedModeEnabled), userID, now); err != nil {
 				http.Error(w, "Failed to update advanced_mode_enabled", http.StatusInternalServerError)
 				return
 			}
 		}
 
 		if req.HeatMapDays != nil {
-			if err := upsertSetting(tx, "heat_map_days", fmt.Sprintf("%d", *req.HeatMapDays), userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "heat_map_days"), fmt.Sprintf("%d", *req.HeatMapDays), userID, now); err != nil {
 				http.Error(w, "Failed to update heat_map_days", http.StatusInternalServerError)
 				return
 			}
 		}
 
 		if req.LowStockAlerts != nil {
-			if err := upsertSetting(tx, "low_stock_alerts", boolToString(*req.LowStockAlerts), userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "low_stock_alerts"), boolToString(*req.LowStockAlerts), userID, now); err != nil {
 				http.Error(w, "Failed to update low_stock_alerts", http.StatusInternalServerError)
 				return
 			}
 		}
 
 		if req.InjectionReminders != nil {
-			if err := upsertSetting(tx, "injection_reminders", boolToString(*req.InjectionReminders), userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "injection_reminders"), boolToString(*req.InjectionReminders), userID, now); err != nil {
 				http.Error(w, "Failed to update injection_reminders", http.StatusInternalServerError)
 				return
 			}
 		}
 
 		if req.ReminderTime != nil {
-			if err := upsertSetting(tx, "reminder_time", *req.ReminderTime, userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "reminder_time"), *req.ReminderTime, userID, now); err != nil {
 				http.Error(w, "Failed to update reminder_time", http.StatusInternalServerError)
 				return
 			}
 		}
 
 		if req.ReminderFrequency != nil {
-			if err := upsertSetting(tx, "reminder_frequency", fmt.Sprintf("%d", *req.ReminderFrequency), userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "reminder_frequency"), fmt.Sprintf("%d", *req.ReminderFrequency), userID, now); err != nil {
 				http.Error(w, "Failed to update reminder_frequency", http.StatusInternalServerError)
 				return
 			}
@@ -198,7 +201,7 @@ func HandleUpdateSettings(db *database.DB) http.HandlerFunc {
 		}
 
 		// Return updated settings
-		settings, err := getSettings(db)
+		settings, err := getSettings(db, accountID)
 		if err != nil {
 			http.Error(w, "Settings updated but failed to retrieve", http.StatusInternalServerError)
 			return
@@ -213,8 +216,32 @@ func HandleUpdateSettings(db *database.DB) http.HandlerFunc {
 
 // Helper functions
 
-// getSettings retrieves all settings from the database with defaults
-func getSettings(db *database.DB) (*SettingsResponse, error) {
+// scopedSettingKey namespaces an account-level setting key by account so that
+// one account's preferences cannot affect another account.
+func scopedSettingKey(accountID int64, key string) string {
+	return fmt.Sprintf("account_%d_%s", accountID, key)
+}
+
+// readAccountSetting reads an account-level setting, preferring the account-scoped
+// key and falling back to the legacy global key (written by older versions) so
+// existing data keeps working without a migration.
+func readAccountSetting(db *database.DB, accountID int64, key string) (string, time.Time, bool) {
+	var value string
+	var updatedAt time.Time
+	err := db.QueryRow(`SELECT value, updated_at FROM settings WHERE key = ?`, scopedSettingKey(accountID, key)).Scan(&value, &updatedAt)
+	if err == nil {
+		return value, updatedAt, true
+	}
+	// Legacy global fallback.
+	err = db.QueryRow(`SELECT value, updated_at FROM settings WHERE key = ?`, key).Scan(&value, &updatedAt)
+	if err == nil {
+		return value, updatedAt, true
+	}
+	return "", time.Time{}, false
+}
+
+// getSettings retrieves account-level settings from the database with defaults.
+func getSettings(db *database.DB, accountID int64) (*SettingsResponse, error) {
 	settings := &SettingsResponse{
 		AdvancedModeEnabled: DefaultAdvancedMode,
 		HeatMapDays:         DefaultHeatMapDays,
@@ -225,55 +252,30 @@ func getSettings(db *database.DB) (*SettingsResponse, error) {
 		UpdatedAt:           time.Now(),
 	}
 
-	// Query all settings
-	rows, err := db.Query(`
-		SELECT key, value, updated_at
-		FROM settings
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	var latestUpdate time.Time
-
-	for rows.Next() {
-		var key, value string
-		var updatedAt time.Time
-
-		if err := rows.Scan(&key, &value, &updatedAt); err != nil {
-			return nil, err
-		}
-
-		// Track the latest update time
-		if updatedAt.After(latestUpdate) {
-			latestUpdate = updatedAt
-		}
-
-		// Parse each setting
-		switch key {
-		case "advanced_mode_enabled":
-			settings.AdvancedModeEnabled = stringToBool(value)
-		case "heat_map_days":
-			if days, err := strconv.Atoi(value); err == nil {
-				settings.HeatMapDays = days
-			}
-		case "low_stock_alerts":
-			settings.LowStockAlerts = stringToBool(value)
-		case "injection_reminders":
-			settings.InjectionReminders = stringToBool(value)
-		case "reminder_time":
-			settings.ReminderTime = value
-		case "reminder_frequency":
-			if freq, err := strconv.Atoi(value); err == nil {
-				settings.ReminderFrequency = freq
+	apply := func(key string, set func(string)) {
+		if value, updatedAt, ok := readAccountSetting(db, accountID, key); ok {
+			set(value)
+			if updatedAt.After(latestUpdate) {
+				latestUpdate = updatedAt
 			}
 		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
+	apply("advanced_mode_enabled", func(v string) { settings.AdvancedModeEnabled = stringToBool(v) })
+	apply("heat_map_days", func(v string) {
+		if days, err := strconv.Atoi(v); err == nil {
+			settings.HeatMapDays = days
+		}
+	})
+	apply("low_stock_alerts", func(v string) { settings.LowStockAlerts = stringToBool(v) })
+	apply("injection_reminders", func(v string) { settings.InjectionReminders = stringToBool(v) })
+	apply("reminder_time", func(v string) { settings.ReminderTime = v })
+	apply("reminder_frequency", func(v string) {
+		if freq, err := strconv.Atoi(v); err == nil {
+			settings.ReminderFrequency = freq
+		}
+	})
 
 	if !latestUpdate.IsZero() {
 		settings.UpdatedAt = latestUpdate
@@ -441,7 +443,8 @@ func HandleChangePassword(db *database.DB) http.HandlerFunc {
 func HandleUpdateAppSettings(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -513,7 +516,7 @@ func HandleUpdateAppSettings(db *database.DB) http.HandlerFunc {
 			}
 		}
 
-		if err := upsertSetting(tx, "advanced_mode_enabled", boolToString(req.AdvancedMode), userID, now); err != nil {
+		if err := upsertSetting(tx, scopedSettingKey(accountID, "advanced_mode_enabled"), boolToString(req.AdvancedMode), userID, now); err != nil {
 			http.Error(w, "Failed to update advanced mode", http.StatusInternalServerError)
 			return
 		}
@@ -533,7 +536,8 @@ func HandleUpdateAppSettings(db *database.DB) http.HandlerFunc {
 func HandleUpdateNotificationSettings(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
-		if userID == 0 {
+		accountID := middleware.GetAccountID(r.Context())
+		if userID == 0 || accountID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -565,19 +569,19 @@ func HandleUpdateNotificationSettings(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		if err := upsertSetting(tx, "injection_reminders", boolToString(req.InjectionReminders), userID, now); err != nil {
+		if err := upsertSetting(tx, scopedSettingKey(accountID, "injection_reminders"), boolToString(req.InjectionReminders), userID, now); err != nil {
 			http.Error(w, "Failed to update injection reminders", http.StatusInternalServerError)
 			return
 		}
 
 		if req.ReminderTime != "" {
-			if err := upsertSetting(tx, "reminder_time", req.ReminderTime, userID, now); err != nil {
+			if err := upsertSetting(tx, scopedSettingKey(accountID, "reminder_time"), req.ReminderTime, userID, now); err != nil {
 				http.Error(w, "Failed to update reminder time", http.StatusInternalServerError)
 				return
 			}
 		}
 
-		if err := upsertSetting(tx, "low_stock_alerts", boolToString(req.LowStockAlerts), userID, now); err != nil {
+		if err := upsertSetting(tx, scopedSettingKey(accountID, "low_stock_alerts"), boolToString(req.LowStockAlerts), userID, now); err != nil {
 			http.Error(w, "Failed to update low stock alerts", http.StatusInternalServerError)
 			return
 		}

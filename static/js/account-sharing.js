@@ -1,4 +1,17 @@
 // Account Sharing Alpine.js Component
+
+// Escape user-controlled text for safe insertion into innerHTML (prevents XSS
+// via usernames). Returns an HTML-escaped string.
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function accountSharing() {
     return {
         members: [],
@@ -43,7 +56,7 @@ function accountSharing() {
             const html = this.members.map(member => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: var(--space-2);">
                 <div>
-                    <strong>${member.Username || 'Unknown User'}</strong>
+                    <strong>${escapeHtml(member.Username || 'Unknown User')}</strong>
                     ${member.Role === 'owner' ? '<span class="badge" style="margin-left: 0.5rem; background: var(--brand-primary-bg); color: var(--brand-primary); padding: 2px 8px; font-size: 0.75rem; border-radius: 999px;">Owner</span>' : ''}
                     ${member.UserID === this.currentUserID ? '<span class="badge" style="margin-left: 0.5rem; background: var(--color-bg-tertiary); color: var(--color-text-secondary); padding: 2px 8px; font-size: 0.75rem; border-radius: 999px;">You</span>' : ''}
                 </div>
@@ -51,7 +64,8 @@ function accountSharing() {
                     <button type="button"
                             class="btn-sm outline secondary"
                             style="margin: 0; color: var(--danger-primary); border-color: var(--danger-border);"
-                            onclick="removeMember(${member.UserID}, '${member.Username}')">
+                            data-username="${escapeHtml(member.Username || '')}"
+                            onclick="removeMember(${member.UserID}, this.dataset.username)">
                         Remove
                     </button>
                 ` : ''}

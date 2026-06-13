@@ -19,6 +19,17 @@
 </article>
 
 <script>
+// Escape user-controlled text before inserting into innerHTML (prevents XSS).
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Format the API response into a table
 document.body.addEventListener('htmx:afterSwap', function(event) {
     if (event.detail.target.closest('[hx-get*="/api/inventory/"]')) {
@@ -42,9 +53,9 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
                 html += `<td>${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>`;
                 html += `<td>${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</td>`;
                 html += `<td style="color: ${changeColor}; font-weight: bold;">${changePrefix}${item.change_amount} ${item.unit || ''}</td>`;
-                html += `<td>${item.reason || '-'}</td>`;
-                html += `<td>${item.notes || '-'}</td>`;
-                html += `<td>${item.username || 'System'}</td>`;
+                html += `<td>${escapeHtml(item.reason || '-')}</td>`;
+                html += `<td>${escapeHtml(item.notes || '-')}</td>`;
+                html += `<td>${escapeHtml(item.username || 'System')}</td>`;
                 html += '</tr>';
             });
 

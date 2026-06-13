@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"injection-tracker/internal/database"
+	"injection-tracker/internal/middleware"
 
 	"github.com/jung-kurt/gofpdf/v2"
 )
@@ -58,6 +59,12 @@ type ExportMedication struct {
 // HandleExportPDF generates a PDF report with injection and symptom data
 func HandleExportPDF(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		// Parse query parameters
 		startDate := r.URL.Query().Get("start_date")
 		endDate := r.URL.Query().Get("end_date")
@@ -84,6 +91,8 @@ func HandleExportPDF(db *database.DB) http.HandlerFunc {
 				http.Error(w, "Invalid end_date format. Use YYYY-MM-DD", http.StatusBadRequest)
 				return
 			}
+			// Include the whole end day.
+			end = end.Add(24*time.Hour - time.Second)
 		} else {
 			// Default to today
 			end = time.Now()
@@ -95,10 +104,10 @@ func HandleExportPDF(db *database.DB) http.HandlerFunc {
 			return
 		}
 
-		// Gather export data
-		exportData, err := gatherExportData(db, start, end, courseID)
+		// Gather export data (scoped to the caller's account)
+		exportData, err := gatherExportData(db, accountID, start, end, courseID)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to gather export data: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to gather export data", http.StatusInternalServerError)
 			return
 		}
 
@@ -123,6 +132,12 @@ func HandleExportPDF(db *database.DB) http.HandlerFunc {
 // HandleExportCSV generates CSV export of injection, symptom, and medication data
 func HandleExportCSV(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		// Parse query parameters
 		startDate := r.URL.Query().Get("start_date")
 		endDate := r.URL.Query().Get("end_date")
@@ -154,15 +169,17 @@ func HandleExportCSV(db *database.DB) http.HandlerFunc {
 				http.Error(w, "Invalid end_date format. Use YYYY-MM-DD", http.StatusBadRequest)
 				return
 			}
+			// Include the whole end day.
+			end = end.Add(24*time.Hour - time.Second)
 		} else {
 			// Default to today
 			end = time.Now()
 		}
 
-		// Gather export data
-		exportData, err := gatherExportData(db, start, end, courseID)
+		// Gather export data (scoped to the caller's account)
+		exportData, err := gatherExportData(db, accountID, start, end, courseID)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to gather export data: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to gather export data", http.StatusInternalServerError)
 			return
 		}
 
@@ -206,29 +223,29 @@ func HandleExportCSV(db *database.DB) http.HandlerFunc {
 	}
 }
 
-// gatherExportData collects all data needed for export
-func gatherExportData(db *database.DB, start, end time.Time, courseIDStr string) (*ExportData, error) {
+// gatherExportData collects all data needed for export, scoped to a single
+// account so one account can never export another account's medical data.
+func gatherExportData(db *database.DB, accountID int64, start, end time.Time, courseIDStr string) (*ExportData, error) {
 	data := &ExportData{
 		StartDate: start,
 		EndDate:   end,
 	}
 
-	// Build WHERE clause for date filtering
-	whereClause := "WHERE timestamp BETWEEN ? AND ?"
-	args := []interface{}{start, end}
-
+	// Optional course filter. The course must belong to the caller's account.
+	courseFilter := ""
+	var courseArg interface{}
 	if courseIDStr != "" {
-		whereClause += " AND course_id = ?"
-		args = append(args, courseIDStr)
+		courseFilter = " AND c.id = ?"
+		courseArg = courseIDStr
 
-		// Get course name
-		err := db.QueryRow("SELECT id, name FROM courses WHERE id = ?", courseIDStr).Scan(&data.CourseID, &data.CourseName)
+		err := db.QueryRow("SELECT id, name FROM courses WHERE id = ? AND account_id = ?", courseIDStr, accountID).
+			Scan(&data.CourseID, &data.CourseName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get course: %w", err)
 		}
 	}
 
-	// Gather injections
+	// Gather injections (scoped via course ownership)
 	injectionQuery := `
 		SELECT i.id, i.timestamp, i.side,
 			COALESCE(i.pain_level, 0) as pain_level,
@@ -237,10 +254,17 @@ func gatherExportData(db *database.DB, start, end time.Time, courseIDStr string)
 			COALESCE(i.notes, '') as notes,
 			COALESCE(u.username, '') as administered_by
 		FROM injections i
+		JOIN courses c ON c.id = i.course_id
 		LEFT JOIN users u ON i.administered_by = u.id
-	` + whereClause + " ORDER BY i.timestamp DESC"
+		WHERE c.account_id = ? AND i.timestamp BETWEEN ? AND ?` + courseFilter + `
+		ORDER BY i.timestamp DESC`
 
-	rows, err := db.Query(injectionQuery, args...)
+	injArgs := []interface{}{accountID, start, end}
+	if courseArg != nil {
+		injArgs = append(injArgs, courseArg)
+	}
+
+	rows, err := db.Query(injectionQuery, injArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query injections: %w", err)
 	}
@@ -264,18 +288,20 @@ func gatherExportData(db *database.DB, start, end time.Time, courseIDStr string)
 		data.Injections = append(data.Injections, inj)
 	}
 
-	// Gather symptoms
+	// Gather symptoms (scoped via course ownership)
 	symptomQuery := `
-		SELECT id, timestamp,
-			COALESCE(pain_level, 0) as pain_level,
-			COALESCE(pain_location, '') as pain_location,
-			COALESCE(pain_type, '') as pain_type,
-			COALESCE(symptoms, '') as symptoms,
-			COALESCE(notes, '') as notes
-		FROM symptom_logs
-	` + whereClause + " ORDER BY timestamp DESC"
+		SELECT s.id, s.timestamp,
+			COALESCE(s.pain_level, 0) as pain_level,
+			COALESCE(s.pain_location, '') as pain_location,
+			COALESCE(s.pain_type, '') as pain_type,
+			COALESCE(s.symptoms, '') as symptoms,
+			COALESCE(s.notes, '') as notes
+		FROM symptom_logs s
+		JOIN courses c ON c.id = s.course_id
+		WHERE c.account_id = ? AND s.timestamp BETWEEN ? AND ?` + courseFilter + `
+		ORDER BY s.timestamp DESC`
 
-	rows, err = db.Query(symptomQuery, args...)
+	rows, err = db.Query(symptomQuery, injArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query symptoms: %w", err)
 	}
@@ -298,15 +324,17 @@ func gatherExportData(db *database.DB, start, end time.Time, courseIDStr string)
 		data.Symptoms = append(data.Symptoms, sym)
 	}
 
-	// Gather medication logs
+	// Gather medication logs (scoped via medication ownership). Medication logs
+	// are not tied to a course, so the course filter does not apply here.
 	medicationQuery := `
 		SELECT ml.id, ml.timestamp, m.name as medication_name, ml.taken,
 			COALESCE(ml.notes, '') as notes
 		FROM medication_logs ml
 		JOIN medications m ON ml.medication_id = m.id
-	` + whereClause + " ORDER BY ml.timestamp DESC"
+		WHERE m.account_id = ? AND ml.timestamp BETWEEN ? AND ?
+		ORDER BY ml.timestamp DESC`
 
-	rows, err = db.Query(medicationQuery, args...)
+	rows, err = db.Query(medicationQuery, accountID, start, end)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query medication logs: %w", err)
 	}

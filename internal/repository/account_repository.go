@@ -530,8 +530,8 @@ func (r *AccountRepository) AcceptInvitation(invitationID, userID int64) error {
 }
 
 // DeleteInvitation deletes an invitation (e.g., revoke before acceptance)
-func (r *AccountRepository) DeleteInvitation(invitationID int64) error {
-	result, err := r.db.Exec(`DELETE FROM account_invitations WHERE id = ?`, invitationID)
+func (r *AccountRepository) DeleteInvitation(invitationID, accountID int64) error {
+	result, err := r.db.Exec(`DELETE FROM account_invitations WHERE id = ? AND account_id = ?`, invitationID, accountID)
 	if err != nil {
 		return fmt.Errorf("failed to delete invitation: %w", err)
 	}
