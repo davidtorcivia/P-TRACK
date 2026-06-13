@@ -84,6 +84,17 @@ func setupSecurityTestDB(t *testing.T) *database.DB {
 			user_agent TEXT,
 			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
+
+		CREATE TABLE settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_by INTEGER
+		);
+
+		-- Open registration is gated by default; enable it so these tests can
+		-- exercise the public register endpoint's validation paths.
+		INSERT INTO settings (key, value) VALUES ('allow_registration', 'true');
 	`
 	if _, err := db.Exec(schema); err != nil {
 		t.Fatalf("Failed to create schema: %v", err)

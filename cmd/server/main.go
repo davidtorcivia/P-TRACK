@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -56,23 +57,38 @@ func main() {
 	// Initialize router
 	r := chi.NewRouter()
 
-	// Apply global middleware
+	// Configure which proxies may set X-Forwarded-For / X-Real-IP. When empty,
+	// forwarding headers are ignored and the direct peer address is used.
+	middleware.SetTrustedProxies(cfg.Security.TrustedProxies)
+
+	// Apply global middleware.
+	// NOTE: we deliberately do NOT use chimiddleware.RealIP here — it rewrites
+	// RemoteAddr from unauthenticated forwarding headers, which would defeat the
+	// trusted-proxy check used by rate limiting. IP resolution is handled by
+	// middleware.getIP using SetTrustedProxies instead.
 	r.Use(chimiddleware.RequestID)
-	r.Use(chimiddleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(60 * time.Second))
 	r.Use(middleware.SecurityHeaders(cfg.Security.CSPEnabled, cfg.Security.HSTSEnabled))
 
-	// CORS configuration
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://localhost:*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	// CORS configuration.
+	//
+	// Auth is cookie-based, so a permissive credentialed CORS policy would let
+	// any allowed origin read a logged-in user's medical data cross-origin.
+	// We therefore only enable credentialed CORS for an explicit allow-list
+	// (ALLOWED_ORIGINS). When none is configured the app is same-origin only,
+	// which needs no CORS headers at all.
+	if len(cfg.Security.AllowedOrigins) > 0 {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   cfg.Security.AllowedOrigins,
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+			ExposedHeaders:   []string{"Link"},
+			AllowCredentials: true,
+			MaxAge:           300,
+		}))
+	}
 
 	// Initialize templates
 	if err := initializeTemplates(); err != nil {
@@ -357,7 +373,9 @@ func handleGetCSRFToken(csrf *middleware.CSRFProtection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := csrf.GenerateToken()
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"csrf_token":"%s"}`, token)
+		if err := json.NewEncoder(w).Encode(map[string]string{"csrf_token": token}); err != nil {
+			log.Printf("Failed to encode CSRF token response: %v", err)
+		}
 	}
 }
 

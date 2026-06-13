@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -159,7 +160,7 @@ func HandleCreateMedication(db *database.DB) http.HandlerFunc {
 
 		medicationRepo := repository.NewMedicationRepository(db)
 		if err := medicationRepo.Create(medication); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to create medication: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to create medication", http.StatusInternalServerError)
 			return
 		}
 
@@ -446,7 +447,7 @@ func HandleLogMedication(db *database.DB) http.HandlerFunc {
 		}
 
 		if err := medicationRepo.CreateLog(medLog); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to create medication log: %v", err), http.StatusInternalServerError)
+			http.Error(w, "Failed to create medication log", http.StatusInternalServerError)
 			return
 		}
 
@@ -676,7 +677,7 @@ func HandleGetDailySchedule(db *database.DB) http.HandlerFunc {
 						%s
 					</div>
 				</div>
-			`, med.Name, dosage, frequency, statusColor, status)
+			`, template.HTMLEscapeString(med.Name), template.HTMLEscapeString(dosage), template.HTMLEscapeString(frequency), statusColor, status)
 		}
 		html += `</div>`
 

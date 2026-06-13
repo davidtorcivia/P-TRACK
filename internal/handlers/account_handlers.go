@@ -399,8 +399,8 @@ func HandleRevokeInvitation(db *database.DB) http.HandlerFunc {
 		}
 
 		accountRepo := repository.NewAccountRepository(db.DB)
-		if err := accountRepo.DeleteInvitation(invID); err != nil {
-			if err == repository.ErrNotFound {
+		if err := accountRepo.DeleteInvitation(invID, accountID); err != nil {
+			if err == repository.ErrInvitationNotFound || err == repository.ErrNotFound {
 				http.Error(w, "Invitation not found", http.StatusNotFound)
 				return
 			}

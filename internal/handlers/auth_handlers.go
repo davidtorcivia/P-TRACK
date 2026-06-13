@@ -331,6 +331,26 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 			return
 		}
 
+		// Gate self-service account creation. Registering WITHOUT an invitation
+		// creates a brand-new standalone account; that is only allowed when the
+		// admin has explicitly enabled open registration. Invited registration
+		// (joining an existing account) is always permitted. This stops an
+		// internet-exposed instance from letting strangers self-provision
+		// accounts that could then reach other accounts' data.
+		if req.InviteToken == "" && !getBoolSetting(db, "allow_registration", false) {
+			_ = auditRepo.LogWithDetails(
+				sql.NullInt64{Valid: false},
+				"registration_failed",
+				"user",
+				sql.NullInt64{Valid: false},
+				map[string]interface{}{"reason": "registration_disabled", "username": req.Username},
+				ipAddress,
+				userAgent,
+			)
+			respondErrorWithRequest(w, r, http.StatusForbidden, "Open registration is disabled. Ask the account owner for an invitation.")
+			return
+		}
+
 		// Check if username already exists
 		existingUser, err := userRepo.GetByUsername(req.Username)
 		if err == nil && existingUser != nil {
@@ -454,7 +474,7 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 				userAgent,
 			)
 		} else {
-			// No invitation - create new account
+			// No invitation - create new standalone account.
 			var err error
 			accountID, err = accountRepo.Create(nil, user.ID) // nil = no custom account name
 			if err != nil {
@@ -483,28 +503,6 @@ func HandleRegister(db *database.DB) http.HandlerFunc {
 				userAgent,
 			)
 		}
-
-		// Log successful registration
-		_ = auditRepo.LogWithDetails(
-			sql.NullInt64{Int64: user.ID, Valid: true},
-			"registration_success",
-			"user",
-			sql.NullInt64{Int64: user.ID, Valid: true},
-			map[string]interface{}{"account_id": accountID},
-			ipAddress,
-			userAgent,
-		)
-
-		// Continue with original audit log
-		_ = auditRepo.LogWithDetails(
-			sql.NullInt64{Int64: user.ID, Valid: true},
-			"registration_success",
-			"user",
-			sql.NullInt64{Int64: user.ID, Valid: true},
-			map[string]interface{}{"username": user.Username},
-			ipAddress,
-			userAgent,
-		)
 
 		// Respond with success
 		if r.Header.Get("HX-Request") == "true" {
@@ -731,30 +729,10 @@ func HandleRefreshToken(db *database.DB, jwtManager *auth.JWTManager) http.Handl
 
 // Helper functions
 
-// getIPAddress extracts the client IP address from the request
+// getIPAddress extracts the client IP address from the request, honoring
+// forwarding headers only from configured trusted proxies.
 func getIPAddress(r *http.Request) string {
-	// Check X-Forwarded-For header first (for proxies)
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		// X-Forwarded-For can contain multiple IPs, take the first one
-		parts := strings.Split(ip, ",")
-		return strings.TrimSpace(parts[0])
-	}
-
-	// Check X-Real-IP header
-	ip = r.Header.Get("X-Real-IP")
-	if ip != "" {
-		return ip
-	}
-
-	// Fall back to RemoteAddr
-	ip = r.RemoteAddr
-	// RemoteAddr includes port, strip it
-	if idx := strings.LastIndex(ip, ":"); idx != -1 {
-		ip = ip[:idx]
-	}
-
-	return ip
+	return middleware.ClientIP(r)
 }
 
 // getTokenFromRequest extracts JWT token from request (cookie or header)

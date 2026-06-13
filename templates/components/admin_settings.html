@@ -65,6 +65,14 @@
             <div style="margin-bottom: var(--space-4);"><label for="site-description">Site Description</label><input
                     type="text" id="site-description" x-model="site.site_description"
                     placeholder="Injection Tracking System" style="margin: 0;"></div>
+            <div style="margin-bottom: var(--space-4);">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" x-model="site.allow_registration" style="margin: 0; width: auto;">
+                    Allow open registration
+                </label>
+                <small style="color: var(--color-text-muted);">When off, new users can only join via an
+                    invitation. Keep this off on internet-exposed instances.</small>
+            </div>
             <button type="submit" x-bind:disabled="savingSite"
                 x-text="savingSite ? 'Saving...' : 'Save Site Settings'"></button>
         </form>

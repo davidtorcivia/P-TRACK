@@ -631,7 +631,9 @@ document.addEventListener('click', (e) => {
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
+        // Register via the dedicated no-cache route so SW updates are picked up
+        // reliably (the /static/ path is served with long-lived caching).
+        navigator.serviceWorker.register('/service-worker.js')
             .then((registration) => {
                 console.log('Service Worker registered:', registration.scope);
 

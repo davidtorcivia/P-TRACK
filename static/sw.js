@@ -1,28 +1,35 @@
 // Service Worker for Injection Tracker PWA
-// Version: 1.0.0 - Update this when deploying changes
+// Version: 1.1.0 - Update this when deploying changes
+//
+// PRIVACY: This app serves per-user medical data over authenticated, cookie-based
+// requests. The service worker therefore MUST NOT cache authenticated API
+// responses or rendered HTML pages — doing so would leak one user's data to the
+// next user of a shared device (and serve stale CSRF tokens). Only truly static,
+// non-user-specific assets (CSS/JS/icons/fonts) are cached.
 
-const CACHE_VERSION = '1.0.0';
+const CACHE_VERSION = '1.1.0';
 const CACHE_NAME = `injection-tracker-v${CACHE_VERSION}`;
 const RUNTIME_CACHE = `injection-tracker-runtime-v${CACHE_VERSION}`;
-const API_CACHE = `injection-tracker-api-v${CACHE_VERSION}`;
 
-// Cache duration for API responses (15 minutes)
-const API_CACHE_DURATION = 15 * 60 * 1000;
-
-// Assets to cache on install
+// Static, non-sensitive assets to cache on install. Note: '/' and other HTML
+// pages are intentionally excluded — they are authenticated and per-user.
 const STATIC_ASSETS = [
-    '/',
     '/offline.html',
+    '/static/css/app.css',
     '/static/css/custom.css',
     '/static/js/app.js',
     '/manifest.json',
     '/static/icons/icon-192.png',
     '/static/icons/icon-512.png',
-    'https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css',
     'https://unpkg.com/htmx.org@1.9.10',
     'https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js',
     'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'
 ];
+
+// Returns true for same-origin paths that are safe to cache (static assets only).
+function isCacheableStatic(url) {
+    return url.origin === location.origin && url.pathname.startsWith('/static/');
+}
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -54,8 +61,7 @@ self.addEventListener('activate', (event) => {
                         .filter((name) =>
                             name.startsWith('injection-tracker-') &&
                             name !== CACHE_NAME &&
-                            name !== RUNTIME_CACHE &&
-                            name !== API_CACHE
+                            name !== RUNTIME_CACHE
                         )
                         .map((name) => {
                             console.log('[SW] Deleting old cache:', name);
@@ -70,32 +76,12 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Helper function to check if cache is fresh
-function isCacheFresh(response) {
-    if (!response) return false;
-    const cachedDate = response.headers.get('sw-cache-date');
-    if (!cachedDate) return false;
-    const age = Date.now() - parseInt(cachedDate);
-    return age < API_CACHE_DURATION;
-}
-
-// Helper function to add cache timestamp
-function addCacheTimestamp(response) {
-    const headers = new Headers(response.headers);
-    headers.set('sw-cache-date', Date.now().toString());
-    return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: headers
-    });
-}
-
-// Fetch event - intelligent caching strategies
+// Fetch event - privacy-preserving caching strategies
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip non-GET requests
+    // Only handle GET; never intercept state-changing requests.
     if (request.method !== 'GET') {
         return;
     }
@@ -105,82 +91,52 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // API GET requests - network first with timed cache fallback
+    // Authenticated API responses carry per-user medical data. Never cache them:
+    // network-only, with a small offline JSON error so callers can degrade.
     if (url.pathname.startsWith('/api/')) {
         event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Clone and cache successful responses with timestamp
+            fetch(request).catch(() =>
+                new Response(
+                    JSON.stringify({ error: 'Offline', cached: false }),
+                    { status: 503, headers: { 'Content-Type': 'application/json' } }
+                )
+            )
+        );
+        return;
+    }
+
+    // HTML navigations are authenticated and per-user (and embed a per-request
+    // CSRF token). Use network-only with an offline fallback page; never cache
+    // the rendered HTML.
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request).catch(() => caches.match('/offline.html'))
+        );
+        return;
+    }
+
+    // Static, non-sensitive assets - cache first, fall back to network.
+    if (isCacheableStatic(url) || STATIC_ASSETS.includes(request.url)) {
+        event.respondWith(
+            caches.match(request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                return fetch(request).then((response) => {
                     if (response.ok) {
-                        const responseClone = addCacheTimestamp(response.clone());
-                        caches.open(API_CACHE).then((cache) => {
+                        const responseClone = response.clone();
+                        caches.open(RUNTIME_CACHE).then((cache) => {
                             cache.put(request, responseClone);
                         });
                     }
                     return response;
-                })
-                .catch(() => {
-                    // Try to serve fresh cache if offline
-                    return caches.open(API_CACHE)
-                        .then((cache) => cache.match(request))
-                        .then((cachedResponse) => {
-                            if (cachedResponse && isCacheFresh(cachedResponse)) {
-                                console.log('[SW] Serving fresh cached API response');
-                                return cachedResponse;
-                            }
-                            // Return offline page for navigation requests
-                            if (request.mode === 'navigate') {
-                                return caches.match('/offline.html');
-                            }
-                            return new Response(
-                                JSON.stringify({ error: 'Offline', cached: false }),
-                                { status: 503, headers: { 'Content-Type': 'application/json' } }
-                            );
-                        });
-                })
+                });
+            })
         );
         return;
     }
 
-    // Static assets - cache first, fallback to network
-    if (url.origin === location.origin || STATIC_ASSETS.includes(request.url)) {
-        event.respondWith(
-            caches.match(request)
-                .then((cachedResponse) => {
-                    if (cachedResponse) {
-                        return cachedResponse;
-                    }
-                    return fetch(request).then((response) => {
-                        if (response.ok) {
-                            const responseClone = response.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(request, responseClone);
-                            });
-                        }
-                        return response;
-                    });
-                })
-        );
-        return;
-    }
-
-    // For everything else, try network first
-    event.respondWith(
-        fetch(request)
-            .then((response) => {
-                // Cache successful responses
-                if (response.ok && request.url.startsWith(location.origin)) {
-                    const responseClone = response.clone();
-                    caches.open(RUNTIME_CACHE).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
-                }
-                return response;
-            })
-            .catch(() => {
-                return caches.match(request);
-            })
-    );
+    // Everything else: pass through to the network (no caching).
 });
 
 // Background sync for offline submissions

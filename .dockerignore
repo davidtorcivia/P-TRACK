@@ -1,0 +1,50 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Build artifacts / binaries
+server
+injection-tracker
+bin/
+dist/
+build/
+out/
+*.exe
+*.test
+*.out
+
+# Secrets and local env
+.env
+.env.*
+cookies.txt
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+ssl/
+
+# Runtime data (must never be baked into the image)
+data/
+backups/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Local tooling / docs not needed at runtime
+.claude/
+.vscode/
+.idea/
+*.md
+setup.sh
+setup.ps1
+patch_registration.sh
+nginx*.conf
+docker-compose.yml
+
+# OS noise
+.DS_Store
+Thumbs.db

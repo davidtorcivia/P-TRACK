@@ -32,6 +32,11 @@ type SiteSettings struct {
 	SiteURL         string `json:"site_url"`
 	SiteTitle       string `json:"site_title"`
 	SiteDescription string `json:"site_description"`
+	// AllowRegistration controls whether the public /api/auth/register endpoint
+	// may create brand-new standalone accounts. Invitation-based registration
+	// (joining an existing account) is always allowed. Defaults to false so an
+	// internet-exposed instance does not let strangers self-provision accounts.
+	AllowRegistration bool `json:"allow_registration"`
 }
 
 // AdminSettingsResponse represents all admin settings
@@ -399,6 +404,23 @@ func HandleUpdateSiteSettings(db *database.DB) http.HandlerFunc {
 			}
 		}
 
+		// allow_registration is a boolean and is always written (including false).
+		allowReg := "false"
+		if req.AllowRegistration {
+			allowReg = "true"
+		}
+		if _, err := db.Exec(`
+			INSERT INTO settings (key, value, updated_at, updated_by)
+			VALUES (?, ?, ?, ?)
+			ON CONFLICT(key) DO UPDATE SET
+				value = excluded.value,
+				updated_at = excluded.updated_at,
+				updated_by = excluded.updated_by
+		`, "allow_registration", allowReg, now, userID); err != nil {
+			http.Error(w, "Failed to save registration setting", http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message":  "Site settings updated successfully",
@@ -745,8 +767,26 @@ func getSiteSettings(db *database.DB) *SiteSettings {
 	if err := db.QueryRow("SELECT value FROM settings WHERE key = 'site_description'").Scan(&value); err == nil {
 		site.SiteDescription = value
 	}
+	site.AllowRegistration = getBoolSetting(db, "allow_registration", false)
 
 	return site
+}
+
+// getBoolSetting reads a boolean value from the settings table, returning
+// defaultValue if the key is missing or unparseable.
+func getBoolSetting(db *database.DB, key string, defaultValue bool) bool {
+	var value string
+	if err := db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&value); err != nil {
+		return defaultValue
+	}
+	switch value {
+	case "true", "1", "yes", "on":
+		return true
+	case "false", "0", "no", "off":
+		return false
+	default:
+		return defaultValue
+	}
 }
 
 func getSiteStats(db *database.DB) *SiteStats {

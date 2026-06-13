@@ -345,46 +345,60 @@ func TestRateLimiter_XForwardedFor(t *testing.T) {
 
 func TestGetIP(t *testing.T) {
 	tests := []struct {
-		name          string
-		remoteAddr    string
-		xForwardedFor string
-		xRealIP       string
-		expectedIP    string
+		name           string
+		trustedProxies []string
+		remoteAddr     string
+		xForwardedFor  string
+		xRealIP        string
+		expectedIP     string
 	}{
 		{
-			name:       "RemoteAddr only",
+			name:       "RemoteAddr only, port stripped",
 			remoteAddr: "192.168.1.1:12345",
-			expectedIP: "192.168.1.1:12345",
+			expectedIP: "192.168.1.1",
 		},
 		{
-			name:          "X-Forwarded-For single",
-			remoteAddr:    "192.168.1.1:12345",
+			// Untrusted peer: forwarding headers MUST be ignored to prevent
+			// rate-limit / lockout bypass via spoofed X-Forwarded-For.
+			name:          "X-Forwarded-For ignored from untrusted peer",
+			remoteAddr:    "203.0.113.7:12345",
 			xForwardedFor: "10.0.0.1",
-			expectedIP:    "10.0.0.1",
+			expectedIP:    "203.0.113.7",
 		},
 		{
-			name:          "X-Forwarded-For multiple",
-			remoteAddr:    "192.168.1.1:12345",
-			xForwardedFor: "10.0.0.1, 10.0.0.2, 10.0.0.3",
-			expectedIP:    "10.0.0.1",
-		},
-		{
-			name:       "X-Real-IP",
-			remoteAddr: "192.168.1.1:12345",
+			name:       "X-Real-IP ignored from untrusted peer",
+			remoteAddr: "203.0.113.7:12345",
 			xRealIP:    "10.0.0.1",
-			expectedIP: "10.0.0.1",
+			expectedIP: "203.0.113.7",
 		},
 		{
-			name:          "X-Forwarded-For takes precedence",
-			remoteAddr:    "192.168.1.1:12345",
-			xForwardedFor: "10.0.0.1",
-			xRealIP:       "10.0.0.2",
-			expectedIP:    "10.0.0.1",
+			name:           "X-Forwarded-For honored from trusted proxy",
+			trustedProxies: []string{"192.168.1.1/32"},
+			remoteAddr:     "192.168.1.1:12345",
+			xForwardedFor:  "10.0.0.1",
+			expectedIP:     "10.0.0.1",
+		},
+		{
+			name:           "X-Forwarded-For takes left-most (original client) from trusted proxy",
+			trustedProxies: []string{"192.168.0.0/16"},
+			remoteAddr:     "192.168.1.1:12345",
+			xForwardedFor:  "10.0.0.1, 10.0.0.2, 10.0.0.3",
+			expectedIP:     "10.0.0.1",
+		},
+		{
+			name:           "X-Real-IP honored from trusted proxy when XFF absent",
+			trustedProxies: []string{"192.168.1.1/32"},
+			remoteAddr:     "192.168.1.1:12345",
+			xRealIP:        "10.0.0.1",
+			expectedIP:     "10.0.0.1",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			SetTrustedProxies(tt.trustedProxies)
+			defer SetTrustedProxies(nil)
+
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.RemoteAddr = tt.remoteAddr
 			if tt.xForwardedFor != "" {

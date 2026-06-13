@@ -17,6 +17,17 @@
 </article>
 
 <script>
+// Escape user-controlled text before inserting into innerHTML (prevents XSS).
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Load all inventory changes on page load
 document.addEventListener('DOMContentLoaded', () => {
     fetch('/api/inventory/history?limit=100')
@@ -61,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += '<span style="color: ' + color + ';">' + sign + change.change_amount.toFixed(1) + '</span>';
                 html += '<br><small style="color: var(--pico-muted-color);">' + reasonFormatted + '</small>';
                 if (change.notes) {
-                    html += '<br><small>' + change.notes + '</small>';
+                    html += '<br><small>' + escapeHtml(change.notes) + '</small>';
                 }
                 html += '</div>';
                 html += '<small style="color: var(--pico-muted-color); white-space: nowrap;">' + formattedDate + '</small>';

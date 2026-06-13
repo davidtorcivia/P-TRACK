@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +19,16 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
+
+// truncateRunes shortens s to at most maxRunes runes (not bytes, so it never
+// splits a multi-byte UTF-8 character), appending an ellipsis when truncated.
+func truncateRunes(s string, maxRunes int) string {
+	r := []rune(s)
+	if len(r) <= maxRunes {
+		return s
+	}
+	return string(r[:maxRunes]) + "..."
+}
 
 // getBasePageData returns common data for all authenticated pages
 func getBasePageData(db *database.DB, r *http.Request, csrf *middleware.CSRFProtection) map[string]interface{} {
@@ -224,15 +235,16 @@ func HandleDashboard(db *database.DB, csrf *middleware.CSRFProtection) http.Hand
 
 			data["Stats"] = stats
 
-			// Get low stock items
+			// Get low stock items (scoped to the caller's account)
 			lowStockItems := []map[string]interface{}{}
 			rows, err := db.Query(`
 				SELECT item_type, quantity, unit, expiration_date, low_stock_threshold
 				FROM inventory_items
-				WHERE low_stock_threshold IS NOT NULL
+				WHERE account_id = ?
+				AND low_stock_threshold IS NOT NULL
 				AND quantity <= low_stock_threshold
 				ORDER BY item_type
-			`)
+			`, accountID)
 			if err == nil {
 				defer rows.Close()
 				for rows.Next() {
@@ -415,14 +427,16 @@ func HandleInventoryPage(db *database.DB, csrf *middleware.CSRFProtection) http.
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := getBasePageData(db, r, csrf)
 		data["Title"] = "Inventory - Injection Tracker"
+		accountID := middleware.GetAccountID(r.Context())
 
-		// Fetch inventory items
+		// Fetch inventory items (scoped to the caller's account)
 		rows, err := db.Query(`
 			SELECT id, item_type, quantity, unit, expiration_date,
 				lot_number, low_stock_threshold, notes, created_at, updated_at
 			FROM inventory_items
+			WHERE account_id = ?
 			ORDER BY item_type
-		`)
+		`, accountID)
 		if err == nil {
 			defer rows.Close()
 
@@ -640,22 +654,24 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 		data["Title"] = "Settings"
 
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
 
-		// Get user-specific settings
+		// Account-level settings (advanced mode, reminders, alerts).
+		acct, _ := getSettings(db, accountID)
 		settings := map[string]interface{}{
 			"Theme":               "auto",
 			"Timezone":            "America/New_York",
 			"DateFormat":          "MM/DD/YYYY",
 			"TimeFormat":          "12h",
-			"AdvancedMode":        false,
+			"AdvancedMode":        acct.AdvancedModeEnabled,
 			"EnableNotifications": false,
-			"InjectionReminders":  false,
-			"ReminderTime":        "19:00",
-			"LowStockAlerts":      true,
+			"InjectionReminders":  acct.InjectionReminders,
+			"ReminderTime":        acct.ReminderTime,
+			"LowStockAlerts":      acct.LowStockAlerts,
 		}
 
-		// Query user settings
-		rows, err := db.Query(`SELECT key, value FROM settings WHERE key LIKE ? OR key NOT LIKE 'user_%'`,
+		// Query this user's personal settings only.
+		rows, err := db.Query(`SELECT key, value FROM settings WHERE key LIKE ?`,
 			fmt.Sprintf("user_%%_%d", userID))
 		if err == nil {
 			defer rows.Close()
@@ -671,16 +687,8 @@ func HandleSettingsPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 						settings["DateFormat"] = value
 					case strings.HasPrefix(key, fmt.Sprintf("user_time_format_%d", userID)):
 						settings["TimeFormat"] = value
-					case key == "advanced_mode_enabled":
-						settings["AdvancedMode"] = (value == "true")
 					case strings.HasPrefix(key, fmt.Sprintf("user_enable_notifications_%d", userID)):
 						settings["EnableNotifications"] = (value == "true")
-					case key == "injection_reminders":
-						settings["InjectionReminders"] = (value == "true")
-					case key == "reminder_time":
-						settings["ReminderTime"] = value
-					case key == "low_stock_alerts":
-						settings["LowStockAlerts"] = (value == "true")
 					}
 				}
 			}
@@ -822,28 +830,43 @@ func formatTimeAgoWeb(t time.Time) string {
 	}
 }
 
+// recentActivityQuery returns combined injection/symptom/medication activity for
+// a single account. Each subquery is scoped via its course/medication ownership,
+// and takes the account ID as a bound parameter (3 total, in order).
+const recentActivityQuery = `
+	SELECT 'injection' as type, i.timestamp, i.side as detail1, COALESCE(CAST(i.pain_level AS TEXT), '') as detail2, i.notes, i.id
+	FROM injections i
+	JOIN courses c ON c.id = i.course_id
+	WHERE c.account_id = ?
+	UNION ALL
+	SELECT 'symptom' as type, s.timestamp, COALESCE(s.pain_location, '') as detail1, COALESCE(CAST(s.pain_level AS TEXT), '') as detail2, s.notes, s.id
+	FROM symptom_logs s
+	JOIN courses c ON c.id = s.course_id
+	WHERE c.account_id = ?
+	UNION ALL
+	SELECT 'medication' as type, ml.timestamp,
+		COALESCE(m.name, '') as detail1,
+		CASE WHEN ml.taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
+		ml.notes, ml.id
+	FROM medication_logs ml
+	JOIN medications m ON m.id = ml.medication_id
+	WHERE m.account_id = ?
+	ORDER BY timestamp DESC`
+
 // HandleGetRecentActivity returns recent activity HTML for dashboard
 func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 		userTimezone := GetUserTimezone(db, userID)
 
-		// Get recent activity using UNION to combine and sort by timestamp
-		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
-			FROM injections
-			UNION ALL
-			SELECT 'symptom' as type, timestamp, COALESCE(pain_location, '') as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
-			FROM symptom_logs
-			UNION ALL
-			SELECT 'medication' as type, timestamp,
-				COALESCE((SELECT name FROM medications WHERE id = medication_logs.medication_id), '') as detail1,
-				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
-				notes, medication_logs.id
-			FROM medication_logs
-			ORDER BY timestamp DESC
-			LIMIT 10
-		`)
+		// Get recent activity using UNION to combine and sort by timestamp,
+		// scoped to the caller's account.
+		rows, err := db.Query(recentActivityQuery+" LIMIT 10", accountID, accountID, accountID)
 
 		if err != nil {
 			w.Header().Set("Content-Type", "text/html")
@@ -910,7 +933,7 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 					<div>
 						<strong>Symptom Logged</strong>`
 				if location != "" {
-					html += fmt.Sprintf(` <small>%s</small>`, strings.ReplaceAll(location, "_", " "))
+					html += fmt.Sprintf(` <small>%s</small>`, template.HTMLEscapeString(strings.ReplaceAll(location, "_", " ")))
 				}
 				if painLevel != "" && painLevel != "0" {
 					html += fmt.Sprintf(` <small>Pain: %s/10</small>`, painLevel)
@@ -927,14 +950,12 @@ func HandleGetRecentActivity(db *database.DB) http.HandlerFunc {
 					<div>
 						<strong>%s</strong> <small style="color: %s;">%s</small>
 						<br><small style="color: var(--pico-muted-color);">%s</small>`,
-					medName, statusColor, cases.Title(language.English).String(status), activity["TimeAgo"])
+					template.HTMLEscapeString(medName), statusColor, cases.Title(language.English).String(status), activity["TimeAgo"])
 			}
 
 			if notes, ok := activity["Notes"].(string); ok && notes != "" {
-				if len(notes) > 60 {
-					notes = notes[:60] + "..."
-				}
-				html += fmt.Sprintf(`<br><small>%s</small>`, notes)
+				notes = truncateRunes(notes, 60)
+				html += fmt.Sprintf(`<br><small>%s</small>`, template.HTMLEscapeString(notes))
 			}
 
 			html += `</div></div></article>`
@@ -953,23 +974,16 @@ func HandleActivityPage(db *database.DB, csrf *middleware.CSRFProtection) http.H
 
 		// Get user's timezone preference
 		userID := middleware.GetUserID(r.Context())
+		accountID := middleware.GetAccountID(r.Context())
+		if accountID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 		userTimezone := GetUserTimezone(db, userID)
 
-		// Get all activity using UNION to combine and sort by timestamp
-		rows, err := db.Query(`
-			SELECT 'injection' as type, timestamp, side as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
-			FROM injections
-			UNION ALL
-			SELECT 'symptom' as type, timestamp, COALESCE(pain_location, '') as detail1, COALESCE(CAST(pain_level AS TEXT), '') as detail2, notes, id
-			FROM symptom_logs
-			UNION ALL
-			SELECT 'medication' as type, timestamp,
-				COALESCE((SELECT name FROM medications WHERE id = medication_logs.medication_id), '') as detail1,
-				CASE WHEN taken = 1 THEN 'taken' ELSE 'missed' END as detail2,
-				notes, medication_logs.id
-			FROM medication_logs
-			ORDER BY timestamp DESC
-		`)
+		// Get all activity using UNION to combine and sort by timestamp, scoped
+		// to the caller's account.
+		rows, err := db.Query(recentActivityQuery, accountID, accountID, accountID)
 
 		if err != nil {
 			http.Error(w, "Failed to load activity", http.StatusInternalServerError)
